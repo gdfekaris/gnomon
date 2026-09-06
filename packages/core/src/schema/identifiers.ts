@@ -30,3 +30,15 @@ export function isInboxStem(s: string): boolean {
 export function isProposalId(s: string): boolean {
   return PROPOSAL_ID.test(s);
 }
+
+/** `n` characters drawn uniformly from the slug alphabet (rejection sampling over random bytes). */
+export function randomAlphabet(n: number, random: (bytes: number) => Uint8Array = (b) => crypto.getRandomValues(new Uint8Array(b))): string {
+  const limit = 256 - (256 % SLUG_ALPHABET.length);
+  let out = '';
+  while (out.length < n) {
+    for (const b of random(Math.max(8, n))) {
+      if (b < limit && out.length < n) out += SLUG_ALPHABET[b % SLUG_ALPHABET.length];
+    }
+  }
+  return out;
+}

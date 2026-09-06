@@ -3,7 +3,7 @@
 // ordering lives in `order`, labels in `name`, and a slug is forever.
 
 import type { BrainFile, BrainSnapshot, CommitBatch, FileWrite, PrincipleFm, SetFm } from '../schema/types';
-import { SLUG_ALPHABET, isSetSlug } from '../schema/identifiers';
+import { isSetSlug, randomAlphabet } from '../schema/identifiers';
 import { serializeFile } from '../schema/serialize';
 import { parseLinks } from '../links/index';
 import { setLabel, withIndexWrites } from '../index/index';
@@ -56,15 +56,9 @@ function danglingInto(s: BrainSnapshot, targets: Set<string>, deleted: Set<strin
 // ---------------------------------------------------------------- sets
 
 /** A fresh `ps-xxxx` slug that collides with nothing in `existing` (schema §3.2). */
-export function newSetSlug(existing: Set<string>, random: (n: number) => Uint8Array = (n) => crypto.getRandomValues(new Uint8Array(n))): string {
-  const limit = 256 - (256 % SLUG_ALPHABET.length); // rejection sampling keeps the draw uniform
+export function newSetSlug(existing: Set<string>, random?: (n: number) => Uint8Array): string {
   for (;;) {
-    let slug = 'ps-';
-    while (slug.length < 7) {
-      for (const b of random(8)) {
-        if (b < limit && slug.length < 7) slug += SLUG_ALPHABET[b % SLUG_ALPHABET.length];
-      }
-    }
+    const slug = `ps-${randomAlphabet(4, random)}`;
     if (!existing.has(slug)) return slug;
   }
 }

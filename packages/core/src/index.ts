@@ -8,3 +8,4 @@ export * from './sets/index';
 export * from './proposals/index';
 export * from './filing/index';
 export * from './crypto/index';
+export * from './capture/index';

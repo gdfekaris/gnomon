@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ValidationError, parseFile, serializeFile, splitFrontmatter, tryParseFile } from '../src/index';
+import { DATETIME, ValidationError, nowUtc, parseFile, serializeFile, splitFrontmatter, tryParseFile } from '../src/index';
 import { FIXTURE, GEO_BRAIN, TEMPLATE, frontmatterFiles, hasGeoBrain } from './brains';
 
 const SET = `---
@@ -140,5 +140,12 @@ describe('parseFile per-file rules (schema §9)', () => {
     expect(rules(p, proposal('amendment', 'target_set: ps-g8xw\ntarget: ps-g8xw/x\n'))).toEqual([]);
     expect(rules(p, proposal('tag'))).toEqual(['proposal.conditional-field']);
     expect(rules(p, proposal('tag', 'target: a-b\n'))).toEqual([]);
+  });
+});
+
+describe('nowUtc', () => {
+  it('formats to the schema datetime form without milliseconds', () => {
+    expect(nowUtc(new Date('2026-09-06T20:44:02.626Z'))).toBe('2026-09-06T20:44:02Z');
+    expect(DATETIME.test(nowUtc())).toBe(true);
   });
 });

@@ -189,10 +189,18 @@ browser.
   dev server, Chromium, 390×844) with three shell flows; CI installs
   Chromium and runs them after the build. The GitHub path is verified in
   block 13b.*
-- [ ] **15. Capture screen with attachment** (M) — spec §10.4. Done when a
+- [x] **15. Capture screen with attachment** (M) — spec §10.4. Done when a
   Playwright flow captures text with and without a PDF into the demo
   brain as one `Capture:` commit that validates, the size limit is
   enforced before upload, and a unit test covers the head-moved retry.
+  *Done 2026-09-06. `core/capture` (`newInboxStem`, `attachmentExtension`,
+  `buildCapture`) so a desktop `/capture` command can reuse the rule;
+  `randomAlphabet` in identifiers now serves stems and set slugs. The app's
+  `services/capture.ts` `captureToInbox` refuses an oversized attachment
+  before any upload, commits once, and on `HeadMovedError` refreshes and
+  retries once. The screen keeps the capture in the form on error and
+  shows the stem on success. Still open from spec §14: the single pending
+  offline text capture, deferred to block 18 (PWA polish).*
 - [ ] **16. Browse screen with attachment view** (L) — proposal §6. Done
   when a Playwright flow over the demo brain shows sets in order and
   principles in precedence order with labels, opens a file with markdown

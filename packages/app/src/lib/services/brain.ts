@@ -78,4 +78,8 @@ export class BrainService {
   get head(): string | null {
     return this.state.current?.head ?? null;
   }
+
+  get snapshot(): BrainSnapshot | null {
+    return this.state.current;
+  }
 }

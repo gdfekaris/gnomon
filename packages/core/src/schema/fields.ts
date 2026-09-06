@@ -78,3 +78,8 @@ export const STATUS_VALUES: Partial<Record<FileType, readonly string[]>> = {
 
 /** ISO 8601 as the schema writes it: `2026-09-05` or `2026-09-05T14:30:12Z` (schema §4). */
 export const DATETIME = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}Z)?$/;
+
+/** The current instant in the schema's datetime form, `YYYY-MM-DDTHH:MM:SSZ` (no fractional seconds). */
+export function nowUtc(date: Date = new Date()): string {
+  return date.toISOString().replace(/\.\d{3}Z$/, 'Z');
+}

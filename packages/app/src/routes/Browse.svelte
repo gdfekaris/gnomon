@@ -41,7 +41,7 @@
   <h3>Inbox</h3>
   <ul data-testid="inbox">
     {#each captures as f (f.path)}
-      <li><code>{f.path}</code> · {f.fm.status}</li>
+      <li><code>{f.path}</code> · {f.fm.status}{#if f.fm.attachment}{' · attachment'}{/if}{#if f.fm.note}{` — ${f.fm.note}`}{/if}</li>
     {:else}
       <li class="empty">(empty)</li>
     {/each}
