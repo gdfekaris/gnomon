@@ -201,12 +201,23 @@ browser.
   retries once. The screen keeps the capture in the form on error and
   shows the stem on success. Still open from spec §14: the single pending
   offline text capture, deferred to block 18 (PWA polish).*
-- [ ] **16. Browse screen with attachment view** (L) — proposal §6. Done
+- [x] **16. Browse screen with attachment view** (L) — proposal §6. Done
   when a Playwright flow over the demo brain shows sets in order and
   principles in precedence order with labels, opens a file with markdown
   rendered and dual links collapsed to one element, shows backlinks, and
   opens an attachment (image preview, PDF in a new tab); HTML is never
-  rendered.
+  rendered. *Done 2026-09-06. `lib/markdown.ts` (unit-tested): markdown-it
+  with `html: false`, dual links collapsed through core's `parseLinks`
+  spans into one `#/browse/<path>#<anchor>` link labelled with the
+  target's title, external links `target=_blank rel=noopener`, GitHub-
+  style heading ids so anchors land. `lib/attachments.ts`: blob URLs
+  cached by SHA for the session; images inline, PDFs via `window.open` in
+  a new tab, HTML served as `text/plain` and shown in a `<pre>`, others
+  as a download. `routes/FileView.svelte` shows frontmatter, body,
+  backlinks (`core.backlinks`), and the attachment link; `Browse.svelte`
+  gains a tag filter (`?tag=`). `lib/route.ts` holds rune-free route
+  parsing (`#/name/path?query#anchor`) so it is unit-testable. Links
+  inside fenced code blocks are rewritten too; bodies are prose, noted.*
 - [ ] **17. Settings + connect-existing** (M) — spec §12 step 4, US-15.
   Done when token and repo can be entered and persisted in IndexedDB,
   validation results are shown, each missing scaffold item is offered as

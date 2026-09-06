@@ -1,14 +1,24 @@
 <script lang="ts">
-  // Browse — proposal §6. Block 14 ships the file list grouped by kind;
-  // block 16 adds the file view, links, backlinks, and attachments.
+  // Browse — proposal §6: folder-aware list with a tag filter; principles
+  // grouped by set in set order and precedence order within each set.
   import { setLabel } from '@gnomon/core';
+  import { browseHref, linkLabel } from '../lib/markdown';
   import { snapshot } from '../lib/stores/snapshot.svelte';
   import { session } from '../lib/stores/session.svelte';
+  import { route } from '../lib/router.svelte';
 
   const s = $derived(snapshot.current);
-  const sources = $derived(s ? s.byType('source') : []);
-  const captures = $derived(s ? s.byType('inbox') : []);
-  const proposals = $derived(s ? s.byType('proposal') : []);
+  const tag = $derived(route.query.get('tag'));
+  const tags = $derived.by(() => {
+    const all = new Set<string>();
+    for (const f of s?.files.values() ?? []) if (f.fm.type !== 'index') for (const t of f.fm.tags ?? []) all.add(t);
+    return [...all].sort();
+  });
+  const has = (f: { fm: { type: string; tags?: string[] } }) => !tag || (f.fm.type !== 'index' && (f.fm.tags ?? []).includes(tag));
+  const sources = $derived(s ? s.byType('source').filter(has) : []);
+  const captures = $derived(s ? s.byType('inbox').filter(has) : []);
+  const proposals = $derived(s ? s.byType('proposal').filter(has) : []);
+  const notes = $derived(s ? s.byType('notes').filter(has) : []);
 </script>
 
 <h2>Browse</h2>
@@ -20,11 +30,18 @@
   <p class="error">Could not load {session.label}: {snapshot.error}</p>
 {:else if s}
   <p class="meta">{session.label} at <code>{s.head.slice(0, 7)}</code> · {s.files.size} files</p>
+  {#if tags.length}
+    <p class="tags" data-testid="tag-filter">
+      <a href="#/browse" class:active={!tag}>all</a>
+      {#each tags as t (t)}<a href="#/browse?tag={t}" class:active={tag === t}>{t}</a>{/each}
+    </p>
+  {/if}
   {#each s.sets as set (set.path)}
-    <h3>{setLabel(set.fm)}</h3>
-    <ol data-testid="set-{set.path.split('/')[1]}">
-      {#each s.principlesOf(set.path.split('/')[1]!) as p (p.path)}
-        <li>{p.fm.title} <small>· grounds: {p.fm.grounds.length}</small></li>
+    {@const slug = set.path.split('/')[1]!}
+    <h3><a href={browseHref(set.path)}>{setLabel(set.fm)}</a></h3>
+    <ol data-testid="set-{slug}">
+      {#each s.principlesOf(slug).filter(has) as p (p.path)}
+        <li><a href={browseHref(p.path)}>{p.fm.title}</a> <small>· grounds: {p.fm.grounds.length}</small></li>
       {:else}
         <li class="empty">(no principles)</li>
       {/each}
@@ -33,15 +50,19 @@
   <h3>Sources</h3>
   <ul data-testid="sources">
     {#each sources as f (f.path)}
-      <li><code>{f.path}</code> — {f.fm.title}, {f.fm.author}{#if f.fm.curated !== 'ratified' && f.fm.curated !== 'human'} <small>· {f.fm.curated}</small>{/if}</li>
+      <li><a href={browseHref(f.path)}>{f.fm.title}</a>, {f.fm.author}{#if f.fm.attachment}{' · attachment'}{/if}{#if f.fm.curated !== 'ratified' && f.fm.curated !== 'human'}{` · ${f.fm.curated}`}{/if} <small><code>{f.path}</code></small></li>
     {:else}
       <li class="empty">(no sources)</li>
     {/each}
   </ul>
+  {#if notes.length && tag}
+    <h3>Notes</h3>
+    <ul>{#each notes as f (f.path)}<li><a href={browseHref(f.path)}>{linkLabel(f.path, s)}</a></li>{/each}</ul>
+  {/if}
   <h3>Inbox</h3>
   <ul data-testid="inbox">
     {#each captures as f (f.path)}
-      <li><code>{f.path}</code> · {f.fm.status}{#if f.fm.attachment}{' · attachment'}{/if}{#if f.fm.note}{` — ${f.fm.note}`}{/if}</li>
+      <li><a href={browseHref(f.path)}><code>{f.path}</code></a> · {f.fm.status}{#if f.fm.attachment}{' · attachment'}{/if}{#if f.fm.note}{` — ${f.fm.note}`}{/if}</li>
     {:else}
       <li class="empty">(empty)</li>
     {/each}
@@ -49,7 +70,7 @@
   <h3>Proposals</h3>
   <ul data-testid="proposals">
     {#each proposals as f (f.path)}
-      <li><code>{f.path}</code> · {f.fm.kind} · {f.fm.status} — {f.fm.title}</li>
+      <li><a href={browseHref(f.path)}>{f.fm.title}</a> · {f.fm.kind} · {f.fm.status} <small><code>{f.path}</code></small></li>
     {:else}
       <li class="empty">(none)</li>
     {/each}
@@ -65,4 +86,6 @@
   .empty { opacity: 0.6; list-style: none; }
   .error { color: #b91c1c; }
   small { opacity: 0.7; }
+  .tags a { margin-right: 0.5rem; }
+  .tags a.active { font-weight: 600; text-decoration: underline; }
 </style>

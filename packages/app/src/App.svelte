@@ -6,6 +6,7 @@
   import { connectDemo, connectGitHub } from './lib/services/index';
   import StaleBanner from './lib/components/StaleBanner.svelte';
   import Browse from './routes/Browse.svelte';
+  import FileView from './routes/FileView.svelte';
   import Capture from './routes/Capture.svelte';
   import Settings from './routes/Settings.svelte';
 
@@ -33,7 +34,9 @@
       <a href="#/settings" class:active={route.name === 'settings'}>Settings</a>
     </nav>
   </header>
-  {#if route.name === 'browse'}
+  {#if route.name === 'browse' && route.path}
+    <FileView path={route.path} anchor={route.anchor} />
+  {:else if route.name === 'browse'}
     <Browse />
   {:else if route.name === 'settings'}
     <Settings />

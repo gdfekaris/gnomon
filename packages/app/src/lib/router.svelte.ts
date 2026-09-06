@@ -1,23 +1,18 @@
 // Hash-based router (spec §10.1): GitHub Pages cannot rewrite paths, and hash
-// routes survive refresh and home-screen launch. Routes are a placeholder table
-// until the screens exist.
+// routes survive refresh and home-screen launch. The reactive route state;
+// parsing lives in route.ts.
+import { type Route, parseRoute } from './route';
+export { ROUTES, type Route, type RouteName, parseRoute } from './route';
 
-export const ROUTES = ['capture', 'browse', 'inbox', 'proposals', 'sets', 'reason', 'settings', 'onboarding'] as const;
-export type RouteName = (typeof ROUTES)[number];
-
-function parse(hash: string): { name: RouteName; rest: string[] } {
-  const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean);
-  const first = parts[0];
-  const name = (ROUTES as readonly string[]).includes(first ?? '') ? (first as RouteName) : 'capture';
-  return { name, rest: parts.slice(1) };
-}
-
-export const route = $state(parse(typeof location === 'undefined' ? '' : location.hash));
+export const route = $state<Route>(parseRoute(typeof location === 'undefined' ? '' : location.hash));
 
 if (typeof window !== 'undefined') {
   window.addEventListener('hashchange', () => {
-    const next = parse(location.hash);
+    const next = parseRoute(location.hash);
     route.name = next.name;
     route.rest = next.rest;
+    route.path = next.path;
+    route.anchor = next.anchor;
+    route.query = next.query;
   });
 }
