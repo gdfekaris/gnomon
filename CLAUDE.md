@@ -46,10 +46,13 @@ process for every phase.
 ```
 npx npm@latest install         # npm 11.1 (bundled with Node 23) crashes on this tree
 npm run typecheck
-npm test
+npm test                       # the index cross-check test needs python3 + pyyaml
 VITE_BASE=/gnomon/ npm run build
-npm run validate:template      # python3 + pyyaml; tools/gnomon-check.py
-python3 tools/gnomon-check.py ~/Desktop/main/geo-brain-2   # add --write to regenerate indexes
+npm run build:cli              # bundles packages/cli/dist/gnomon.js
+npm run validate:template      # the CLI over template/ (build:cli first)
+npm run validate:fixture       # the CLI over packages/core/fixtures/brain
+node packages/cli/dist/gnomon.js validate ~/Desktop/main/geo-brain-2   # or index, status
+npm run validate:reference     # the Python reference checker, tools/gnomon-check.py
 npm run dev -w packages/app
 ```
 

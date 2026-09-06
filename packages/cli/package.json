@@ -16,10 +16,11 @@
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
-    "build": "esbuild src/main.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/gnomon.js"
+    "build": "esbuild src/main.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/gnomon.js --banner:js=\"import { createRequire as __createRequire } from 'node:module'; const require = __createRequire(import.meta.url);\""
   },
   "dependencies": {
-    "@gnomon/core": "0.0.0"
+    "@gnomon/core": "0.0.0",
+    "@gnomon/storage": "0.0.0"
   },
   "devDependencies": {
     "esbuild": "^0.28.2"

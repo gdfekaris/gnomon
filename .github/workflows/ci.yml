@@ -21,8 +21,9 @@ jobs:
       # The index generator's tests cross-check against tools/gnomon-check.py.
       - run: python3 -m pip install --quiet pyyaml
       - run: npm test
-      - name: Validate the brain template and the reference fixture
+      - name: Validate the brain template and the reference fixture with the CLI
         run: |
+          npm run build:cli
           npm run validate:template
           npm run validate:fixture
       - name: Build the app

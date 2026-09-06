@@ -135,10 +135,22 @@ browser.
   blocks 10b and 13 run it. `ReadResult` (core) carries the optional
   per-file `encrypted` flag into `buildSnapshot`. `NotFoundError` added.
   Storage tests get their own tsconfig with Node types like core's.*
-- [ ] **12. Working-tree driver + CLI `validate` / `index` / `status`** (M)
+- [x] **12. Working-tree driver + CLI `validate` / `index` / `status`** (M)
   — spec §13. Done when the CLI runs on `template/` and geo-brain-2 and
   agrees with the Python checker, and CI's template check uses the CLI
-  instead of the Python script.
+  instead of the Python script. *Done 2026-09-06. `cli/src/worktree.ts`
+  `WorkingTreeDriver` implements `StorageDriver` over the filesystem
+  (`commit` writes files, no git commit; history/compare/revert throw).
+  In a git checkout the file list is `git ls-files -co
+  --exclude-standard` so ignored files are not part of the brain, the
+  head is `HEAD`, and `validate` compares every modified tracked file
+  against `git show HEAD:` for the byte-identical rules; outside git it
+  says those rules were skipped. `validate` also prints a NOTE when an
+  index is stale. `npm run build:cli` bundles with esbuild (a
+  `createRequire` banner is needed for the `yaml` package's CJS build).
+  CI builds the CLI and runs `validate:template` and `validate:fixture`
+  through it; `validate:reference` still runs the Python checker by hand
+  and the block 7 cross-check test keeps it honest.*
 - [ ] **13. `GitHubDriver`** (L) — spec §6.2, REST writes + GraphQL reads,
   no Octokit. Done when it passes the block 11 contract suite against a
   scratch repo. **Needs a disposable token and scratch repo from the
@@ -171,9 +183,10 @@ browser.
   its previous committed version" needs the last commit. The CLI reads the
   previous version via `git show HEAD:<path>` when a `.git` directory is
   present and skips that one rule otherwise, saying so in its output.
-- **Python checker retires at block 12.** Once the CLI validates the
-  template in CI, `tools/gnomon-check.py` stays in the repo as the
-  historical reference implementation and is no longer run.
+- **Python checker retires at block 12.** Since block 12 the CLI validates
+  the template and fixture in CI. `tools/gnomon-check.py` stays as the
+  reference implementation: the block 7 index cross-check test still runs
+  it on fixture variants, and `npm run validate:reference` runs it by hand.
 
 ## Notes for whoever resumes
 

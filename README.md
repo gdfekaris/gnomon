@@ -19,20 +19,20 @@ scaffolded; no feature is implemented yet.
 | `packages/providers` | `@gnomon/providers`: `ProviderDriver`, Anthropic, OpenRouter |
 | `packages/app` | the Svelte 5 + Vite PWA |
 | `packages/cli` | published as `gnomon-cli`, binary `gnomon` |
-| `tools/gnomon-check.py` | Python prototype of `gnomon validate` and `gnomon index` (needs PyYAML); stands in until `packages/cli` implements them |
+| `tools/gnomon-check.py` | Python reference implementation of `gnomon validate` and `gnomon index` (needs PyYAML); the CLI is tested against it |
 
 ## Working on it
 
 ```
 npx npm@latest install      # npm 11.1 (bundled with Node 23) crashes on this tree; any npm >= 12 works
 npm run typecheck
-npm test
+npm test                    # python3 + pyyaml for the index cross-check
 VITE_BASE=/gnomon/ npm run build
-npm run validate:template   # python3 + pyyaml
+npm run build:cli && npm run validate:template && npm run validate:fixture
 npm run dev -w packages/app
 ```
 
-Node 20 or newer. CI runs the same five steps on every push.
+Node 20 or newer. CI runs the same steps on every push.
 
 ## Where things stand
 

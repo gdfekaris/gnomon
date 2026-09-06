@@ -13,8 +13,10 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "vitest run",
     "build": "npm run build --workspaces --if-present",
-    "validate:template": "python3 tools/gnomon-check.py template",
-    "validate:fixture": "python3 tools/gnomon-check.py packages/core/fixtures/brain"
+    "validate:template": "node packages/cli/dist/gnomon.js validate template",
+    "validate:fixture": "node packages/cli/dist/gnomon.js validate packages/core/fixtures/brain",
+    "build:cli": "npm run build -w packages/cli",
+    "validate:reference": "python3 tools/gnomon-check.py template && python3 tools/gnomon-check.py packages/core/fixtures/brain"
   },
   "devDependencies": {
     "@types/node": "^26.4.1",
