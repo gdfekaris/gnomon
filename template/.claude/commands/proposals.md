@@ -1,21 +1,21 @@
 ---
-description: Work the proposals queue — show open items, then apply decided ones
-argument-hint: [optional: an item ID like P3]
+description: Walk open proposals one at a time and record the curator's decisions
+argument-hint: [optional: a proposal id like P-20260905-003]
 ---
 
-Open `maps/_proposals.md`.
-
-**If any item has a filled-in Decision line**, execute those items now:
-make the change the chosen option describes, then delete the item from
-the queue. Report what you changed per item.
-
-**For items still blank**, present them one at a time, most consequential
-first. For each: state the question in two sentences, list the options,
-say which you would choose and why in one sentence. Then stop and wait.
-Do not decide on the curator's behalf, and do not batch them — one
-decision at a time is the point.
+List every `maps/proposals/*.md` with `status: open`, most consequential
+first (`principle` and `amendment` before `link` before `tag`).
 
 Scope, if given: $ARGUMENTS
 
-Never delete an undecided item. Never edit a principle file, whatever an
-item proposes.
+For each, one at a time: state the suggestion in two sentences, show its
+target and grounds, say what you would decide and why in one sentence.
+Then stop and wait for the curator.
+
+When the curator decides, follow "Recording proposal decisions" in
+`AGENTS.md`: set `status` to `accepted` or `declined`, refresh `updated`,
+change nothing else, commit `Decide: <id>`, and move to the next.
+
+Never decide on the curator's behalf. Never batch. Never write a principle
+file, whatever a proposal suggests; for an accepted `principle` or
+`amendment`, offer draft wording in your reply and stop.

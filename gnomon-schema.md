@@ -96,7 +96,7 @@ In a source folder the attachment is always named `original.<ext>`. The name `or
 
 ## 4. Frontmatter contract
 
-All `.md` files except `AGENTS.md`, `README.md`, and `templates/*` carry YAML frontmatter delimited by `---`. Field names are lowercase snake_case. Dates are ISO 8601 (`2026-09-05` or `2026-09-05T14:30:12Z`). Lists use YAML flow or block syntax; the app writes block syntax. Attachments carry no frontmatter; they are opaque bytes.
+All `.md` files except `AGENTS.md`, `README.md`, `templates/*`, and anything under a dot-directory (`.claude/`, `.gnomon/`, `.obsidian/`) carry YAML frontmatter delimited by `---`. Dot-directories are tool configuration, not brain content; the validator, the index generator, and prompt assembly ignore them. Field names are lowercase snake_case. Dates are ISO 8601 (`2026-09-05` or `2026-09-05T14:30:12Z`). Lists use YAML flow or block syntax; the app writes block syntax. Attachments carry no frontmatter; they are opaque bytes.
 
 ### 4.1 Common fields
 
@@ -362,7 +362,7 @@ The app validates on every read and refuses to write a file that fails a refusal
 
 **Refusals:**
 
-- Frontmatter parses as YAML and contains every required field for its `type`; `type: index` files contain `type` only.
+- Every `.md` file outside the §4 exemptions parses as YAML frontmatter plus body and contains every required field for its `type`; `type: index` files contain `type` only.
 - `curated` is one of the three values, is `human` for `principle`, `principle-set`, `inbox`, and is never `ratified` for `proposal`.
 - `set` in a principle equals its folder's slug; `source` in a notes file equals its folder's slug.
 - Set `order` values form the contiguous sequence 1..N; within each set, principle `order` values form the contiguous sequence 1..N.

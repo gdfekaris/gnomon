@@ -1,40 +1,45 @@
-# geo-brain-2
+# A Gnomon brain
 
 A commonplace book that an AI can reason from.
 
-You collect passages from what you read. You state, in your own words, the
-positions you actually hold. Agents do the clerical work — filing,
-indexing, cross-referencing — and then reason **from your positions**
-instead of giving you the balanced survey any chat window would.
+You capture passages from what you read, exactly as you found them. You
+write, in your own words, the principles you actually hold, and you rank
+them. Agents do the clerical work — filing, linking, proposing — and then
+reason **from your principles** instead of giving you the balanced survey
+any chat window would.
 
-The rules exist to keep one line intact: **sources are other people,
-principles are you.** An agent may file, link, index, and propose. It may
-never write a principle, reword a passage, or delete something you wrote.
+One line holds the whole thing together: **sources are other people,
+principles are you.** An agent may file, link, and propose. It may never
+write a principle, change a passage, or delete something you saved.
+
+This folder is a valid, empty brain. It has Set 1 and nothing in it. The
+rules the agent follows are in `AGENTS.md`; the format is the Gnomon
+Brain Format Schema.
 
 ---
 
 ## The loop
 
 ```
-./bin/brain                      where do I stand, what should I run
-/capture <text | path>           30 seconds, whenever you read something
-/file-inbox                      weekly-ish, ~15 minutes
-/proposals                       decide the open questions, one at a time
-                                 ...then write a principle yourself
-/reason <question>               the payoff
+/capture <text | path>        whenever you read something. Seconds.
+/file-inbox                   weekly-ish. The agent files; you review.
+/proposals                    decide the open suggestions, one at a time
+                              ...then write a principle yourself
+/reason <question>            the payoff
 ```
 
-| command | step | what happens |
-|---|---|---|
-| `/capture` | capture | drops it in `inbox/` verbatim. No filing, no analysis. Capture must cost nothing or you won't do it. |
-| `/file-inbox` | file | identifies the source, retains the original, pulls citable passages, opens proposals, updates the index. Shows you the passages. |
-| `/proposals` | decide | walks open items one at a time. You type a letter; it executes and clears them. |
-| `/reason` | consult | argues a question from your in-force principles, citing which principle and which passage backs each move. |
-| `/relate` | consult | takes a new text and reports where it agrees with your stance, where it challenges it, and what it echoes or contradicts. |
-| `/reconcile` | maintain | finds broken links, drift between the indexes, unratified files. Reports; fixes nothing. |
+| command | what happens |
+|---|---|
+| `/capture` | saves the text (and optionally a file) to `inbox/`, verbatim, one commit. No filing, no analysis. |
+| `/file-inbox` | turns each capture into a source folder, carries the attachment across, writes proposals. Shows you what it filed. |
+| `/proposals` | walks open proposals one at a time. You decide; it records. |
+| `/reason` | argues a question from a set's principles, in precedence order, citing which principle and which passage backs each move. |
+| `/relate` | takes a new text and reports where it agrees with a set, where it challenges it, what it echoes or contradicts. |
+| `/compare` | two or more sets: shared ground, direct conflicts, gaps. |
+| `/validate` | checks the brain for format errors, broken references, and drift. Reports; fixes nothing. |
 
-`./bin/brain` is read-only and never changes anything. Run it whenever you
-have no idea what to do next.
+The same brain works in the Gnomon app on your phone. Both edit the same
+files through git.
 
 ---
 
@@ -42,57 +47,35 @@ have no idea what to do next.
 
 | path | what it holds | who owns it |
 |---|---|---|
-| `inbox/` | unfiled captures | you drop, agent files, **you** delete |
-| `sources/<slug>/original.md` | the whole capture, byte-for-byte | immutable |
-| `sources/<slug>/raw.md` | the passages worth citing — your *reading* of the source | immutable |
+| `inbox/` | captures, with their attached files | you save, agent files, **you** clear |
+| `sources/<slug>/raw.md` | the capture, byte for byte | immutable |
+| `sources/<slug>/original.<ext>` | the attached file, if any | immutable |
 | `sources/<slug>/notes.md` | your marginalia | you |
-| `principles/<slug>.md` | your stance, one per file | **you only** |
-| `principles/_index.md` | which principles are in force, in precedence order | agent maintains |
-| `maps/_index.md` | catalogue of everything | agent maintains |
-| `maps/_proposals.md` | the decision queue | agent appends, you decide |
-| `templates/` | frontmatter templates | — |
-
-`principles/_index.md` and `maps/_index.md` do different jobs. The maps
-one is inventory: what exists. The principles one is the **reading list**:
-what loads as a premise, in what order, when reasoning. A principle can
-exist without being in force.
-
----
-
-## Deciding proposals
-
-Every item in `maps/_proposals.md` looks like this:
-
-```
-### P3 · rule change · AGENTS.md
-
-**Question:** two sentences.
-**Options:**
-- **a** — ...
-- **b** — ... ← recommended
-
-**Decision:**
-```
-
-Type a letter on the Decision line — or free text if no option fits — then
-run `/proposals`. Decided items get executed and deleted. Undecided items
-are never deleted by an agent.
+| `principles/<set>/_set.md` | a set: its number, optional name, framing | **you only** |
+| `principles/<set>/<slug>.md` | one principle, ranked within its set | **you only** |
+| `maps/proposals/` | one suggestion per file | agent writes, you decide |
+| `principles/_index.md`, `maps/_index.md` | generated indexes | nobody edits; regenerate |
+| `templates/` | skeletons for new files | — |
 
 ---
 
 ## Writing a principle
 
-This is the part no command does for you, and the part that makes the rest
-work. Nothing loads as a premise until you write one.
+This is the part no command does for you, and the part that makes the
+rest work. Nothing loads as a premise until you write one.
 
-1. `cp templates/principle.md principles/your-slug.md`
-2. Keep `curated: human`. Write one paragraph in your own words.
-3. Add a line under **In force** in `principles/_index.md`:
-   `- [[your-slug]] (your-slug.md) — one-sentence gloss`
+1. Copy `templates/principle.md` to `principles/ps-g8xw/<your-slug>.md`
+   (`ps-g8xw` is Set 1; every brain starts with it).
+2. Fill `title`, keep `set: ps-g8xw` and `curated: human`, set `order` to
+   one more than the set's current count, and replace the `{{...}}`
+   placeholders. Write one paragraph in your own words.
+3. List the sources that ground it under `grounds`, and link them in the
+   body.
+4. Run `npx gnomon-cli index` (or let the app do it) and commit.
 
 **A principle is not a summary of a source.** The test: if the source
 turned out to be wrong, would the principle survive? If it collapses, you
-wrote a summary. Sources ground, complicate, and contradict principles —
+wrote a summary. Sources ground, complicate, and contradict principles;
 they never dictate them.
 
 **Where principles come from, in practice:** read back through your own
@@ -100,9 +83,18 @@ they never dictate them.
 Three different sources, same complaint from you each time — that
 recurring note is a principle trying to surface.
 
-**Order is precedence.** When two in-force principles cannot both be
-honored, the earlier one governs, and an agent must say it invoked
-precedence rather than quietly picking a side.
+**Order is precedence.** When two principles in a set cannot both be
+honored, the lower `order` governs, and an agent must say it invoked
+precedence rather than quietly picking a side. Renumber by editing the
+`order` fields; never rename or move a file.
+
+## More than one set
+
+A set is a stance. Keep several when you want to think the same question
+through under different commitments: Set 1 and Set 2, or "Set 2 — Work".
+To add one by hand: make `principles/ps-<4 chars from
+23456789abcdefghjkmnpqrstuvwxyz>/_set.md` from `templates/set.md` with
+`order` one more than the current count. The app does this with one tap.
 
 ---
 
@@ -110,36 +102,23 @@ precedence rather than quietly picking a side.
 
 Full text in `AGENTS.md`. The four worth knowing by heart:
 
-- **`raw.md` and `original.md` are immutable.** A quoted passage that
+- **`raw.md` and attachments are immutable.** A quoted passage that
   drifts is worse than no quote. Corrections go in `notes.md`.
 - **Agents never write principles.** A knowledge base whose conclusions
   were written by a model is a model's knowledge base.
-- **Propose, don't finalize.** Agents append to the queue; you decide.
-  Nothing you wrote is deleted by an agent.
-- **A capture never leaves as only a selection.** Text you own is retained
-  whole as `original.md`; the passages are a reading of it, not a
-  replacement.
+- **Propose, don't finalize.** Agents write proposals; you decide. Nothing
+  you wrote is deleted by an agent.
+- **Files never move.** Every link stays valid forever. Numbering, naming,
+  and grouping live in frontmatter.
 
 ---
 
-## Publishing the scaffolding
+## Desktop tooling
 
-This brain stays local — no remote is configured. The *structure* is
-shareable, and lives on the orphan branch `skeleton`, built by
-`tools/export-skeleton.sh` from an explicit allowlist. It shares no
-history with `master`, so no source material can reach it.
-
-```
-./tools/export-skeleton.sh
-git remote add public git@github.com:<you>/<repo>.git
-git push public skeleton:main
-```
-
-Add a structural file to the allowlist in that script or it stays behind —
-silence is deliberate, since the alternative failure is publishing your
-material.
-
----
+`npx gnomon-cli validate` checks the brain; `npx gnomon-cli index`
+regenerates the two index files; `npx gnomon-cli status` says where things
+stand. Needs Node 20 or newer. Without Node, the app regenerates the
+indexes on its next write, and everything else still works.
 
 ## When it feels pointless
 

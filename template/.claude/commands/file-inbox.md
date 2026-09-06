@@ -1,23 +1,23 @@
 ---
-description: File everything in the inbox into sources (Task C)
-argument-hint: [optional: which item, or which pages/sections to keep]
+description: File every unfiled capture into sources (Task C)
+argument-hint: [optional: a stem, to file only that capture]
 ---
 
-Run **Standard Task C** from `AGENTS.md` on every item in `inbox/`,
-following it exactly. Read AGENTS.md first — the rules there govern, not
-your judgment.
+Run **Task C** from `AGENTS.md` on every `inbox/*.md` with
+`status: unfiled`, following it exactly. Read `AGENTS.md` first; its rules
+govern, not your judgment.
 
 Scope, if given: $ARGUMENTS
 
-Reminders that are easy to get wrong:
-- Retain the original (step 3) when the text is the curator's to keep.
-- Never dump a whole document into `raw.md`.
-- If the curator did not name a selection, you are choosing passages —
-  say so plainly, and list what you cut and why in the proposals queue.
-- Every proposal you raise goes in the queue format defined at the top of
-  `maps/_proposals.md`, with an ID, a fixed menu of options, and a blank
-  Decision line. Never a loose essay.
-- Leave the inbox file in place. Deleting it is the curator's act.
+Easy to get wrong:
+- The `raw.md` body is the capture's body, byte for byte. You do not pick
+  passages; there is no selection step.
+- Copy the attachment, if any, to `original.<ext>` unchanged.
+- Leave optional frontmatter out rather than guess it.
+- One proposal per file in `maps/proposals/`, numbered after today's
+  highest. Never a loose essay in your reply.
+- The only change to the capture is `status: filed` and `filed_as`.
+- One commit per capture: `File: <slug>`.
 
-When done, SHOW the passages you selected in your reply — not a
-description of them. The curator cannot ratify what they cannot see.
+When done, list each filing (title, author, slug) and each proposal (id,
+kind, title) in your reply. The curator cannot ratify what they cannot see.

@@ -1,12 +1,17 @@
 ---
-title: 
+type: principle
+title: {{title}}
+set: {{set_slug}}
+order: {{order}}
+grounds: []
+related: []
+tags: []
 curated: human
-grounded-in: []   # source slugs
+created: {{now}}
+updated: {{now}}
 ---
-
-<!-- One principle, stated in your own words, one paragraph if possible. -->
+{{The principle, in your own words. One paragraph if you can.}}
 
 **Grounding passages:**
-- [[source-slug]] §1 (../sources/source-slug/raw.md)
 
-**Tensions:** <!-- other principles this pulls against, if any -->
+- [[sources/{{source_slug}}/raw]] ([raw](../../sources/{{source_slug}}/raw.md))
