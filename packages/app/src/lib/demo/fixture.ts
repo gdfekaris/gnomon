@@ -9,9 +9,10 @@ const binaries = import.meta.glob('../../../../core/fixtures/brain/**/*.pdf', { 
 
 const rel = (key: string) => key.slice(key.indexOf('/fixtures/brain/') + '/fixtures/brain/'.length);
 
-export async function demoDriver(): Promise<MemoryDriver> {
+export async function demoDriver(omit: string[] = []): Promise<MemoryDriver> {
   const seed = new Map<string, string | Uint8Array>();
   for (const [key, text] of Object.entries(texts)) seed.set(rel(key), text);
   for (const [key, url] of Object.entries(binaries)) seed.set(rel(key), new Uint8Array(await (await fetch(url)).arrayBuffer()));
+  for (const p of omit) seed.delete(p);
   return MemoryDriver.create(seed, {}, 'Initial commit');
 }

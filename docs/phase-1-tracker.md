@@ -218,11 +218,28 @@ browser.
   gains a tag filter (`?tag=`). `lib/route.ts` holds rune-free route
   parsing (`#/name/path?query#anchor`) so it is unit-testable. Links
   inside fenced code blocks are rewritten too; bodies are prose, noted.*
-- [ ] **17. Settings + connect-existing** (M) — spec §12 step 4, US-15.
+- [x] **17. Settings + connect-existing** (M) — spec §12 step 4, US-15.
   Done when token and repo can be entered and persisted in IndexedDB,
   validation results are shown, each missing scaffold item is offered as
   its own commit, and a Playwright flow exercises connect-existing against
-  a demo brain with a scaffold item removed.
+  a demo brain with a scaffold item removed. *Done 2026-09-06.
+  `lib/scaffold.ts` bundles `template/**/*.md` (Phase 3 reuses it).
+  `services/connect.ts` (unit-tested): `inspectBrain` returns refusals,
+  warnings, one `Scaffold: <path>` offer per missing scaffold item (a
+  folder as its `.gitkeep`), `Add Set 1` on `sets.none`, and an `Index`
+  offer when the generated files are stale; `applyOffer` commits one and
+  re-inspects, so every offer carries the current head. Index
+  regeneration is offered, never automatic. `ValidationPanel.svelte`
+  lists refusals with Add buttons or "fix by hand", then warnings.
+  Settings adds provider keys, budget, set-description placement, theme
+  (`data-theme` + `color-scheme`), the who-can-see-what text, and the
+  version. `describeError` maps AuthError/NotFoundError/RateLimitError/
+  NetworkError to sentences. Test affordance: `#/settings?demo-omit=a,b`
+  drops paths from the demo brain. Local Settings fields sync once
+  on-device settings load, since they arrive after first render. The
+  mocked-401 flow caught a real driver bug: `GitHubDriver` called the
+  stored global `fetch` as a method, which browsers reject as an illegal
+  invocation; it is now called unbound.*
 - [ ] **18. PWA polish + Pages deploy** (S) — spec §11, §18. Done when the
   app installs on iPhone, shows the update toast, and CI deploys to Pages.
 - [ ] **19. Publish `gnomon-cli`** (S) — spec §18. Done when a tagged

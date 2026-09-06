@@ -40,7 +40,8 @@ export class GitHubDriver implements StorageDriver {
     this.branch = opts.branch ?? 'main';
     this.apiBase = (opts.apiBase ?? 'https://api.github.com').replace(/\/$/, '');
     this.token = opts.token;
-    this.fetchFn = opts.fetch ?? fetch;
+    // Called unbound: browsers throw "Illegal invocation" when window.fetch runs with another `this`.
+    this.fetchFn = opts.fetch ?? ((input, init) => fetch(input, init));
   }
 
   get repo(): string {

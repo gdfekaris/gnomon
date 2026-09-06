@@ -1,16 +1,31 @@
 <script lang="ts">
-  // Settings — proposal §6. Block 14: connect the demo brain or a GitHub
-  // repository. Block 17 adds validation results, connect-existing scaffold
-  // offers, provider keys, budget, privacy, and theme.
-  import { connectDemo, connectGitHub, disconnect } from '../lib/services/index';
+  // Settings — proposal §6: git connection, AI providers, context budget,
+  // privacy disclosure, theme; connect-existing validation (US-15). The
+  // encryption toggle is Phase 4 and the token walkthrough is Phase 3.
+  import pkg from '../../package.json';
+  import { connectDemo, connectGitHub, describeError, disconnect } from '../lib/services/index';
+  import ValidationPanel from '../lib/components/ValidationPanel.svelte';
+  import { route } from '../lib/router.svelte';
   import { session } from '../lib/stores/session.svelte';
-  import { settings, saveGit } from '../lib/stores/settings.svelte';
+  import { settings, saveGit, savePrefs, saveProviderKeys } from '../lib/stores/settings.svelte';
 
   let owner = $state(settings.git?.owner ?? '');
   let name = $state(settings.git?.name ?? '');
   let token = $state(settings.git?.token ?? '');
+  let anthropic = $state(settings.anthropicKey);
+  let openrouter = $state(settings.openrouterKey);
   let busy = $state(false);
   let error = $state<string | null>(null);
+  let savedKeys = $state(false);
+  // On-device settings load after launch; pick them up once they arrive.
+  $effect(() => {
+    if (!settings.loaded) return;
+    owner = settings.git?.owner ?? '';
+    name = settings.git?.name ?? '';
+    token = settings.git?.token ?? '';
+    anthropic = settings.anthropicKey;
+    openrouter = settings.openrouterKey;
+  });
 
   async function run(action: () => Promise<void>) {
     busy = true;
@@ -18,12 +33,12 @@
     try {
       await action();
     } catch (e) {
-      error = (e as Error).message;
+      error = describeError(e);
     } finally {
       busy = false;
     }
   }
-  const useDemo = () => run(connectDemo);
+  const useDemo = () => run(() => connectDemo((route.query.get('demo-omit') ?? '').split(',').filter(Boolean)));
   const useGitHub = () => run(async () => {
     const git = { owner: owner.trim(), name: name.trim(), token: token.trim() };
     await saveGit(git);
@@ -34,6 +49,10 @@
     await saveGit(null);
     token = '';
   });
+  const saveKeys = () => run(async () => {
+    await saveProviderKeys({ anthropic: anthropic.trim(), openrouter: openrouter.trim() });
+    savedKeys = true;
+  });
 </script>
 
 <h2>Settings</h2>
@@ -42,6 +61,7 @@
   <h3>Brain</h3>
   {#if session.driver}
     <p>Connected: <strong>{session.label}</strong> ({session.mode}).</p>
+    <ValidationPanel />
     <button onclick={signOut} disabled={busy}>Disconnect</button>
   {:else}
     <p>Not connected.</p>
@@ -56,19 +76,71 @@
 
 <section>
   <h3>GitHub repository</h3>
-  <label>Owner <input bind:value={owner} autocapitalize="off" autocomplete="off" /></label>
-  <label>Repository <input bind:value={name} autocapitalize="off" autocomplete="off" /></label>
-  <label>Fine-grained token <input bind:value={token} type="password" autocomplete="off" /></label>
+  <label>Owner <input bind:value={owner} autocapitalize="off" autocomplete="off" data-testid="git-owner" /></label>
+  <label>Repository <input bind:value={name} autocapitalize="off" autocomplete="off" data-testid="git-name" /></label>
+  <label>Fine-grained token <input bind:value={token} type="password" autocomplete="off" data-testid="git-token" /></label>
   <button onclick={useGitHub} disabled={busy || !owner || !name || !token}>Connect</button>
-  <p class="hint">The token is stored only on this device (spec §10.3).</p>
+  <p class="hint">A fine-grained token with Contents read and write on the one repository. Stored only on this device.</p>
+</section>
+
+<section>
+  <h3>AI providers</h3>
+  <label>Anthropic API key <input bind:value={anthropic} type="password" autocomplete="off" data-testid="key-anthropic" /></label>
+  <label>OpenRouter API key <input bind:value={openrouter} type="password" autocomplete="off" data-testid="key-openrouter" /></label>
+  <button onclick={saveKeys} disabled={busy} data-testid="save-keys">Save keys</button>
+  {#if savedKeys}<span class="hint">Saved on this device.</span>{/if}
+  <p class="hint">Used by the Reason screen (Phase 2). Keys never leave this device except to the provider you chose.</p>
+</section>
+
+<section>
+  <h3>Reasoning</h3>
+  <label>
+    Context budget: {settings.prefs.budgetPercent}% of the model's window
+    <input type="range" min="10" max="90" step="5" value={settings.prefs.budgetPercent} oninput={(e) => savePrefs({ budgetPercent: Number((e.currentTarget as HTMLInputElement).value) })} data-testid="budget" />
+  </label>
+  <label>
+    Set description goes in
+    <select value={settings.prefs.setDescriptionPlacement} onchange={(e) => savePrefs({ setDescriptionPlacement: (e.currentTarget as HTMLSelectElement).value as 'context' | 'system' })} data-testid="placement">
+      <option value="context">the conversation, as context</option>
+      <option value="system">the system prompt, as instruction</option>
+    </select>
+  </label>
+</section>
+
+<section>
+  <h3>Appearance</h3>
+  <label>
+    Theme
+    <select value={settings.prefs.theme} onchange={(e) => savePrefs({ theme: (e.currentTarget as HTMLSelectElement).value as 'system' | 'light' | 'dark' })} data-testid="theme">
+      <option value="system">Follow the system</option>
+      <option value="light">Light</option>
+      <option value="dark">Dark</option>
+    </select>
+  </label>
+</section>
+
+<section>
+  <h3>Who can see what</h3>
+  <p>
+    Your brain is a private repository on GitHub; GitHub holds the files and can technically read them.
+    When you reason, the AI provider you picked receives the principle sets you selected and as many of their
+    grounding passages as fit the budget, never attachments and never the whole brain. Nobody else sees anything:
+    this app has no server. Client-side encryption of passage text arrives in a later release.
+  </p>
+</section>
+
+<section class="about">
+  <p class="hint">Gnomon {pkg.version}</p>
 </section>
 
 {#if error}<p class="error" role="alert">{error}</p>{/if}
 
 <style>
-  section { margin-bottom: 1.5rem; }
+  section { margin-bottom: 1.75rem; }
   label { display: block; margin: 0.5rem 0; }
-  input { width: 100%; max-width: 24rem; padding: 0.4rem; font-size: 1rem; }
+  input:not([type='range']), select { width: 100%; max-width: 24rem; padding: 0.4rem; font-size: 1rem; display: block; margin-top: 0.25rem; }
+  input[type='range'] { width: 100%; max-width: 24rem; display: block; }
   .hint { opacity: 0.7; font-size: 0.9rem; }
   .error { color: #b91c1c; }
+  .about { border-top: 1px solid rgba(127, 127, 127, 0.3); padding-top: 0.75rem; }
 </style>
