@@ -98,13 +98,29 @@ browser.
   schema §7.6; the capture's `updated` is left alone since only `status`
   and `filed_as` may change; a `tag` proposal without a target targets
   the new source). Ratify and reject are spec §9, Phase 2.*
-- [ ] **10. Encrypted body format** (S) — spec §6.4 pure functions with a
+- [x] **10. Encrypted body format** (S) — spec §6.4 pure functions with a
   stub keyring. Done when encrypt/decrypt round-trips, AAD path binding
   fails on the wrong path, and unmarked bodies pass through as plaintext.
+  *Done 2026-09-06. `core/crypto`: `encryptBody`, `decryptBody`,
+  `decryptIfEncrypted`, `isEncryptedBody`, `isEncryptablePath`,
+  `importBodyKey` (non-extractable, zeroes the input), dependency-free
+  base64, and the `EncryptionConfig` type for `.gnomon/encryption.json`.
+  Payload is one base64 line; decoding accepts wrapped input. The stub
+  keyring is 32 fixed bytes through `importBodyKey`.*
+- [ ] **10b. `EncryptingDriver`** (S) — spec §6.4 wrapper, spec §19. Done
+  when the block 11 contract suite passes through
+  `EncryptingDriver(MemoryDriver, stubKeyring)`, reads return plaintext
+  with a per-file `encrypted` flag, writes to encryptable paths store
+  ciphertext, a write whose plaintext equals the stored plaintext is
+  dropped (random nonces would otherwise churn the blob), and non-encryptable
+  paths pass through untouched. Built after block 11 since it wraps it.
 - [ ] **11. `MemoryDriver` + driver contract suite** (M) — spec §6.3, §17.
   Done when the suite passes: `expectedHead` rejection, atomic multi-file
   commit with a binary write, `readMany` over 100+ paths, revert conflict
   detection, and reject-of-an-earlier-filing-after-a-later-one succeeds.
+  `readMany` results gain an optional per-file `encrypted` flag that
+  `buildSnapshot` passes into each `BrainFile` (mixed brains during
+  enablement). Then block 10b.
 - [ ] **12. Working-tree driver + CLI `validate` / `index` / `status`** (M)
   — spec §13. Done when the CLI runs on `template/` and geo-brain-2 and
   agrees with the Python checker, and CI's template check uses the CLI

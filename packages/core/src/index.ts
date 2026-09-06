@@ -7,3 +7,4 @@ export * from './index/index';
 export * from './sets/index';
 export * from './proposals/index';
 export * from './filing/index';
+export * from './crypto/index';
