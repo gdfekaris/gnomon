@@ -11,7 +11,7 @@ alignment phase.
 |---|---|---|
 | `gnomon-proposal.md` | what and why: users, stories, architecture, delivery plan | **v0.3, rewritten** |
 | `gnomon-schema.md` | the on-disk brain format; the contract every tool shares | **v0.2, rewritten** |
-| `second-brain-technical-spec.md` | how the app, shared library, and CLI are built | draft |
+| `gnomon-technical-spec.md` | how the app, shared library, and CLI are built | **v0.2, rewritten** |
 | `alignment-review.md` | contradictions and open questions across the three, with Decision lines | **decided** |
 | `template/` | the brain scaffolding carried over from geo-brain-2; predates the schema and will be rewritten to match it | stale |
 
