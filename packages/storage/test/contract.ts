@@ -14,7 +14,12 @@ const enc = new TextEncoder();
 const NOW = '2026-09-06T12:00:00Z';
 const SHA40 = /^[0-9a-f]{40}$/;
 
-export function driverContract(name: string, factory: DriverFactory): void {
+export interface ContractOptions {
+  /** the driver stores ciphertext, so compare patches show stored bytes rather than plaintext */
+  patchesAreStoredBytes?: boolean;
+}
+
+export function driverContract(name: string, factory: DriverFactory, options: ContractOptions = {}): void {
   describe(`${name} (driver contract, spec §6.1)`, () => {
     const seed = readBrainBytes();
     const fresh = () => factory(new Map(seed));
@@ -142,8 +147,10 @@ export function driverContract(name: string, factory: DriverFactory): void {
       const changes = await d.compare(h0, c1.sha);
       expect(changes.map((c) => [c.path, c.status])).toEqual([['bin.dat', 'added'], ['inbox/.gitkeep', 'removed'], ['new.md', 'added'], [notes, 'modified']]);
       const modified = changes.find((c) => c.path === notes)!;
-      expect(modified.patch).toContain('+Added line.');
-      expect(modified.patch!.split('\n').filter((l) => l.startsWith('-'))).toEqual([]);
+      if (!options.patchesAreStoredBytes) {
+        expect(modified.patch).toContain('+Added line.');
+        expect(modified.patch!.split('\n').filter((l) => l.startsWith('-'))).toEqual([]);
+      }
       expect(changes.find((c) => c.path === 'new.md')!.patch).toContain('+fresh');
       expect(changes.find((c) => c.path === 'bin.dat')!.patch).toBeUndefined();
       expect(await d.compare(c1.sha, c1.sha)).toEqual([]);

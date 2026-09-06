@@ -107,13 +107,21 @@ browser.
   base64, and the `EncryptionConfig` type for `.gnomon/encryption.json`.
   Payload is one base64 line; decoding accepts wrapped input. The stub
   keyring is 32 fixed bytes through `importBodyKey`.*
-- [ ] **10b. `EncryptingDriver`** (S) — spec §6.4 wrapper, spec §19. Done
+- [x] **10b. `EncryptingDriver`** (S) — spec §6.4 wrapper, spec §19. Done
   when the block 11 contract suite passes through
   `EncryptingDriver(MemoryDriver, stubKeyring)`, reads return plaintext
   with a per-file `encrypted` flag, writes to encryptable paths store
-  ciphertext, a write whose plaintext equals the stored plaintext is
-  dropped (random nonces would otherwise churn the blob), and non-encryptable
-  paths pass through untouched. Built after block 11 since it wraps it.
+  ciphertext, unchanged plaintext keeps its ciphertext, and
+  non-encryptable paths pass through untouched. *Done 2026-09-06.
+  `storage/encrypting.ts` and `storage/keyring.ts` (`Keyring` interface,
+  `StaticKeyring` in-memory holder, also the stub). The key is fetched
+  lazily, so a locked keyring still reads a plaintext or mixed brain.
+  Ciphertext reuse is per body: a rewrite whose plaintext body equals the
+  stored one keeps the stored ciphertext even when frontmatter changes,
+  so a filing's capture diff is its two frontmatter lines. `compare`
+  patches describe stored bytes (a body change shows as a ciphertext
+  line); recomputing plaintext patches needs blob reads by SHA at both
+  commits, a Phase 4 decision for the review view on encrypted brains.*
 - [x] **11. `MemoryDriver` + driver contract suite** (M) — spec §6.3, §17.
   Done when the suite passes: `expectedHead` rejection, atomic multi-file
   commit with a binary write, `readMany` over 100+ paths, revert conflict
