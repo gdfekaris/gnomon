@@ -4,7 +4,7 @@ title: The work of a human being
 author: Marcus Aurelius
 work: Meditations
 year: 180
-locator: 5.1
+locator: "5.1"
 inbox_ref: 20260905-143012-x7q
 tags:
   - stoicism

@@ -20,10 +20,13 @@ browser.
   across two sets, and proposals in each status. Done when
   `npm run validate:fixture` reports zero refusals, zero warnings, indexes
   up to date. *Done 2026-09-06; CI validates it alongside the template.*
-- [ ] **2. `parseFile` / `serializeFile`** (M) — `packages/core/src/schema`,
+- [x] **2. `parseFile` / `serializeFile`** (M) — `packages/core/src/schema`,
   spec §5. Done when every frontmatter-bearing file in the three golden
   brains round-trips byte-identical, and bad YAML or missing frontmatter
-  throws a typed `ValidationError`.
+  throws a typed `ValidationError`. *Done 2026-09-06. Template and fixture
+  round-trip byte for byte; geo-brain-2 round-trips semantically and
+  idempotently, differing only in three double-quoted titles that the
+  canonical form writes plain.*
 - [ ] **3. Snapshot builder** (S) — build `BrainSnapshot` from a
   path→text map plus tree entries. Done when `sets` and `principlesOf`
   are sorted by `order` and `byType` works for every type.
@@ -104,6 +107,11 @@ browser.
   full datetimes, double-quoted titles containing quotes, principles that
   omit `related` and `tags` entirely while the template writes `[]`.
   Round-trip fidelity means preserving what the file has.
+- Canonical form quotes any string that YAML would read as something else
+  (`locator: "4.3"`, `title: "true"`); the fixture had `locator: 4.3` and
+  the serializer caught it. Per-file schema §9 rules live in `parseFile`
+  under stable rule ids (`field.required`, `path.set-mismatch`, ...);
+  cross-file rules are block 4.
 - Block 7 must match the Python reference byte for byte. The reference
   was corrected 2026-09-06 to put a blank line between one author's source
   list and the next `### Author` heading in `maps/_index.md`.

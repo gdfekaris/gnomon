@@ -4,7 +4,7 @@ title: Retire into thyself
 author: Marcus Aurelius
 work: Meditations
 year: 180
-locator: 4.3
+locator: "4.3"
 inbox_ref: 20260901-081500-k3m
 tags:
   - stoicism
