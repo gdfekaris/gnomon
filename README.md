@@ -9,7 +9,7 @@ alignment phase.
 
 | file | role | status |
 |---|---|---|
-| `second-brain-proposal-v0.2.md` | what and why: users, stories, architecture, delivery plan | draft |
+| `gnomon-proposal.md` | what and why: users, stories, architecture, delivery plan | **v0.3, rewritten** |
 | `gnomon-schema.md` | the on-disk brain format; the contract every tool shares | **v0.2, rewritten** |
 | `second-brain-technical-spec.md` | how the app, shared library, and CLI are built | draft |
 | `alignment-review.md` | contradictions and open questions across the three, with Decision lines | **decided** |
