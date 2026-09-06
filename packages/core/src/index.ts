@@ -3,3 +3,4 @@
 // in gnomon-cli, and in tests.
 export * from './schema/index';
 export * from './links/index';
+export * from './index/index';

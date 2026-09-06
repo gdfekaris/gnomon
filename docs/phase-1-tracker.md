@@ -63,10 +63,16 @@ browser.
   reference generator's output. `backlinks` ignores index files and adds
   proposal `target_set` and `grounds` to the spec's list. `relativePath`
   and `resolveRelative` are exported for block 7.*
-- [ ] **7. `generateIndexes`** (M) — spec §7.2. Done when output is
+- [x] **7. `generateIndexes`** (M) — spec §7.2. Done when output is
   byte-identical to both `_index.md` files in `template/` and geo-brain-2,
   and to the Python checker's output on the fixture; regenerating an
-  unchanged brain yields no diff.
+  unchanged brain yields no diff. *Done 2026-09-06. Byte-identical on all
+  three golden brains, and a test runs `tools/gnomon-check.py` on four
+  mutated fixture variants and compares (CI installs PyYAML before
+  `npm test` for this). `indexWrites(snapshot)` returns only the index
+  files whose text differs, for the commit that carries them. Sorting is
+  by codepoint via `cmpCodepoint`. Digit-only tags must be quoted
+  (`"2026"`) or YAML reads them as integers.*
 - [ ] **8. Sets and principles** (M) — spec §7.3, schema §7.1–7.4, §7.9.
   Done when create/rename/reorder/delete produce `CommitBatch` values with
   correct renumbering, `reorderPrinciples` rewrites only moved files, and

@@ -18,10 +18,11 @@ jobs:
       - run: npm install -g npm@latest
       - run: npm ci
       - run: npm run typecheck
+      # The index generator's tests cross-check against tools/gnomon-check.py.
+      - run: python3 -m pip install --quiet pyyaml
       - run: npm test
       - name: Validate the brain template and the reference fixture
         run: |
-          python3 -m pip install --quiet pyyaml
           npm run validate:template
           npm run validate:fixture
       - name: Build the app
