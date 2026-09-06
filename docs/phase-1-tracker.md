@@ -104,9 +104,8 @@ browser.
   full datetimes, double-quoted titles containing quotes, principles that
   omit `related` and `tags` entirely while the template writes `[]`.
   Round-trip fidelity means preserving what the file has.
-- Block 7 must match the Python reference byte for byte, including one
-  quirk: in `maps/_index.md` there is no blank line between an author's
-  last source line and the next `### Author` heading. Decide with the
-  maintainer whether to fix the reference before matching it.
+- Block 7 must match the Python reference byte for byte. The reference
+  was corrected 2026-09-06 to put a blank line between one author's source
+  list and the next `### Author` heading in `maps/_index.md`.
 - The tracker is the only place Phase 1 progress is recorded. Update it
   in the same commit as the block it ticks.

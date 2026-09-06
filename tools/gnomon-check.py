@@ -95,7 +95,9 @@ if not srcs: mi.append('(no sources)\n')
 else:
     cur=None
     for a,w,t,p,fm in srcs:
-        if a!=cur: mi.append(f'### {a}\n'); cur=a
+        if a!=cur:
+            if cur is not None: mi.append('')
+            mi.append(f'### {a}\n'); cur=a
         extra=(f", {w}" if w else '')+(f" ({fm['year']})" if fm.get('year') else '')
         att=' — attachment' if fm.get('attachment') else ''
         st='' if fm['curated'] in ('ratified','human') else f" — {fm['curated']}"

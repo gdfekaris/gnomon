@@ -22,10 +22,12 @@ type: index
 ### Joan Didion
 
 - [[sources/didion-why-i-write/raw]] ([raw](../sources/didion-why-i-write/raw.md)) — To find out what I'm thinking, Why I Write (1976) — attachment
+
 ### Marcus Aurelius
 
 - [[sources/aurelius-meditations-4-3/raw]] ([raw](../sources/aurelius-meditations-4-3/raw.md)) — Retire into thyself, Meditations (180)
 - [[sources/aurelius-meditations-5-1/raw]] ([raw](../sources/aurelius-meditations-5-1/raw.md)) — The work of a human being, Meditations (180) — agent-proposed
+
 ### Simone Weil
 
 - [[sources/weil-attention/raw]] ([raw](../sources/weil-attention/raw.md)) — Attention as generosity
