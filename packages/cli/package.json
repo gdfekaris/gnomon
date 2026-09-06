@@ -1,0 +1,27 @@
+{
+  "name": "gnomon-cli",
+  "version": "0.0.0",
+  "description": "Gnomon desktop CLI: validate a brain, regenerate its indexes, show status. Run as `npx gnomon-cli <command>` in a brain.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "gnomon": "./dist/gnomon.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "build": "esbuild src/main.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/gnomon.js"
+  },
+  "dependencies": {
+    "@gnomon/core": "0.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}

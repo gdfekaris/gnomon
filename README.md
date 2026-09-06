@@ -1,24 +1,43 @@
 # gnomon-dev
 
-Design documents and the brain template for **Gnomon**, a portable,
-model-agnostic second brain: a folder of plain markdown in your own git repo,
-plus a bring-your-own-AI companion PWA. No code yet; this repo is in the
-alignment phase.
+Monorepo for **Gnomon**, a portable, model-agnostic second brain: a folder
+of plain markdown in your own git repo, plus a bring-your-own-AI companion
+PWA and a small desktop CLI. Design documents are aligned and the code is
+scaffolded; no feature is implemented yet.
 
-## Documents
+## Layout
 
-| file | role | status |
-|---|---|---|
-| `gnomon-proposal.md` | what and why: users, stories, architecture, delivery plan | **v0.3, rewritten** |
-| `gnomon-schema.md` | the on-disk brain format; the contract every tool shares | **v0.2, rewritten** |
-| `gnomon-technical-spec.md` | how the app, shared library, and CLI are built | **v0.2, rewritten** |
-| `alignment-review.md` | contradictions and open questions across the three, with Decision lines | **decided** |
-| `template/` | the canonical empty brain: AGENTS.md, Set 1, templates, commands, empty indexes | **rewritten to schema v0.2** |
-| `tools/gnomon-check.py` | throwaway Python prototype of `gnomon validate` and `gnomon index` (needs PyYAML); used to verify the template and migrate geo-brain-2. Replaced by `packages/cli` once it exists. | prototype |
+| path | what it is |
+|---|---|
+| `docs/gnomon-proposal.md` | what and why: users, stories, architecture, delivery plan (v0.3) |
+| `docs/gnomon-schema.md` | the on-disk brain format; the contract every tool shares (v0.2) |
+| `docs/gnomon-technical-spec.md` | how the app, shared library, and CLI are built (v0.2) |
+| `docs/alignment-review.md` | the decisions that aligned the three, with rationale |
+| `template/` | the canonical empty brain: AGENTS.md, Set 1, templates, commands, empty indexes |
+| `packages/core` | `@gnomon/core`: schema types, links, index, sets, proposals, filing, assembly, crypto. Framework-free. |
+| `packages/storage` | `@gnomon/storage`: `StorageDriver`, GitHub, Memory, Encrypting drivers |
+| `packages/providers` | `@gnomon/providers`: `ProviderDriver`, Anthropic, OpenRouter |
+| `packages/app` | the Svelte 5 + Vite PWA |
+| `packages/cli` | published as `gnomon-cli`, binary `gnomon` |
+| `tools/gnomon-check.py` | Python prototype of `gnomon validate` and `gnomon index` (needs PyYAML); stands in until `packages/cli` implements them |
+
+## Working on it
+
+```
+npx npm@latest install      # npm 11.1 (bundled with Node 23) crashes on this tree; any npm >= 12 works
+npm run typecheck
+npm test
+VITE_BASE=/gnomon/ npm run build
+npm run validate:template   # python3 + pyyaml
+npm run dev -w packages/app
+```
+
+Node 20 or newer. CI runs the same five steps on every push.
 
 ## Where things stand
 
 1. ~~Fill the Decision lines in `alignment-review.md`.~~ Done 2026-09-05.
 2. ~~Rewrite the three documents and `template/` so they agree.~~ Done 2026-09-05.
 3. ~~Migrate geo-brain-2 by hand into the new format.~~ Done 2026-09-05.
-4. Scaffold the monorepo described in the technical spec §3.
+4. ~~Scaffold the monorepo described in the technical spec §3.~~ Done 2026-09-05.
+5. Phase 1 (technical spec §19): `core` schema parse/serialize and validation, index generation matching `template/`, the GitHub and Memory drivers, `gnomon-cli` validate/index/status, the app's Capture, Browse, and Settings screens.

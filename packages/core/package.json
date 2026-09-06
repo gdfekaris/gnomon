@@ -1,0 +1,19 @@
+{
+  "name": "@gnomon/core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Gnomon shared library: brain schema, links, index generation, sets, proposals, filing, prompt assembly, encrypted body format. Framework-free.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "yaml": "^2.9.0"
+  }
+}

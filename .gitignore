@@ -20,3 +20,6 @@ Thumbs.db
 .*.swp
 .idea/
 .vscode/
+
+# vite-plugin-pwa dev output
+dev-dist/

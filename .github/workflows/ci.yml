@@ -1,0 +1,32 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      # npm 11.1 crashes resolving vitest's peer set (null edgesOut); use current npm.
+      - run: npm install -g npm@latest
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - name: Validate the brain template
+        run: |
+          python3 -m pip install --quiet pyyaml
+          npm run validate:template
+      - name: Build the app
+        run: npm run build
+        env:
+          VITE_BASE: /gnomon/
+
+  # TODO(spec §18): deploy job with actions/deploy-pages once GitHub Pages is
+  # enabled for this repository; publish gnomon-cli to npm on release tags.

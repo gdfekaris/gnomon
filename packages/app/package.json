@@ -1,0 +1,29 @@
+{
+  "name": "@gnomon/app",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Gnomon companion PWA (Svelte 5 + Vite).",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "svelte-check --tsconfig ./tsconfig.json"
+  },
+  "dependencies": {
+    "@gnomon/core": "0.0.0",
+    "@gnomon/providers": "0.0.0",
+    "@gnomon/storage": "0.0.0",
+    "idb-keyval": "^6.3.0",
+    "markdown-it": "^15.0.1",
+    "svelte": "^5.57.0",
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^7.3.0",
+    "@types/markdown-it": "^14.2.0",
+    "svelte-check": "^4.7.6",
+    "vite": "^8.2.2",
+    "vite-plugin-pwa": "^1.3.0"
+  }
+}
