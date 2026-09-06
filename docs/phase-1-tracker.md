@@ -27,9 +27,13 @@ browser.
   round-trip byte for byte; geo-brain-2 round-trips semantically and
   idempotently, differing only in three double-quoted titles that the
   canonical form writes plain.*
-- [ ] **3. Snapshot builder** (S) — build `BrainSnapshot` from a
+- [x] **3. Snapshot builder** (S) — build `BrainSnapshot` from a
   path→text map plus tree entries. Done when `sets` and `principlesOf`
-  are sorted by `order` and `byType` works for every type.
+  are sorted by `order` and `byType` works for every type. *Done
+  2026-09-06. `buildSnapshot` in `core/schema/snapshot.ts`; files that
+  fail to parse are reported in `snapshot.issues` (an additive extension
+  to spec §5) and left out, so a brain with one broken file still loads.
+  `TreeEntry` now lives in core and storage re-exports it.*
 - [ ] **4. `validateSnapshot`** (M) — spec §7.4, schema §9. Done when it
   reproduces every refusal and warning of `tools/gnomon-check.py` on the
   golden brains and on hand-broken variants, one test per rule, each

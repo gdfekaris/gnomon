@@ -4,7 +4,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { isFrontmatterPath } from '../src/index';
+import { type BrainSnapshot, type TreeEntry, buildSnapshot, isFrontmatterPath } from '../src/index';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 export const TEMPLATE = join(here, '..', '..', '..', 'template');
@@ -29,4 +29,12 @@ export function readBrain(root: string): Map<string, string> {
 
 export function frontmatterFiles(root: string): Map<string, string> {
   return new Map([...readBrain(root)].filter(([p]) => isFrontmatterPath(p)));
+}
+
+/** A snapshot of an on-disk brain, as the working-tree driver will produce it. */
+export function snapshotFromDisk(root: string, head = 'HEAD'): BrainSnapshot {
+  const all = readBrain(root);
+  const tree: TreeEntry[] = [...all].map(([path, text]) => ({ path, sha: '', size: Buffer.byteLength(text) }));
+  const texts = new Map([...all].filter(([p]) => isFrontmatterPath(p)).map(([p, text]) => [p, { text, sha: '' }]));
+  return buildSnapshot({ head, tree, texts });
 }

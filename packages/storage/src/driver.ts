@@ -1,6 +1,7 @@
 // StorageDriver interface, verbatim from the technical spec §6.1.
 
-export interface TreeEntry { path: string; sha: string; size: number; }
+import type { TreeEntry } from '@gnomon/core';
+export type { TreeEntry };
 export interface CommitInfo { sha: string; message: string; date: string; parents: string[]; }
 export interface FileChange { path: string; status: 'added' | 'modified' | 'removed'; patch?: string; }
 

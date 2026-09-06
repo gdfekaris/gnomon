@@ -1,5 +1,7 @@
 // Core types, verbatim from the technical spec §5 and the schema §4.
 
+import type { Issue } from './issues';
+
 export type CurationState = 'human' | 'agent-proposed' | 'ratified';
 export type FileType = 'source' | 'notes' | 'principle' | 'principle-set' | 'inbox' | 'proposal' | 'index';
 
@@ -69,13 +71,24 @@ export interface BrainFile<F extends Frontmatter = Frontmatter> {
   encrypted: boolean;
 }
 
+/** One blob in the repository tree at a commit (spec §6.1). Directories are not listed. */
+export interface TreeEntry { path: string; sha: string; size: number; }
+
 /** An attached file; bytes are fetched on demand (spec §5, §6.1). */
 export interface Attachment { path: string; sha: string; size: number; }
 
 export interface BrainSnapshot {
   head: string;
+  /** every frontmatter-bearing .md file that parsed; see `issues` for the rest */
   files: Map<string, BrainFile>;
+  /** every non-markdown, non-dot file in the tree; validation decides whether it belongs */
   attachments: Map<string, Attachment>;
+  /**
+   * Refusals from files that failed to parse and are therefore absent from
+   * `files`. An extension to spec §5 so a snapshot can say why it is
+   * incomplete; cross-file rules are validateSnapshot's job.
+   */
+  issues: Issue[];
   /** sorted by order */
   sets: BrainFile<SetFm>[];
   /** sorted by order */

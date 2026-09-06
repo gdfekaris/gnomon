@@ -5,3 +5,4 @@ export * from './paths';
 export * from './fields';
 export * from './parse';
 export * from './serialize';
+export * from './snapshot';
