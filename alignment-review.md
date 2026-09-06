@@ -2,7 +2,7 @@
 
 **Contradictions and open questions across the proposal, the schema, the technical spec, and the template**
 
-Version 0.1 — Pre-code review
+Version 0.2 — All decisions recorded 2026-09-05
 September 2026
 
 ---
@@ -11,9 +11,9 @@ September 2026
 
 Every item below has an ID, a question, and a menu of options with one marked
 ← recommended. **Decide by writing a letter (or free text) on the Decision
-line.** Once every Decision line is filled, the three design documents and the
-template get rewritten in one pass so that they agree, and this file becomes
-the changelog for that pass.
+line.** Every Decision line is now filled (2026-09-05). The three design
+documents and the template get rewritten in one pass so that they agree, and
+this file is the changelog for that pass.
 
 Items are grouped:
 
@@ -88,7 +88,7 @@ unspecified (S §8 step 1, T §8.3). Does a set have an order?
   Rejected on the schema's own grounds: it duplicates set membership in two
   places.
 
-**Decision:**
+**Decision:** a
 
 ### 2.2 · principle statuses (In force / Provisional / Scoped / Retired)
 
@@ -107,7 +107,7 @@ analog. Keep any status?
   one assembly filter.
 - **c** — Full four-state model from the template, as a `status` field.
 
-**Decision:**
+**Decision:** a
 
 ### 2.3 · one passage per capture, `original.md`, and §-numbered passages
 
@@ -134,8 +134,15 @@ The proposal lists "multiple passages per capture" as open (P §9.3).
   curator-owned captures. Requires: reinstating the selection step in Task C,
   a model-in-the-loop passage picker in the PWA (T §8.5 must change), an
   `original.md` entry in the schema, and `§N` in the link grammar.
+- **c** — Option a, plus an optional source file. A capture may carry one
+  attached file (PDF, HTML, image) that is stored beside `raw.md` in the
+  source folder and tracked in git. Consequences for the rewrite: an
+  `attachment` field on inbox items and `raw.md`; a file input on the capture
+  screen; the storage driver already writes base64 blobs; the template
+  `.gitignore` stops blanket-ignoring PDFs and HTML; encryption (Phase 4)
+  must state whether attachments are encrypted.
 
-**Decision:**
+**Decision:** c
 
 ### 2.4 · the `rule change` proposal kind
 
@@ -150,7 +157,7 @@ product artifact versioned with the app, not a per-brain document.
 - **b** — Add `kind: note` as a catch-all for anything the agent wants the
   curator to see that fits no other kind.
 
-**Decision:**
+**Decision:** a
 
 ### 2.5 · who records a proposal decision on desktop
 
@@ -167,7 +174,7 @@ principle by hand; there is nothing for an agent to execute.
   as an explicit carve-out in S §4.7 and AGENTS.md. ← recommended
 - **b** — Desktop users edit `status` by hand; agents never touch it.
 
-**Decision:**
+**Decision:** a
 
 ### 2.6 · `package.json` inside every brain
 
@@ -182,7 +189,7 @@ in your own git repo".
   `package.json`. ← recommended
 - **b** — Keep `package.json` + `bin/` in the template as specified.
 
-**Decision:**
+**Decision:** a
 
 ---
 
@@ -212,7 +219,7 @@ the filing commit did touch it.
   "unfiled" as: `status: unfiled` and no `raw.md` carries a matching
   `inbox_ref`. Reject leaves the item untouched.
 
-**Decision:**
+**Decision:** a
 
 ### 3.2 · a single `_proposals.md` makes every filing after the first un-rejectable
 
@@ -234,7 +241,7 @@ multi-commit filings" is reached on the second inbox item. Also,
   have reject rewrite the rejected filing's entries to `status: declined`.
   Replace `from_commit` with `from_source`.
 
-**Decision:**
+**Decision:** a
 
 ### 3.3 · index frontmatter defeats determinism and minimal commits
 
@@ -251,7 +258,7 @@ always differ, and two app versions never agree.
 - **b** — Keep the fields; compare bodies only when deciding whether to commit;
   accept that different app versions disagree on the header.
 
-**Decision:**
+**Decision:** a
 
 ### 3.4 · the template cannot be a valid brain if Set 1's slug is per-user
 
@@ -268,7 +275,7 @@ every fresh brain collides with nothing.
 - **b** — Keep per-user generation; add a `gnomon init` CLI step for desktop
   clones and document that the raw template is not a brain.
 
-**Decision:**
+**Decision:** a
 
 ### 3.5 · the stated purpose of `principles/_index.md` is contradicted by the fill order
 
@@ -283,7 +290,7 @@ principles (Task A on desktop).
   desktop agents; never part of a prompt". ← recommended
 - **b** — Drop it; `maps/_index.md` is the only index.
 
-**Decision:**
+**Decision:** a
 
 ### 3.6 · the flat-principles migration serves nobody
 
@@ -302,7 +309,7 @@ geo-brain-2 today holds 2 sources, 1 principle, and 1 inbox item.
 - **b** — Keep the repair as specified and accept that it does not finish the
   job for the one brain that needs it.
 
-**Decision:**
+**Decision:** a
 
 ### 3.7 · lazy body loading contradicts validate-on-read and regenerate-on-write
 
@@ -326,7 +333,7 @@ start.
   the brain is encrypted".
 - **c** — Keep the spec as written and lower the T §16 target.
 
-**Decision:**
+**Decision:** a
 
 ### 3.8 · the desktop CLI is named after an existing npm package
 
@@ -343,7 +350,7 @@ deprecated placeholder that npm itself holds "to avoid malicious use", and
 - **b** — Keep a dependency-free bash `bin/status` in the template alongside
   the Node CLI, for users without Node.
 
-**Decision:**
+**Decision:** a
 
 ### 3.9 · Appendix A is a second copy of the schema and has already drifted
 
@@ -357,7 +364,7 @@ normative copies will keep drifting.
   The schema is the only normative copy. ← recommended
 - **b** — Keep both and add a check to the rewrite pass.
 
-**Decision:**
+**Decision:** a
 
 ### 3.10 · minor internal contradictions (decide once, apply everywhere)
 
@@ -389,7 +396,7 @@ Each of these has one sensible reading; the decision is to confirm it.
 - **3.10.8** S §4.6 keeps `captured` as a duplicate of `created` "for
   readability". Reading: drop `captured`; one timestamp.
 
-**Decision:**
+**Decision:** a — apply all eight
 
 ---
 
@@ -410,7 +417,7 @@ Pages base path, and every identifier still says Second Brain: `second-brain/`
   phrase in the summary paragraph. ← recommended
 - **b** — Rename the product name in prose only; keep `sb-` identifiers.
 
-**Decision:**
+**Decision:** a
 
 ---
 
@@ -449,12 +456,14 @@ From P §9.3, with a recommendation each:
 - **6.2** Task D with a new text. Recommend no for v1: Task B with several
   sets selected already labels each set's reading of the text (S §8
   "Multiple sets"). Note the overlap in the proposal and close the question.
+  **Decided: no for v1.**
 - **6.3** Multiple passages per capture. Resolved by 2.3.
 - **6.4** Auto-populate `grounds` from dual links in a principle body.
   Recommend: `gnomon validate` and the app editor warn when the body links to a
   source absent from `grounds` or vice versa, and the editor offers a one-tap
   sync. Frontmatter stays the machine surface (S §1 rule 2); the warning keeps
   the two from drifting without making the body authoritative.
+  **Decided: warn and offer one-tap sync.**
 
 From T §20, unchanged and correctly left open: snapshot persistence (revisit
 with 3.7), the Anthropic context-window table, Argon2id parameters, the
