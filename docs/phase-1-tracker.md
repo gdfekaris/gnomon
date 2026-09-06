@@ -151,10 +151,29 @@ browser.
   CI builds the CLI and runs `validate:template` and `validate:fixture`
   through it; `validate:reference` still runs the Python checker by hand
   and the block 7 cross-check test keeps it honest.*
-- [ ] **13. `GitHubDriver`** (L) — spec §6.2, REST writes + GraphQL reads,
+- [x] **13. `GitHubDriver`** (L) — spec §6.2, REST writes + GraphQL reads,
   no Octokit. Done when it passes the block 11 contract suite against a
-  scratch repo. **Needs a disposable token and scratch repo from the
-  maintainer.**
+  scratch repo. *Done against a fake 2026-09-06: `storage/github.ts`
+  passes the contract suite through `storage/test/fake-github.ts`, an
+  in-memory model of the git object store and every endpoint the driver
+  uses, served as a `fetch`. Also tested: header set, one tree call plus
+  at most six GraphQL batches for a 500-file brain, the five-step commit
+  sequence, a head that moves between the ref check and the ref update
+  (the `force: false` guard), binary-blob fallback, error mapping (401
+  AuthError, 403 with `x-ratelimit-remaining: 0` or 429 RateLimitError,
+  thrown fetch NetworkError, 404 NotFoundError), and `createRepo`
+  retargeting the driver.*
+- [ ] **13b. `GitHubDriver` against real GitHub** (S) — needs a disposable
+  fine-grained token (Contents read/write) and a scratch private repo
+  from the maintainer. Done when the contract suite passes against it on
+  the nightly schedule (spec §18). Things the fake assumes that the real
+  run must confirm: a `POST /git/trees` entry with `sha: null` for a path
+  absent from `base_tree` is a 422 (the driver relies on it for atomic
+  failure); the ref PATCH with `force: false` returns 422 on a non-fast-
+  forward; `/compare` file statuses are `added`/`modified`/`removed` with
+  `patch` for text; blob `size` is present in recursive tree listings;
+  `auto_init` makes the ref available immediately or within the driver's
+  ten retries.
 - [ ] **14. App shell: stores, BrainService, snapshot load** (M) — spec
   §10.1–10.2. Done when the app loads geo-brain-2 through the GitHub
   driver and shows its file list with `stale` handling on `HeadMovedError`.
