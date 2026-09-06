@@ -1,0 +1,6 @@
+# Editor and OS cruft only. Attachments are part of the brain and are tracked.
+.obsidian/
+.DS_Store
+Thumbs.db
+*~
+.*.swp

@@ -11,15 +11,15 @@ Started 2026-09-06. Resume a session by finding the first unticked block.
 ## Blocks
 
 Blocks 1–12 are the core library and CLI; all testable offline against the
-three golden brains (`template/`, `packages/core/fixtures/`, and
+three golden brains (`template/`, `packages/core/fixtures/brain/`, and
 `~/Desktop/main/geo-brain-2`). Blocks 13 onward touch the network and the
 browser.
 
-- [ ] **1. Reference brain fixture** (S) — `packages/core/fixtures/`: the
-  template plus a few sources (one with an attachment), principles across
-  two sets, and proposals in each status. Done when
-  `python3 tools/gnomon-check.py packages/core/fixtures` reports zero
-  refusals, zero warnings, indexes up to date.
+- [x] **1. Reference brain fixture** (S) — `packages/core/fixtures/brain/`:
+  the template plus a few sources (one with an attachment), principles
+  across two sets, and proposals in each status. Done when
+  `npm run validate:fixture` reports zero refusals, zero warnings, indexes
+  up to date. *Done 2026-09-06; CI validates it alongside the template.*
 - [ ] **2. `parseFile` / `serializeFile`** (M) — `packages/core/src/schema`,
   spec §5. Done when every frontmatter-bearing file in the three golden
   brains round-trips byte-identical, and bad YAML or missing frontmatter
@@ -104,5 +104,9 @@ browser.
   full datetimes, double-quoted titles containing quotes, principles that
   omit `related` and `tags` entirely while the template writes `[]`.
   Round-trip fidelity means preserving what the file has.
+- Block 7 must match the Python reference byte for byte, including one
+  quirk: in `maps/_index.md` there is no blank line between an author's
+  last source line and the next `### Author` heading. Decide with the
+  maintainer whether to fix the reference before matching it.
 - The tracker is the only place Phase 1 progress is recorded. Update it
   in the same commit as the block it ticks.

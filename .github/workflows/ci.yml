@@ -19,10 +19,11 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
-      - name: Validate the brain template
+      - name: Validate the brain template and the reference fixture
         run: |
           python3 -m pip install --quiet pyyaml
           npm run validate:template
+          npm run validate:fixture
       - name: Build the app
         run: npm run build
         env:
