@@ -1,0 +1,22 @@
+# Node (monorepo per technical spec §3, once code exists)
+node_modules/
+dist/
+build/
+.vite/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+
+# Secrets and local config
+.env
+.env.*
+!.env.example
+
+# Editor and OS cruft
+.DS_Store
+Thumbs.db
+*~
+.*.swp
+.idea/
+.vscode/
