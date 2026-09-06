@@ -1,7 +1,7 @@
 // StorageDriver interface, verbatim from the technical spec §6.1.
 
-import type { CommitBatch, FileWrite, TreeEntry } from '@gnomon/core';
-export type { CommitBatch, FileWrite, TreeEntry };
+import type { CommitBatch, FileWrite, ReadResult, TreeEntry } from '@gnomon/core';
+export type { CommitBatch, FileWrite, ReadResult, TreeEntry };
 export interface CommitInfo { sha: string; message: string; date: string; parents: string[]; }
 export interface FileChange { path: string; status: 'added' | 'modified' | 'removed'; patch?: string; }
 
@@ -11,7 +11,7 @@ export interface StorageDriver {
   /** full recursive tree at head */
   list(): Promise<TreeEntry[]>;
   /** batched text reads (GraphQL on GitHub) */
-  readMany(paths: string[]): Promise<Map<string, { text: string; sha: string }>>;
+  readMany(paths: string[]): Promise<Map<string, ReadResult>>;
   /** one attachment */
   readBytes(path: string): Promise<{ bytes: Uint8Array; sha: string }>;
   /** atomic multi-file commit */

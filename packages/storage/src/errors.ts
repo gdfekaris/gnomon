@@ -25,6 +25,12 @@ export class AttachmentTooLargeError extends StorageError {
   }
 }
 export class LockedError extends StorageError { override name = 'LockedError'; }
+export class NotFoundError extends StorageError {
+  override name = 'NotFoundError';
+  constructor(public readonly path: string) {
+    super(`not found: ${path}`);
+  }
+}
 
 /** Attachments are capped before upload (spec §6.2). One constant, revisited with real usage (spec §20.7). */
 export const ATTACHMENT_LIMIT_BYTES = 20 * 1024 * 1024;

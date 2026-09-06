@@ -71,6 +71,9 @@ export interface BrainFile<F extends Frontmatter = Frontmatter> {
   encrypted: boolean;
 }
 
+/** One text read, as `StorageDriver.readMany` returns it (spec §6.1). `encrypted` is set by the encrypting driver. */
+export interface ReadResult { text: string; sha: string; encrypted?: boolean; }
+
 /** One blob in the repository tree at a commit (spec §6.1). Directories are not listed. */
 export interface TreeEntry { path: string; sha: string; size: number; }
 

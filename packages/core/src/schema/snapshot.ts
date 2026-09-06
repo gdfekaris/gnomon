@@ -3,7 +3,7 @@
 // a BrainSnapshot. Files that fail to parse are reported in `issues` and
 // left out, so a brain with one broken file still loads.
 
-import type { Attachment, BrainFile, BrainSnapshot, FileType, Frontmatter, PrincipleFm, SetFm, TreeEntry } from './types';
+import type { Attachment, BrainFile, BrainSnapshot, FileType, Frontmatter, PrincipleFm, ReadResult, SetFm, TreeEntry } from './types';
 import { type Issue, refusal } from './issues';
 import { isExemptPath, isFrontmatterPath, pathInfo } from './paths';
 import { tryParseFile } from './parse';
@@ -14,8 +14,8 @@ export interface SnapshotInput {
   /** every blob at `head` */
   tree: TreeEntry[];
   /** text of every frontmatter-bearing path in `tree`, as `readMany` returns it */
-  texts: Map<string, { text: string; sha: string }>;
-  /** bodies were decrypted by an encrypting driver */
+  texts: Map<string, ReadResult>;
+  /** default for files whose read result carries no `encrypted` flag */
   encrypted?: boolean;
 }
 
@@ -34,7 +34,8 @@ export function buildSnapshot(input: SnapshotInput): BrainSnapshot {
         issues.push(refusal(entry.path, 'file.unreadable', 'listed in the tree but its text was not read'));
         continue;
       }
-      const opts = input.encrypted === undefined ? { sha: got.sha } : { sha: got.sha, encrypted: input.encrypted };
+      const encrypted = got.encrypted ?? input.encrypted;
+      const opts = encrypted === undefined ? { sha: got.sha } : { sha: got.sha, encrypted };
       const result = tryParseFile(entry.path, got.text, opts);
       if (result.ok) files.set(entry.path, result.file);
       else issues.push(...result.issues);

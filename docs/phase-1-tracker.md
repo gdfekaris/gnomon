@@ -114,13 +114,19 @@ browser.
   ciphertext, a write whose plaintext equals the stored plaintext is
   dropped (random nonces would otherwise churn the blob), and non-encryptable
   paths pass through untouched. Built after block 11 since it wraps it.
-- [ ] **11. `MemoryDriver` + driver contract suite** (M) — spec §6.3, §17.
+- [x] **11. `MemoryDriver` + driver contract suite** (M) — spec §6.3, §17.
   Done when the suite passes: `expectedHead` rejection, atomic multi-file
   commit with a binary write, `readMany` over 100+ paths, revert conflict
   detection, and reject-of-an-earlier-filing-after-a-later-one succeeds.
-  `readMany` results gain an optional per-file `encrypted` flag that
-  `buildSnapshot` passes into each `BrainFile` (mixed brains during
-  enablement). Then block 10b.
+  *Done 2026-09-06. `storage/memory.ts` with git-compatible blob SHAs
+  (`gitBlobSha`) so revert conflicts behave as on GitHub, an injectable
+  clock, `createRepo` in auto_init shape, and `linePatch` for compare
+  output. `storage/snapshot.ts` `loadSnapshot(driver)` is the one
+  list→readMany→buildSnapshot path for the CLI and the app. The contract
+  suite is `storage/test/contract.ts` `driverContract(name, factory)`;
+  blocks 10b and 13 run it. `ReadResult` (core) carries the optional
+  per-file `encrypted` flag into `buildSnapshot`. `NotFoundError` added.
+  Storage tests get their own tsconfig with Node types like core's.*
 - [ ] **12. Working-tree driver + CLI `validate` / `index` / `status`** (M)
   — spec §13. Done when the CLI runs on `template/` and geo-brain-2 and
   agrees with the Python checker, and CI's template check uses the CLI
