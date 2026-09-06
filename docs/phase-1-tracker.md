@@ -86,10 +86,18 @@ browser.
   `Reorder principle sets`, `Reorder principles: Set N`, `Edit principle:`,
   `Delete principle:`. Dangling reports cover `related`, proposal
   `target`/`target_set`, and body links in every file.*
-- [ ] **9. Proposals and filing** (M) — spec §7.5, §7.6. Done when
+- [x] **9. Proposals and filing** (M) — spec §7.5, §7.6. Done when
   `nextProposalId` sequences within a day, `decideProposal` touches only
   `status` and `updated`, and `buildFiling` copies body and attachment
-  byte for byte and changes exactly two capture fields.
+  byte for byte and changes exactly two capture fields. *Done 2026-09-06.
+  `core/proposals`: `nextProposalId` (accepts ids drawn earlier in the
+  same batch), `buildProposal` (validates kind-conditional fields),
+  `decideProposal` (carries the `maps/_index.md` change since the open
+  list moves). `core/filing`: `proposeSourceSlug` (surname + title
+  fragment), `uniqueSourceSlug`, `buildFiling` (no index writes per
+  schema §7.6; the capture's `updated` is left alone since only `status`
+  and `filed_as` may change; a `tag` proposal without a target targets
+  the new source). Ratify and reject are spec §9, Phase 2.*
 - [ ] **10. Encrypted body format** (S) — spec §6.4 pure functions with a
   stub keyring. Done when encrypt/decrypt round-trips, AAD path binding
   fails on the wrong path, and unmarked bodies pass through as plaintext.
