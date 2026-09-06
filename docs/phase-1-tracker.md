@@ -34,10 +34,16 @@ browser.
   fail to parse are reported in `snapshot.issues` (an additive extension
   to spec §5) and left out, so a brain with one broken file still loads.
   `TreeEntry` now lives in core and storage re-exports it.*
-- [ ] **4. `validateSnapshot`** (M) — spec §7.4, schema §9. Done when it
+- [x] **4. `validateSnapshot`** (M) — spec §7.4, schema §9. Done when it
   reproduces every refusal and warning of `tools/gnomon-check.py` on the
   golden brains and on hand-broken variants, one test per rule, each
-  tagged `refusal` or `warning`.
+  tagged `refusal` or `warning`. *Done 2026-09-06. Also `validateLayout`
+  (schema §2 scaffold, needs the raw tree because empty folders hold only
+  `.gitkeep`) and `hasRefusals`. Goes beyond the Python checker with:
+  undeclared attachments, attachment naming, notes without raw, principle
+  folders without `_set.md`, proposal `target`/`target_set`/`from_source`
+  dangling, stale `inbox_ref`, unknown fields, stray files (warning). The
+  links module is seeded with `linkedSourceSlugs` for grounds drift.*
 - [ ] **5. `validateWrite`** (S) — spec §7.4. Done when it refuses a
   `raw.md` body change in `human` or `ratified` state and any attachment
   change, and allows everything else.

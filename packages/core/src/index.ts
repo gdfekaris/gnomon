@@ -2,3 +2,4 @@
 // Zero DOM or Node dependencies: this code runs identically in the browser,
 // in gnomon-cli, and in tests.
 export * from './schema/index';
+export * from './links/index';

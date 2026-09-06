@@ -38,3 +38,19 @@ export function snapshotFromDisk(root: string, head = 'HEAD'): BrainSnapshot {
   const texts = new Map([...all].filter(([p]) => isFrontmatterPath(p)).map(([p, text]) => [p, { text, sha: '' }]));
   return buildSnapshot({ head, tree, texts });
 }
+
+/** Tree entries for a path→text map, as a driver's list() would return them. */
+export function treeOf(all: Map<string, string>): TreeEntry[] {
+  return [...all].map(([path, text]) => ({ path, sha: '', size: Buffer.byteLength(text) }));
+}
+
+/** Snapshot of a brain given as a path→text map, with edits applied (null deletes). */
+export function snapshotOf(all: Map<string, string>, edits: Record<string, string | null> = {}): BrainSnapshot {
+  const map = new Map(all);
+  for (const [p, v] of Object.entries(edits)) {
+    if (v === null) map.delete(p);
+    else map.set(p, v);
+  }
+  const texts = new Map([...map].filter(([p]) => isFrontmatterPath(p)).map(([p, text]) => [p, { text, sha: '' }]));
+  return buildSnapshot({ head: 'HEAD', tree: treeOf(map), texts });
+}
