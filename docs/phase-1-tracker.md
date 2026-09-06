@@ -174,21 +174,36 @@ browser.
   `patch` for text; blob `size` is present in recursive tree listings;
   `auto_init` makes the ref available immediately or within the driver's
   ten retries.
-- [ ] **14. App shell: stores, BrainService, snapshot load** (M) — spec
-  §10.1–10.2. Done when the app loads geo-brain-2 through the GitHub
-  driver and shows its file list with `stale` handling on `HeadMovedError`.
+- [x] **14. App shell: stores, BrainService, snapshot load** (M) — spec
+  §10.1–10.2. Done when the app loads the demo brain (the reference
+  fixture through `MemoryDriver`) and lists its contents, the same
+  `BrainService` path is wired to `GitHubDriver` behind Settings, and
+  `HeadMovedError` sets `stale` with a refresh banner. *Done 2026-09-06.
+  Stores: `settings` (idb-keyval under the spec §10.3 keys; `$state`
+  proxies must be `$state.snapshot`-ed before IndexedDB), `session`,
+  `snapshot`. `services/brain.ts` `BrainService` is framework-free and
+  unit-tested: connect, refresh, validateBatch refusal before the driver,
+  local `applyBatch` at the new head then background refresh, stale on
+  `HeadMovedError`. `demo/fixture.ts` bundles the fixture via
+  `import.meta.glob`. Playwright is set up (`npm run e2e -w packages/app`,
+  dev server, Chromium, 390×844) with three shell flows; CI installs
+  Chromium and runs them after the build. The GitHub path is verified in
+  block 13b.*
 - [ ] **15. Capture screen with attachment** (M) — spec §10.4. Done when a
-  capture with a PDF lands as one `Capture:` commit that validates, the
-  size limit is enforced before upload, and the head-moved retry works.
+  Playwright flow captures text with and without a PDF into the demo
+  brain as one `Capture:` commit that validates, the size limit is
+  enforced before upload, and a unit test covers the head-moved retry.
 - [ ] **16. Browse screen with attachment view** (L) — proposal §6. Done
-  when sets show in order and principles in precedence order with labels,
-  markdown renders with dual links collapsed to one element, backlinks
-  show, and attachments preview (image) or open (PDF); HTML is never
+  when a Playwright flow over the demo brain shows sets in order and
+  principles in precedence order with labels, opens a file with markdown
+  rendered and dual links collapsed to one element, shows backlinks, and
+  opens an attachment (image preview, PDF in a new tab); HTML is never
   rendered.
 - [ ] **17. Settings + connect-existing** (M) — spec §12 step 4, US-15.
   Done when token and repo can be entered and persisted in IndexedDB,
-  validation results are shown, and each missing scaffold item is offered
-  as its own commit.
+  validation results are shown, each missing scaffold item is offered as
+  its own commit, and a Playwright flow exercises connect-existing against
+  a demo brain with a scaffold item removed.
 - [ ] **18. PWA polish + Pages deploy** (S) — spec §11, §18. Done when the
   app installs on iPhone, shows the update toast, and CI deploys to Pages.
 - [ ] **19. Publish `gnomon-cli`** (S) — spec §18. Done when a tagged

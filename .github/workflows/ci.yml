@@ -30,6 +30,10 @@ jobs:
         run: npm run build
         env:
           VITE_BASE: /gnomon/
+      - name: Playwright flows against the demo brain
+        run: |
+          npx playwright install --with-deps chromium
+          npm run e2e -w packages/app
 
   # TODO(spec §18): deploy job with actions/deploy-pages once GitHub Pages is
   # enabled for this repository; publish gnomon-cli to npm on release tags.

@@ -54,9 +54,10 @@ npm run validate:fixture       # the CLI over packages/core/fixtures/brain
 node packages/cli/dist/gnomon.js validate ~/Desktop/main/geo-brain-2   # or index, status
 npm run validate:reference     # the Python reference checker, tools/gnomon-check.py
 npm run dev -w packages/app
+npx playwright install chromium && npm run e2e -w packages/app   # app flows over the demo brain
 ```
 
 Commit as you go and push to `origin main` (private repo
-`gdfekaris/gnomon-dev`). CI runs typecheck, test, template validation, and
-the app build on every push; the Pages deploy and npm publish jobs are
+`gdfekaris/gnomon-dev`). CI runs typecheck, unit tests, CLI validation of the
+template and fixture, the app build, and the Playwright flows on every push; the Pages deploy and npm publish jobs are
 still TODO in `.github/workflows/ci.yml`.
