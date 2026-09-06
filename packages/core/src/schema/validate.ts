@@ -6,7 +6,7 @@ import type { BrainSnapshot, InboxFm, PrincipleFm, ProposalFm, SourceFm, TreeEnt
 import { type Issue, refusal, warning } from './issues';
 import { FIELD_SPECS } from './fields';
 import { pathInfo } from './paths';
-import { linkedSourceSlugs } from '../links/index';
+import { groundsDrift } from '../links/index';
 
 const TOP_FOLDERS = ['inbox', 'sources', 'principles', 'maps', 'templates'] as const;
 const TEMPLATE_FILES = ['raw', 'notes', 'principle', 'set', 'inbox', 'proposal'].map((n) => `templates/${n}.md`);
@@ -131,9 +131,7 @@ export function validateSnapshot(s: BrainSnapshot): Issue[] {
     for (const ref of fm.related ?? []) {
       if (!principlePaths.has(`principles/${ref}.md`)) w(f.path, 'related.dangling', `related names no principle '${ref}'`);
     }
-    const linked = linkedSourceSlugs(f.body);
-    const inBodyOnly = linked.filter((x) => !fm.grounds.includes(x));
-    const inGroundsOnly = fm.grounds.filter((x) => !linked.includes(x));
+    const { inBodyOnly, inGroundsOnly } = groundsDrift(f);
     if (inBodyOnly.length || inGroundsOnly.length) {
       w(f.path, 'grounds.drift', `body links and grounds disagree: body only [${inBodyOnly.join(', ')}], grounds only [${inGroundsOnly.join(', ')}]`);
     }

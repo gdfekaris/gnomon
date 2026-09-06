@@ -53,9 +53,16 @@ browser.
   applies these plus attachment immutability and source deletion to a
   whole `CommitBatch`; `applyBatch` computes the resulting snapshot in
   memory. `CommitBatch`/`FileWrite` moved into core (storage re-exports).*
-- [ ] **6. Links module** (S) — spec §7.1: `parseLinks`, `renderDualLink`,
+- [x] **6. Links module** (S) — spec §7.1: `parseLinks`, `renderDualLink`,
   `backlinks`, `groundsDrift`. Done when geo-brain-2's heading-anchored
-  links parse and the drift warning matches the Python checker.
+  links parse and the drift warning matches the Python checker. *Done
+  2026-09-06. `parseLinks(body, fromPath)` takes the referencing path so
+  relative links resolve; a dual link whose halves disagree carries a
+  `mismatch`. `renderDualLink` defaults the label from the target (raw,
+  notes, set, principle, proposal, capture, file) and reproduces the
+  reference generator's output. `backlinks` ignores index files and adds
+  proposal `target_set` and `grounds` to the spec's list. `relativePath`
+  and `resolveRelative` are exported for block 7.*
 - [ ] **7. `generateIndexes`** (M) — spec §7.2. Done when output is
   byte-identical to both `_index.md` files in `template/` and geo-brain-2,
   and to the Python checker's output on the fixture; regenerating an
