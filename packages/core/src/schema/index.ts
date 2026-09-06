@@ -7,3 +7,4 @@ export * from './parse';
 export * from './serialize';
 export * from './snapshot';
 export * from './validate';
+export * from './write';

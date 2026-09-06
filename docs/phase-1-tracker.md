@@ -44,9 +44,15 @@ browser.
   folders without `_set.md`, proposal `target`/`target_set`/`from_source`
   dangling, stale `inbox_ref`, unknown fields, stray files (warning). The
   links module is seeded with `linkedSourceSlugs` for grounds drift.*
-- [ ] **5. `validateWrite`** (S) — spec §7.4. Done when it refuses a
+- [x] **5. `validateWrite`** (S) — spec §7.4. Done when it refuses a
   `raw.md` body change in `human` or `ratified` state and any attachment
-  change, and allows everything else.
+  change, and allows everything else. *Done 2026-09-06. Per schema §5 the
+  raw body is immutable in every state, not only `human`/`ratified`. Also
+  refuses `created` changes, curation transitions outside §5, and edits to
+  a capture's body, note, or attachment. `validateBatch(snapshot, batch)`
+  applies these plus attachment immutability and source deletion to a
+  whole `CommitBatch`; `applyBatch` computes the resulting snapshot in
+  memory. `CommitBatch`/`FileWrite` moved into core (storage re-exports).*
 - [ ] **6. Links module** (S) — spec §7.1: `parseLinks`, `renderDualLink`,
   `backlinks`, `groundsDrift`. Done when geo-brain-2's heading-anchored
   links parse and the drift warning matches the Python checker.

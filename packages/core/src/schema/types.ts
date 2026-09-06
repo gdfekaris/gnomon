@@ -95,3 +95,15 @@ export interface BrainSnapshot {
   principlesOf: (setSlug: string) => BrainFile<PrincipleFm>[];
   byType: <T extends FileType>(t: T) => BrainFile<Extract<Frontmatter, { type: T }>>[];
 }
+
+/** One file in a commit: text for markdown, bytes for attachments (spec §6.1). */
+export type FileWrite = { path: string; text: string } | { path: string; bytes: Uint8Array };
+
+/** An atomic multi-file commit against a known head (spec §6.1). */
+export interface CommitBatch {
+  message: string;
+  /** optimistic concurrency; the driver fails with HeadMovedError if stale */
+  expectedHead: string;
+  writes: FileWrite[];
+  deletes: string[];
+}
