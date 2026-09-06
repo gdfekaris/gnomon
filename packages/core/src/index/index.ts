@@ -3,7 +3,8 @@
 // work then title, open proposals by id, tags by name, all by codepoint.
 // tools/gnomon-check.py is the reference; this reproduces it byte for byte.
 
-import type { BrainSnapshot, FileWrite, SetFm, SourceFm } from '../schema/types';
+import type { BrainSnapshot, CommitBatch, FileWrite, SetFm, SourceFm } from '../schema/types';
+import { applyBatch } from '../schema/write';
 import { renderDualLink } from '../links/index';
 import { serializeFile } from '../schema/serialize';
 
@@ -116,4 +117,11 @@ export function indexWrites(s: BrainSnapshot): FileWrite[] {
     if (!current || serializeFile(current) !== generated[path]) writes.push({ path, text: generated[path] });
   }
   return writes;
+}
+
+/** The batch plus whichever index files its result changes (spec §7.2). Pure: applies the batch in memory first. */
+export function withIndexWrites(snapshot: BrainSnapshot, batch: CommitBatch): CommitBatch {
+  const after = applyBatch(snapshot, batch);
+  const writes = indexWrites(after).filter((w) => !batch.writes.some((b) => b.path === w.path));
+  return writes.length ? { ...batch, writes: [...batch.writes, ...writes] } : batch;
 }

@@ -73,10 +73,19 @@ browser.
   files whose text differs, for the commit that carries them. Sorting is
   by codepoint via `cmpCodepoint`. Digit-only tags must be quoted
   (`"2026"`) or YAML reads them as integers.*
-- [ ] **8. Sets and principles** (M) — spec §7.3, schema §7.1–7.4, §7.9.
+- [x] **8. Sets and principles** (M) — spec §7.3, schema §7.1–7.4, §7.9.
   Done when create/rename/reorder/delete produce `CommitBatch` values with
   correct renumbering, `reorderPrinciples` rewrites only moved files, and
-  delete returns the dangling-reference report.
+  delete returns the dangling-reference report. *Done 2026-09-06.
+  `core/sets`: `newSetSlug`, `createSet`, `updateSet` (rename, description,
+  remove name), `reorderSets`, `deleteSet`, `slugify`,
+  `uniquePrincipleSlug`, `createPrinciple`, `updatePrinciple`,
+  `reorderPrinciples`, `deletePrinciple`. Every batch carries the index
+  files it changes via `withIndexWrites` (in `core/index`). Commit
+  messages beyond the schema's vocabulary: `Update principle set:`,
+  `Reorder principle sets`, `Reorder principles: Set N`, `Edit principle:`,
+  `Delete principle:`. Dangling reports cover `related`, proposal
+  `target`/`target_set`, and body links in every file.*
 - [ ] **9. Proposals and filing** (M) — spec §7.5, §7.6. Done when
   `nextProposalId` sequences within a day, `decideProposal` touches only
   `status` and `updated`, and `buildFiling` copies body and attachment
