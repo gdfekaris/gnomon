@@ -1,4 +1,4 @@
-# gnomon-dev
+# gnomon
 
 Monorepo for **Gnomon**, a portable, model-agnostic second brain: a folder
 of plain markdown in your own git repo, plus a bring-your-own-AI companion

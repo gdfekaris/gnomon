@@ -261,12 +261,13 @@ browser.
   GitHub Pages on every push to `main` and it installs on iPhone.
   **Deferred by the maintainer (2026-09-07) until the live human test;
   nothing else depends on it.** Two decisions then: (1) Pages does not publish from a
-  private repository on a Free plan, so either make `gnomon-dev` public,
-  deploy the build to a separate public repository, use another static
-  host, or confirm a paid plan; then enable Pages with Source = GitHub
-  Actions. (2) The base path: CI builds with `VITE_BASE=/gnomon/`, but a
-  project site for this repository lives at `/gnomon-dev/` unless the
-  repository is renamed to `gnomon` or a custom domain is attached.
+  private repository on a Free plan, so either make `gdfekaris/gnomon`
+  public, deploy the build to a separate public repository, use another
+  static host, or confirm a paid plan; then enable Pages with Source =
+  GitHub Actions. (2) ~~The base path.~~ Settled 2026-09-07: the
+  repository was renamed from `gnomon-dev` to `gnomon`, so the project
+  site is `gdfekaris.github.io/gnomon/` and CI's `VITE_BASE=/gnomon/` is
+  already right.
 - [ ] **19. Publish `gnomon-cli`** (S) — spec §18. Done when a tagged
   release publishes to npm and `npx gnomon-cli validate` works in a fresh
   brain clone. **The maintainer runs the publish.**
