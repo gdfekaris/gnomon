@@ -258,8 +258,9 @@ browser.
   navigation fallback; offline flows use `context.setOffline`. Installing
   on a real iPhone is checked once the site is deployed (18b).*
 - [ ] **18b. Pages deploy** (S) — spec §18. Done when CI deploys the app to
-  GitHub Pages on every push to `main` and it installs on iPhone. **Needs
-  two decisions from the maintainer:** (1) Pages does not publish from a
+  GitHub Pages on every push to `main` and it installs on iPhone.
+  **Deferred by the maintainer (2026-09-07) until the live human test;
+  nothing else depends on it.** Two decisions then: (1) Pages does not publish from a
   private repository on a Free plan, so either make `gnomon-dev` public,
   deploy the build to a separate public repository, use another static
   host, or confirm a paid plan; then enable Pages with Source = GitHub
