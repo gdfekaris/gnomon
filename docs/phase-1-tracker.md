@@ -270,7 +270,12 @@ browser.
   already right.
 - [ ] **19. Publish `gnomon-cli`** (S) — spec §18. Done when a tagged
   release publishes to npm and `npx gnomon-cli validate` works in a fresh
-  brain clone. **The maintainer runs the publish.**
+  brain clone. **On hold with 18b (maintainer, 2026-09-07) until the live
+  human test.** The name `gnomon-cli` was free on npm on 2026-09-07. Needs
+  an npm account with 2FA, then either a local `npm login` for the first
+  release or a granular publish token as a repository secret for a
+  tag-triggered workflow. Before the first publish: add `repository` and
+  a package README, set a real version, dry-run the tarball.
 
 ## Decisions made during Phase 1
 
