@@ -13,20 +13,26 @@ small desktop CLI. This repo is the monorepo.
 - `docs/gnomon-proposal.md` (v0.3) — what and why.
 - `docs/alignment-review.md` — twenty decisions made 2026-09-05 with
   rationale. They are settled; do not reopen them without the user.
-- `docs/phase-<n>-tracker.md` — the current phase's block list and progress.
+- `docs/phase-<n>-tracker.md` — the current phase's block list and progress
+  (Phase 2 as of 2026-09-07).
 
-## Where we are (2026-09-06)
+## Where we are (2026-09-07)
 
 Done: the three documents are aligned; `template/` is the canonical empty
-brain and validates clean; the maintainer's real brain
-(`~/Desktop/main/geo-brain-2`, branch `main`, no remote) is migrated to the
-format; the monorepo is scaffolded and CI is green.
+brain; the maintainer's real brain (`~/Desktop/main/geo-brain-2`, branch
+`main`, no remote) is migrated; Phase 1 (spec §19) is built and green:
+`core` (schema, links, index, sets, proposals, filing, capture, crypto),
+`storage` (Memory, Encrypting, GitHub drivers and the contract suite),
+`gnomon-cli` validate/index/status, and the app shell with Capture, Browse,
+and Settings over a demo brain, with Playwright flows in CI. Three Phase 1
+items wait on the maintainer (real-GitHub run, Pages deploy, npm publish)
+and are carried in the Phase 2 tracker.
 
-**Next: Phase 1 (spec §19).** Progress lives in `docs/phase-1-tracker.md`:
-nineteen blocks in dependency order, each with a "done when". Resume by
+**Next: Phase 2 (spec §19).** Progress lives in `docs/phase-2-tracker.md`:
+nine blocks in dependency order, each with a "done when". Resume by
 finding the first unticked block. Tick a block in the same commit that
 completes it. When the phase is done, delete the tracker, break down the
-next phase, and write `docs/phase-2-tracker.md`; that is the working
+next phase, and write `docs/phase-3-tracker.md`; that is the working
 process for every phase.
 
 ## Conventions
