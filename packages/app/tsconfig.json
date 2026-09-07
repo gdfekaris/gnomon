@@ -4,6 +4,7 @@
     "types": [
       "svelte",
       "vite/client",
+      "vite-plugin-pwa/client",
       "node"
     ],
     "noEmit": true,

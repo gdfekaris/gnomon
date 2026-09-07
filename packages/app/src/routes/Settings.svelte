@@ -120,6 +120,14 @@
 </section>
 
 <section>
+  <h3>Install</h3>
+  <p class="hint">
+    On iPhone, open this page in Safari, tap Share, then <strong>Add to Home Screen</strong>. On Android and desktop
+    Chrome, use the browser's Install option. Installed, Gnomon opens straight to Capture.
+  </p>
+</section>
+
+<section>
   <h3>Who can see what</h3>
   <p>
     Your brain is a private repository on GitHub; GitHub holds the files and can technically read them.

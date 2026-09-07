@@ -5,6 +5,9 @@
   import { session } from './lib/stores/session.svelte';
   import { connectDemo, connectGitHub } from './lib/services/index';
   import StaleBanner from './lib/components/StaleBanner.svelte';
+  import UpdateToast from './lib/components/UpdateToast.svelte';
+  import { startServiceWorker } from './lib/stores/pwa.svelte';
+  import { watchNetwork } from './lib/stores/pending.svelte';
   import Browse from './routes/Browse.svelte';
   import FileView from './routes/FileView.svelte';
   import Capture from './routes/Capture.svelte';
@@ -13,6 +16,8 @@
   // Launch: rebuild the session from on-device settings (spec §10.2), off the
   // critical path so Capture renders first (spec §10.4).
   onMount(async () => {
+    startServiceWorker();
+    watchNetwork();
     await loadSettings();
     if (session.driver) return;
     try {
@@ -25,6 +30,7 @@
 </script>
 
 <StaleBanner />
+<UpdateToast />
 <main>
   <header>
     <h1>Gnomon</h1>

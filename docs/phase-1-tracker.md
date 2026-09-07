@@ -240,8 +240,32 @@ browser.
   mocked-401 flow caught a real driver bug: `GitHubDriver` called the
   stored global `fetch` as a method, which browsers reject as an illegal
   invocation; it is now called unbound.*
-- [ ] **18. PWA polish + Pages deploy** (S) — spec §11, §18. Done when the
-  app installs on iPhone, shows the update toast, and CI deploys to Pages.
+- [x] **18. PWA polish** (S) — spec §11, §14 offline capture. Done when the
+  production build serves a manifest with icons and registers a service
+  worker that precaches only the shell, the update toast is wired, and an
+  offline text capture waits in memory and saves when the connection
+  returns. *Done 2026-09-07. Placeholder icons from `tools/make-icons.mjs`
+  (Playwright renders an SVG; the design pass replaces them); manifest
+  icons 192, 512, and maskable 512; `apple-touch-icon` and `theme-color`
+  in `index.html`. `stores/pwa.svelte.ts` registers the worker with
+  `registerType: 'prompt'` and `UpdateToast.svelte` offers Reload or
+  Later. `services/offline.ts` `OfflineQueue` (unit-tested): one
+  text-only capture queued while offline or on `NetworkError`, refused
+  with an attachment, flushed on the `online` event; never persisted.
+  Settings gains an Install note for iPhone. Playwright: a `pwa` project
+  runs against `vite preview` of a build in `dist-preview/` and checks
+  the manifest, icons, worker scope, and that the only route is the
+  navigation fallback; offline flows use `context.setOffline`. Installing
+  on a real iPhone is checked once the site is deployed (18b).*
+- [ ] **18b. Pages deploy** (S) — spec §18. Done when CI deploys the app to
+  GitHub Pages on every push to `main` and it installs on iPhone. **Needs
+  two decisions from the maintainer:** (1) Pages does not publish from a
+  private repository on a Free plan, so either make `gnomon-dev` public,
+  deploy the build to a separate public repository, use another static
+  host, or confirm a paid plan; then enable Pages with Source = GitHub
+  Actions. (2) The base path: CI builds with `VITE_BASE=/gnomon/`, but a
+  project site for this repository lives at `/gnomon-dev/` unless the
+  repository is renamed to `gnomon` or a custom domain is attached.
 - [ ] **19. Publish `gnomon-cli`** (S) — spec §18. Done when a tagged
   release publishes to npm and `npx gnomon-cli validate` works in a fresh
   brain clone. **The maintainer runs the publish.**

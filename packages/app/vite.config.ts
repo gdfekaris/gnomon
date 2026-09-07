@@ -20,12 +20,17 @@ export default defineConfig({
         start_url: `${base}#/capture`,
         theme_color: '#1c1917',
         background_color: '#fafaf9',
-        // TODO(design pass): maskable icons at 192 and 512.
-        icons: [],
+        // Placeholder icons from tools/make-icons.mjs until the design pass.
+        icons: [
+          { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallback: 'index.html',
+        // Spec §11: no runtime caching; API origins bypass the worker entirely.
         runtimeCaching: [],
       },
     }),

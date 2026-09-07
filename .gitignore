@@ -1,6 +1,7 @@
 # Node (monorepo per technical spec §3, once code exists)
 node_modules/
 dist/
+dist-preview/
 build/
 .vite/
 coverage/
@@ -23,3 +24,4 @@ Thumbs.db
 
 # vite-plugin-pwa dev output
 dev-dist/
+dist-preview/
