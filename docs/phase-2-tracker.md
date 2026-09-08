@@ -85,14 +85,25 @@ API key is needed. Real keys matter only for trying the Reason screen live.
   the snapshot at head, not from the filing commit's blobs: if a later
   commit changed them, ratify and reject are refused anyway and the
   state shows as changed.*
-- [ ] **4. Filing through the app** (M) — spec §8.5. `core/assembly`: the
+- [x] **4. Filing through the app** (M) — spec §8.5. `core/assembly`: the
   Task C system prompt asking for one strict JSON object per capture;
   `parseFilingReply(text): { meta: SourceMeta; proposals: ProposalParams[] }`
   validating shape, kinds, and conditional fields and refusing anything
   else; the capture's text and note go in the prompt, never the
   attachment. Done when a scripted reply files a capture end to end
   through `buildFiling` over the memory driver and a malformed reply is
-  refused before any commit.
+  refused before any commit. *Done 2026-09-07. `core/assembly/filing.ts`:
+  `FILING_PROMPT` (one strict JSON object, no fences, leave optional
+  fields out rather than guess, only listed slugs and refs),
+  `buildFilingPrompt(snapshot, capture, budget)` (sets with principle
+  refs and bodies, existing source slugs, the note, the capture text; an
+  attachment is mentioned but never shown; `CAPTURE_EXCEEDS_BUDGET`),
+  `extractJson` (tolerates fences and stray prose), `parseFilingReply`
+  (strict: unknown keys, wrong types, missing conditional fields, and,
+  with a snapshot, any target set, principle, or grounds slug that does
+  not exist are refused with a `FilingReplyError` naming the field; tags
+  are lowercased and deduplicated; an optional `meta.slug` is accepted).
+  The mock-provider end-to-end lands with the Inbox screen (block 8).*
 - [ ] **5. Sets screen** (M) — proposal §6, US-18, US-20, spec §7.3.
   `routes/Sets.svelte`: sets with ordinal and sub-name, new set, rename,
   reorder (drag, with a keyboard fallback), delete with confirmation
