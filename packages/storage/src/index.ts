@@ -5,3 +5,4 @@ export * from './memory';
 export * from './encrypting';
 export * from './github';
 export * from './snapshot';
+export * from './filings';

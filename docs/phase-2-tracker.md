@@ -67,14 +67,24 @@ API key is needed. Real keys matter only for trying the Reason screen live.
   the SSE bytes at 1, 3, 7, and 1024 bytes so multi-byte characters split
   across reads. Live calls are the maintainer's to try from the Reason
   screen (block 7).*
-- [ ] **3. Ratify and reject** (S) — spec §9, schema §5, §7.7. `core`:
+- [x] **3. Ratify and reject** (S) — spec §9, schema §5, §7.7. `core`:
   `buildRatify(snapshot, changes: FileChange[])` rewrites `curated` and
   `updated` only on the filing's added `source` and `notes` files, message
   `Ratify: <slug>`, indexes carried; `isFilingCommit(info, changes)`
   (message prefix `File: ` plus at least one added `raw.md`); reject is
   `driver.revert(sha, 'Reject: <slug>')`. Done when, over the memory
   driver, ratify touches exactly the two files, reject after a later
-  filing succeeds, and a conflict lists the paths.
+  filing succeeds, and a conflict lists the paths. *Done 2026-09-07.
+  `core/review`: `filingSlug`, `isFilingCommit`, `filingState` (pending /
+  ratified / rejected / changed), `reviewFiling` (added files, attachments
+  by name and size, the capture's `+` lines), `buildRatify` (refuses a
+  non-filing, an already ratified filing, and a rejected one).
+  `storage/filings.ts`: `listFilings` (history then compare per `File:`
+  commit), `changesOf`, `rejectFiling` (revert). `CommitInfo` and
+  `FileChange` moved into core. The review view renders added files from
+  the snapshot at head, not from the filing commit's blobs: if a later
+  commit changed them, ratify and reject are refused anyway and the
+  state shows as changed.*
 - [ ] **4. Filing through the app** (M) — spec §8.5. `core/assembly`: the
   Task C system prompt asking for one strict JSON object per capture;
   `parseFilingReply(text): { meta: SourceMeta; proposals: ProposalParams[] }`

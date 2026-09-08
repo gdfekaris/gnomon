@@ -74,6 +74,12 @@ export interface BrainFile<F extends Frontmatter = Frontmatter> {
 /** One text read, as `StorageDriver.readMany` returns it (spec §6.1). `encrypted` is set by the encrypting driver. */
 export interface ReadResult { text: string; sha: string; encrypted?: boolean; }
 
+/** One commit in history (spec §6.1). */
+export interface CommitInfo { sha: string; message: string; date: string; parents: string[]; }
+
+/** One file's change between two commits (spec §6.1). */
+export interface FileChange { path: string; status: 'added' | 'modified' | 'removed'; patch?: string; }
+
 /** One blob in the repository tree at a commit (spec §6.1). Directories are not listed. */
 export interface TreeEntry { path: string; sha: string; size: number; }
 

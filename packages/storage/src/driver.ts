@@ -1,9 +1,7 @@
 // StorageDriver interface, verbatim from the technical spec §6.1.
 
-import type { CommitBatch, FileWrite, ReadResult, TreeEntry } from '@gnomon/core';
-export type { CommitBatch, FileWrite, ReadResult, TreeEntry };
-export interface CommitInfo { sha: string; message: string; date: string; parents: string[]; }
-export interface FileChange { path: string; status: 'added' | 'modified' | 'removed'; patch?: string; }
+import type { CommitBatch, CommitInfo, FileChange, FileWrite, ReadResult, TreeEntry } from '@gnomon/core';
+export type { CommitBatch, CommitInfo, FileChange, FileWrite, ReadResult, TreeEntry };
 
 export interface StorageDriver {
   /** current commit SHA of main */
