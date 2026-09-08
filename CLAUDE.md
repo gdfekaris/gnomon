@@ -14,25 +14,27 @@ small desktop CLI. This repo is the monorepo.
 - `docs/alignment-review.md` — twenty decisions made 2026-09-05 with
   rationale. They are settled; do not reopen them without the user.
 - `docs/phase-<n>-tracker.md` — the current phase's block list and progress
-  (Phase 2 as of 2026-09-07).
+  (Phase 3 as of 2026-09-08).
 
-## Where we are (2026-09-07)
+## Where we are (2026-09-08)
 
-Done: the three documents are aligned; `template/` is the canonical empty
-brain; the maintainer's real brain (`~/Desktop/main/geo-brain-2`, branch
-`main`, no remote) is migrated; Phase 1 (spec §19) is built and green:
-`core` (schema, links, index, sets, proposals, filing, capture, crypto),
-`storage` (Memory, Encrypting, GitHub drivers and the contract suite),
-`gnomon-cli` validate/index/status, and the app shell with Capture, Browse,
-and Settings over a demo brain, with Playwright flows in CI. Three Phase 1
-items wait on the maintainer (real-GitHub run, Pages deploy, npm publish)
-and are carried in the Phase 2 tracker.
+Done: Phase 1 and Phase 2 (spec §19) are built and green. `core` (schema,
+links, index, sets, proposals, filing, capture, crypto, assembly with the
+four system prompts, review), `storage` (Memory, Encrypting, GitHub drivers,
+filings, the contract suite and a fake GitHub), `providers` (Anthropic,
+OpenRouter, a mock with a streaming contract), `gnomon-cli`
+validate/index/status, and the app: Capture, Browse, Sets, editors, Reason,
+Inbox (file, review, ratify, reject), Proposals, Settings with
+connect-existing, PWA polish, all over a demo brain with Playwright flows
+in CI. Six items are deferred and carried in the Phase 3 tracker
+(real-GitHub run, Pages deploy, npm publish, the design pass, token-count
+refinement, Phase 4 notes).
 
-**Next: Phase 2 (spec §19).** Progress lives in `docs/phase-2-tracker.md`:
-nine blocks in dependency order, each with a "done when". Resume by
+**Next: Phase 3 (spec §19).** Progress lives in `docs/phase-3-tracker.md`:
+five blocks in dependency order, each with a "done when". Resume by
 finding the first unticked block. Tick a block in the same commit that
 completes it. When the phase is done, delete the tracker, break down the
-next phase, and write `docs/phase-3-tracker.md`; that is the working
+next phase, and write `docs/phase-4-tracker.md`; that is the working
 process for every phase.
 
 ## Conventions
