@@ -6,10 +6,11 @@
   import { brain, describeError } from '../lib/services/index';
   import { appendGroundingLink, createPrincipleIn, driftOf, parseList, saveNotes, savePrinciple, saveSourceMeta, slugOfSource, tagList } from '../lib/services/edit';
   import { browseHref } from '../lib/markdown';
+  import { prefillFrom } from '../lib/services/proposals';
   import { session } from '../lib/stores/session.svelte';
   import { snapshot } from '../lib/stores/snapshot.svelte';
 
-  let { path, newIn = undefined }: { path: string; newIn?: string | undefined } = $props();
+  let { path, newIn = undefined, from = undefined }: { path: string; newIn?: string | undefined; from?: string | undefined } = $props();
   const s = $derived(snapshot.current);
   const file = $derived(newIn ? undefined : s?.files.get(path));
   const kind = $derived<'principle' | 'notes' | 'source' | 'none'>(newIn ? 'principle' : file?.fm.type === 'principle' || file?.fm.type === 'notes' || file?.fm.type === 'source' ? file.fm.type : 'none');
@@ -32,8 +33,11 @@
   let locator = $state('');
   let origin = $state('');
 
+  // A proposal being accepted (schema §4.7): pre-fill a new principle, or show the suggestion beside an existing file.
+  const prefill = $derived(from && s ? prefillFrom(s, from, newIn ?? path.split('/')[1] ?? '') : null);
+
   $effect(() => {
-    const key = `${newIn ?? ''}|${path}|${file?.sha ?? ''}`;
+    const key = `${newIn ?? ''}|${path}|${file?.sha ?? ''}|${from ?? ''}`;
     if (loadedFor === key) return;
     loadedFor = key;
     error = null;
@@ -41,7 +45,7 @@
       const fm = file.fm as PrincipleFm;
       title = fm.title; body = file.body; grounds = [...fm.grounds]; related = (fm.related ?? []).join(', '); tags = (fm.tags ?? []).join(', ');
     } else if (kind === 'principle') {
-      title = ''; body = ''; grounds = []; related = ''; tags = '';
+      title = prefill?.title ?? ''; body = prefill?.body ?? ''; grounds = prefill ? [...prefill.grounds] : []; related = ''; tags = '';
     } else if (kind === 'notes' && file) {
       body = file.body;
     } else if (kind === 'source' && file) {
@@ -85,6 +89,13 @@
   <p class="error">Nothing editable at <code>{path}</code>. Passages and attachments are immutable; corrections go in the notes file.</p>
 {:else}
   <p><a href={newIn ? '#/sets' : browseHref(path)}>← Back</a></p>
+  {#if prefill}
+    <div class="from" role="status" data-testid="from-proposal">
+      <p><strong>From proposal <code>{prefill.id}</code></strong> ({prefill.kind}){#if prefill.kind !== 'principle'}: <em>{s.files.get(`maps/proposals/${prefill.id}.md`) && 'title' in s.files.get(`maps/proposals/${prefill.id}.md`)!.fm ? (s.files.get(`maps/proposals/${prefill.id}.md`)!.fm as { title: string }).title : ''}</em>{/if}</p>
+      {#if prefill.rationale}<p class="rationale">{prefill.rationale}</p>{/if}
+      <p class="hint">{prefill.kind === 'principle' ? 'The draft below is the proposal\'s wording. A principle is yours only once you have rewritten it in your own words.' : 'Apply what you agree with by hand; the proposal is only a suggestion.'}</p>
+    </div>
+  {/if}
   {#if kind === 'principle'}
     <h2>{newIn ? `New principle in ${setLabel(s.sets.find((x) => x.path === `principles/${newIn}/_set.md`)!.fm)}` : 'Edit principle'}</h2>
     <p class="hint">In your own words. A principle is not a summary of a source: if the source turned out to be wrong, the principle should survive.</p>
@@ -161,4 +172,7 @@
   .hint { opacity: 0.7; }
   .error { color: #b91c1c; }
   small { opacity: 0.7; font-weight: normal; }
+  .from { border-left: 3px solid #b45309; padding: 0.25rem 0.75rem; margin-bottom: 1rem; }
+  .from p { margin: 0.25rem 0; }
+  .rationale { white-space: pre-wrap; }
 </style>

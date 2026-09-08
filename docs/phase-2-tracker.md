@@ -193,13 +193,25 @@ API key is needed. Real keys matter only for trying the Reason screen live.
   The fixture's own pending filing is not in the demo brain's git
   history (it was seeded in one commit), so it does not appear in the
   list; its state is visible in Browse.*
-- [ ] **9. Proposals screen** (M) — US-3, schema §4.7, §7.10.
+- [x] **9. Proposals screen** (M) — US-3, schema §4.7, §7.10.
   `routes/Proposals.svelte`: open proposals grouped by target set with
   kind, title, rationale, and links; accept and decline via
   `decideProposal`; accepting a `principle` or `amendment` opens the
   block 6 editor pre-filled from the proposal. Done when a flow decides
   three proposals and writes a principle from an accepted one, and the
-  proposal shows `accepted` with the new principle linked.
+  proposal shows `accepted` with the new principle linked. *Done
+  2026-09-08. `services/proposals.ts` (unit-tested): `groupProposals`
+  (by target set in set order, untargeted last, newest first), `decide`
+  (one `Decide:` commit), `acceptanceRoute` (principle → new-principle
+  editor; amendment and link → that principle's editor; tag → the
+  source's metadata editor), `prefillFrom` (title, grounds with dual
+  links, and a draft body that links back to the proposal, so `writtenAs`
+  can find the principle through backlinks). The editor shows a
+  from-proposal banner with the rationale and, for a principle, warns
+  that the draft is the proposal's wording until rewritten. Also added
+  here: the spec §17 flow showing an attachment in the review by name and
+  size. Candidate for Phase 3: a "save as proposal" action for the
+  proposal section of a Relate answer (not in the Phase 2 row).*
 
 ## Deferred from Phase 1
 

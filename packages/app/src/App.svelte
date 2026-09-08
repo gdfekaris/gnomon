@@ -16,6 +16,7 @@
   import Editor from './routes/Editor.svelte';
   import Reason from './routes/Reason.svelte';
   import Inbox from './routes/Inbox.svelte';
+  import Proposals from './routes/Proposals.svelte';
 
   // Launch: rebuild the session from on-device settings (spec §10.2), off the
   // critical path so Capture renders first (spec §10.4).
@@ -42,6 +43,7 @@
       <a href="#/capture" class:active={route.name === 'capture'}>Capture</a>
       <a href="#/browse" class:active={route.name === 'browse'}>Browse</a>
       <a href="#/inbox" class:active={route.name === 'inbox'}>Inbox</a>
+      <a href="#/proposals" class:active={route.name === 'proposals'}>Proposals</a>
       <a href="#/sets" class:active={route.name === 'sets'}>Sets</a>
       <a href="#/reason" class:active={route.name === 'reason'}>Reason</a>
       <a href="#/settings" class:active={route.name === 'settings'}>Settings</a>
@@ -52,11 +54,13 @@
   {:else if route.name === 'browse'}
     <Browse />
   {:else if route.name === 'sets' && route.rest.length === 2 && route.rest[1] === 'new-principle'}
-    <Editor path="" newIn={route.rest[0]} />
+    <Editor path="" newIn={route.rest[0]} from={route.query.get('from') ?? undefined} />
   {:else if route.name === 'sets'}
     <Sets />
   {:else if route.name === 'edit'}
-    <Editor path={route.path} />
+    <Editor path={route.path} from={route.query.get('from') ?? undefined} />
+  {:else if route.name === 'proposals'}
+    <Proposals />
   {:else if route.name === 'reason'}
     <Reason />
   {:else if route.name === 'inbox'}
