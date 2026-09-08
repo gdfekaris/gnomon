@@ -39,7 +39,7 @@ API key is needed. Real keys matter only for trying the Reason screen live.
   principles (AGENTS.md: reasoning without premises). Passages sit under
   a `## Grounding passages` heading. `parseCitations` wraps
   `parseLinks`. `estimateTokens` lives here; providers re-exports it.*
-- [ ] **2. Provider drivers** (L) — spec §8.1. `providers`: a `MockProvider`
+- [x] **2. Provider drivers** (L) — spec §8.1. `providers`: a `MockProvider`
   that replays scripted responses (for tests and the demo brain; not in
   the spec but assumed by §17); `AnthropicDriver` (`/v1/messages` with the
   browser CORS header, SSE streaming, `listModels` from `/v1/models` with a
@@ -48,7 +48,25 @@ API key is needed. Real keys matter only for trying the Reason screen live.
   `X-Title`, SSE, `listModels` with `context_length`). Done when both real
   drivers pass one shared streaming contract against a fake fetch (text
   deltas, done with usage, abort via `AbortSignal`, auth and rate-limit
-  errors typed) and the mock replays a script deterministically.
+  errors typed) and the mock replays a script deterministically. *Done
+  2026-09-07. Plain `fetch` per the spec (the bundled Claude API skill
+  defaults to the official SDK; the spec's no-vendor-SDK rule wins).
+  `providers/src`: `errors.ts` (`ProviderAuthError` 401/403,
+  `ProviderRateLimitError` 429 with retry-after, `ProviderUnavailableError`
+  5xx/529, `ProviderNetworkError`), `sse.ts` (chunk-safe reader, re-checks
+  the abort signal after a cancelled read), `anthropic.ts` (version
+  header `2023-06-01`, browser-access header, `message_start`/
+  `content_block_delta`/`message_delta` parsing, `stopReason` on done so
+  a `refusal` is visible, paged `/v1/models` using `max_input_tokens`
+  when reported and a family table otherwise; spec §20.2 is settled in
+  favour of the API field with the table as fallback), `openrouter.ts`
+  (bearer, referer, title, `usage.include`, `[DONE]`), `mock.ts`
+  (`demoScript` cites the ref comments it was given and names precedence).
+  The contract suite (`test/contract.ts`) is scenario-based; each
+  provider's test file serialises scenarios in its wire format, cutting
+  the SSE bytes at 1, 3, 7, and 1024 bytes so multi-byte characters split
+  across reads. Live calls are the maintainer's to try from the Reason
+  screen (block 7).*
 - [ ] **3. Ratify and reject** (S) — spec §9, schema §5, §7.7. `core`:
   `buildRatify(snapshot, changes: FileChange[])` rewrites `curated` and
   `updated` only on the filing's added `source` and `notes` files, message
