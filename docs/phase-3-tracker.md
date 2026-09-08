@@ -11,9 +11,9 @@ Started 2026-09-08. Resume a session by finding the first unticked block.
 
 ## Blocks
 
-Blocks 1–5 are the app; block 1 is library-shaped and tested over the fake
+Blocks 1–6 are the app; block 1 is library-shaped and tested over the fake
 GitHub, the rest end in Playwright flows over the demo brain or a mocked
-GitHub. The design pass was passed on for this phase (see Deferred).
+GitHub. Block 4 is the design pass, taken up now that every screen exists.
 
 - [ ] **1. Onboarding service** (M) — spec §12 steps 2–4, US-14, US-15.
   `services/onboarding.ts`: `validateToken` (`GET /user` and a permission
@@ -43,14 +43,24 @@ GitHub. The design pass was passed on for this phase (see Deferred).
   states reviewed on a slow connection. Done when a flow over a fresh
   template brain sees the nudges and empty states and a flow over the
   fixture sees the right nudge at each step of the loop.
-- [ ] **4. Save as proposal** (S) — carried from Phase 2 (not in the spec's
+- [ ] **4. The design pass** (L) — spec §1 ("a separate design pass"),
+  proposal §8 Phase 3 polish. A mobile-first visual system across every
+  screen: Capture, Browse and the file view, Sets, the editors, Reason,
+  Inbox, Proposals, Settings, and the onboarding screens from block 2.
+  First a design canvas of the screens for the maintainer to review and
+  adjust; then the styling lands as shared tokens and components, real
+  icons replace the `tools/make-icons.mjs` placeholders, and dark mode is
+  checked. Done when the maintainer has approved the canvas, every screen
+  uses the shared system, the manifest icons are the real ones, and every
+  existing Playwright flow still passes unchanged.
+- [ ] **5. Save as proposal** (S) — carried from Phase 2 (not in the spec's
   row; kept by the maintainer 2026-09-08). A Relate answer's proposal
   section can be saved as a `curated: human` proposal file (schema §4.7)
   targeting the selected set, one `Add proposal:` commit, with the kind
   and target chosen in a small form pre-filled from the answer. Done when
   a flow relates a text with the demo model and saves its proposal, and
   the Proposals screen lists it as open and yours.
-- [ ] **5. Release readiness** (S) — spec §18, proposal §10. The CLI
+- [ ] **6. Release readiness** (S) — spec §18, proposal §10. The CLI
   package gets `repository`, a README, and version `0.1.0`; the app shows
   its version (already in Settings) and the two match; a smoke checklist
   for the live human test (install on iPhone, capture with a photo,
@@ -63,7 +73,7 @@ GitHub. The design pass was passed on for this phase (see Deferred).
 
 Carried over unchanged from Phase 1 and Phase 2; each needs something
 from the maintainer or a later phase. The live human test at the end of
-this phase is the natural moment for the first three.
+this phase is the natural moment for the first three and P2-live.
 
 - [ ] **P1-13b. `GitHubDriver` against real GitHub** (S) — needs a
   disposable fine-grained token (Contents read/write) and a scratch
@@ -89,16 +99,13 @@ this phase is the natural moment for the first three.
   local `npm login` for the first release or a granular publish token as a
   repository secret for a tag-triggered workflow. Before the first
   publish: add `repository` and a package README, set a real version,
-  dry-run the tarball (block 5 does this part). A published package is
+  dry-run the tarball (block 6 does this part). A published package is
   public even though this repository is private; it contains only the
   built CLI.
-- [ ] **P3-design. The design pass** — passed on for Phase 3 by the
-  maintainer (2026-09-08). When taken up: a mobile-first visual system
-  across every screen mocked on a design canvas for review first, real
-  icons replacing `tools/make-icons.mjs` placeholders, dark mode checked,
-  the existing Playwright flows unchanged. Live provider calls (Anthropic,
-  OpenRouter) also remain the maintainer's to try with real keys from the
-  Reason and Inbox screens.
+- [ ] **P2-live. Live provider calls** — Anthropic and OpenRouter are
+  wired and tested against fakes; only the maintainer's real keys can
+  exercise them, from the Reason and Inbox screens. Part of the live
+  human test.
 - [ ] **P2-tokens. Token-count refinement** — spec §8.2's optional
   `POST /v1/messages/count_tokens` when the estimate is within 10% of the
   budget. Deliberately left out; the estimate is conservative and the bar

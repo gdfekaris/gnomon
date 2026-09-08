@@ -27,11 +27,11 @@ validate/index/status, and the app: Capture, Browse, Sets, editors, Reason,
 Inbox (file, review, ratify, reject), Proposals, Settings with
 connect-existing, PWA polish, all over a demo brain with Playwright flows
 in CI. Six items are deferred and carried in the Phase 3 tracker
-(real-GitHub run, Pages deploy, npm publish, the design pass, token-count
-refinement, Phase 4 notes).
+(real-GitHub run, Pages deploy, npm publish, live provider calls,
+token-count refinement, Phase 4 notes).
 
 **Next: Phase 3 (spec §19).** Progress lives in `docs/phase-3-tracker.md`:
-five blocks in dependency order, each with a "done when". Resume by
+six blocks in dependency order (the design pass is block 4), each with a "done when". Resume by
 finding the first unticked block. Tick a block in the same commit that
 completes it. When the phase is done, delete the tracker, break down the
 next phase, and write `docs/phase-4-tracker.md`; that is the working
