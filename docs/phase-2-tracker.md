@@ -123,7 +123,7 @@ API key is needed. Real keys matter only for trying the Reason screen live.
   screen (US-4's editors are block 6). Flows: create/rename/reorder/
   delete with survivors renumbered and paths intact, set reorder and
   description, last-set guard.*
-- [ ] **6. Editors with curation enforcement** (L) — US-4, US-5, US-6,
+- [x] **6. Editors with curation enforcement** (L) — US-4, US-5, US-6,
   US-7. Principle create and edit from `templates/principle.md`, with a
   link-insertion helper that writes dual links and a one-tap sync when
   body links and `grounds` drift; notes editing that turns the file
@@ -132,7 +132,20 @@ API key is needed. Real keys matter only for trying the Reason screen live.
   attachments, ever. Every save is `validateBatch`-checked. Done when
   flows write a principle from the editor, sync drifted grounds, edit a
   notes file and see it become `human`, and confirm a `raw.md` body has no
-  edit affordance.
+  edit affordance. *Done 2026-09-07. `services/edit.ts` (unit-tested):
+  `appendGroundingLink` (adds the Grounding passages heading once and one
+  dual link per call), `driftOf`, `createPrincipleIn`, `savePrinciple`,
+  `saveNotes` (any state → `human`), `saveSourceMeta` (blank optional
+  fields are removed; the body is never touched; the file becomes
+  `human`, so editing a pending filing's metadata makes it yours and
+  ratify then refuses it as changed). `routes/Editor.svelte` on
+  `#/edit/<path>` and `#/sets/<slug>/new-principle`: principle form with
+  grounds chips, a source picker that inserts the dual link and the
+  ground together, and two one-tap syncs (grounds ← body links, body ←
+  grounds); notes form; source metadata form with the passage shown
+  read-only and no textarea; anything else says nothing is editable.
+  FileView links Edit for principles and notes and Edit metadata for
+  sources with a note that the passage is immutable.*
 - [ ] **7. Reason screen** (L) — US-8, US-9, US-10, US-19, spec §8.3,
   §10.2. `routes/Reason.svelte` and `ReasoningService`: set picker chips
   (last selection remembered), task presets (reason, relate, compare,

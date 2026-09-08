@@ -2,7 +2,7 @@
 // `#/name/rest/of/path?query#anchor`; the trailing `#anchor` is a heading
 // anchor inside a brain file (schema §6).
 
-export const ROUTES = ['capture', 'browse', 'inbox', 'proposals', 'sets', 'reason', 'settings', 'onboarding'] as const;
+export const ROUTES = ['capture', 'browse', 'inbox', 'proposals', 'sets', 'reason', 'settings', 'onboarding', 'edit'] as const;
 export type RouteName = (typeof ROUTES)[number];
 
 export interface Route { name: RouteName; rest: string[]; path: string; anchor: string | undefined; query: URLSearchParams; }

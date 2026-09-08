@@ -139,6 +139,7 @@
             <li class="empty">(no principles yet)</li>
           {/each}
         </ol>
+        <p><a href="#/sets/{slug}/new-principle" data-testid="new-principle">+ New principle</a></p>
       </li>
     {/each}
   </ol>

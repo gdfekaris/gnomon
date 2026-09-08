@@ -44,6 +44,11 @@
   {#if attachmentPath}
     <p><a href={browseHref(attachmentPath)} data-testid="attachment-link">Attachment: {fm['attachment']}</a></p>
   {/if}
+  {#if fm['type'] === 'principle' || fm['type'] === 'notes'}
+    <p><a href="#/edit/{path}" data-testid="edit-link">Edit</a></p>
+  {:else if fm['type'] === 'source'}
+    <p><a href="#/edit/{path}" data-testid="edit-link">Edit metadata</a> <small>· the passage text is immutable; corrections go in <a href={browseHref(path.replace(/raw\.md$/, 'notes.md'))}>notes</a></small></p>
+  {/if}
   {#if file.body}
     <MarkdownView body={file.body} {path} {anchor} />
   {:else}

@@ -13,6 +13,7 @@
   import Capture from './routes/Capture.svelte';
   import Settings from './routes/Settings.svelte';
   import Sets from './routes/Sets.svelte';
+  import Editor from './routes/Editor.svelte';
 
   // Launch: rebuild the session from on-device settings (spec §10.2), off the
   // critical path so Capture renders first (spec §10.4).
@@ -46,8 +47,12 @@
     <FileView path={route.path} anchor={route.anchor} />
   {:else if route.name === 'browse'}
     <Browse />
+  {:else if route.name === 'sets' && route.rest.length === 2 && route.rest[1] === 'new-principle'}
+    <Editor path="" newIn={route.rest[0]} />
   {:else if route.name === 'sets'}
     <Sets />
+  {:else if route.name === 'edit'}
+    <Editor path={route.path} />
   {:else if route.name === 'settings'}
     <Settings />
   {:else if route.name === 'capture'}
