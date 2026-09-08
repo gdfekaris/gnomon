@@ -4,7 +4,7 @@
 // `#anchor` half of a link lands on the passage.
 
 import MarkdownIt from 'markdown-it';
-import { type BrainSnapshot, parseLinks } from '@gnomon/core';
+import { type BrainSnapshot, parseCitations, parseLinks } from '@gnomon/core';
 
 const md = new MarkdownIt({ html: false, linkify: false, breaks: false });
 
@@ -55,4 +55,19 @@ export function renderMarkdown(body: string, fromPath: string, snapshot: BrainSn
     text = text.slice(0, ref.start) + link + text.slice(ref.end);
   }
   return md.render(text);
+}
+
+/**
+ * A model answer: resolvable [[ref]] citations become links into Browse;
+ * unresolvable ones stay visible as marked plain text (spec §8.4), so a
+ * hallucinated citation is never dressed up as a real one.
+ */
+export function renderAnswer(text: string, snapshot: BrainSnapshot | null): string {
+  if (!snapshot) return md.render(text);
+  let out = text;
+  for (const c of parseCitations(text, snapshot).sort((a, b) => b.start - a.start)) {
+    if (c.resolved) continue;
+    out = `${out.slice(0, c.start)}\`⚠ ${c.ref}\` (not in this brain)${out.slice(c.end)}`;
+  }
+  return renderMarkdown(out, 'maps/_index.md', snapshot);
 }

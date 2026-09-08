@@ -146,14 +146,28 @@ API key is needed. Real keys matter only for trying the Reason screen live.
   read-only and no textarea; anything else says nothing is editable.
   FileView links Edit for principles and notes and Edit metadata for
   sources with a note that the passage is immutable.*
-- [ ] **7. Reason screen** (L) — US-8, US-9, US-10, US-19, spec §8.3,
+- [x] **7. Reason screen** (L) — US-8, US-9, US-10, US-19, spec §8.3,
   §10.2. `routes/Reason.svelte` and `ReasoningService`: set picker chips
   (last selection remembered), task presets (reason, relate, compare,
   free-form), provider and model picker from `listModels`, budget bar
   from `assemble` before sending, streaming transcript, citations as
   links with unresolvable ones marked. Done when a flow with the mock
   provider reasons from two sets and shows set-attributed output with
-  precedence named and citations that resolve into Browse.
+  precedence named and citations that resolve into Browse. *Done
+  2026-09-07. `services/reasoning.ts` `ReasoningService` (unit-tested):
+  providers composed from saved keys with the demo model always present;
+  `preview` assembles against `contextWindow × budgetPercent` before
+  anything is sent; `run` sends the prior turns as history plus the
+  assembled context as the last user message, streams into the
+  transcript, marks a `refusal` stop, and parses citations; `stop`
+  aborts and marks the answer. `stores/reasoning.svelte.ts` holds the
+  task, provider, model, input, and transcript; the set selection is
+  remembered in prefs (`lastSelectedSets`), every set selected on first
+  use. `renderAnswer` links resolvable citations and shows unresolvable
+  ones as marked plain text (spec §8.4). `routes/Reason.svelte`: chips,
+  task presets, provider and model pickers, the budget bar with a note
+  on what fits, Send/Stop/Clear. `maxTokens` is the model's output cap
+  capped at 8192. Live provider calls remain the maintainer's to try.*
 - [ ] **8. Inbox screen** (L) — US-2, US-3, spec §9, proposal §9
   decision 3. `routes/Inbox.svelte`: captures with their status, "process
   inbox with AI" running block 4 per capture with one commit each, recent

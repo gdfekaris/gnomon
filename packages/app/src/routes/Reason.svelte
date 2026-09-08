@@ -1,0 +1,168 @@
+<script lang="ts">
+  // Reason — US-8, US-9, US-10, US-19; proposal §6. Set picker chips, task
+  // presets, provider and model picker, the budget bar from assemble
+  // before sending, a streaming transcript, and citations as links.
+  import { type Task, setLabel } from '@gnomon/core';
+  import { renderAnswer } from '../lib/markdown';
+  import { brain } from '../lib/services/index';
+  import { taskLabel, describeAssemblyError } from '../lib/services/reasoning';
+  import { configureReasoner, reasoner, reasoning } from '../lib/stores/reasoning.svelte';
+  import { savePrefs, settings } from '../lib/stores/settings.svelte';
+  import { session } from '../lib/stores/session.svelte';
+  import { snapshot } from '../lib/stores/snapshot.svelte';
+
+  const s = $derived(snapshot.current);
+  const TASKS: Task[] = ['reason', 'relate', 'compare', 'free'];
+  const PROVIDER_LABELS: Record<string, string> = { mock: 'Demo model (no key)', anthropic: 'Anthropic', openrouter: 'OpenRouter' };
+  let selected = $state<string[]>([]);
+  let modelsFor = $state<string | null>(null);
+  let modelError = $state<string | null>(null);
+  let seeded = $state(false);
+
+  // Last selection remembered per device (US-8); default to every set on first use.
+  $effect(() => {
+    if (!s || seeded) return;
+    const slugs = s.sets.map((f) => f.path.split('/')[1]!);
+    const remembered = settings.prefs.lastSelectedSets.filter((x) => slugs.includes(x));
+    selected = remembered.length ? remembered : slugs;
+    seeded = true;
+  });
+  $effect(() => {
+    configureReasoner();
+    void settings.anthropicKey;
+    void settings.openrouterKey;
+  });
+  // Models for the chosen provider.
+  $effect(() => {
+    const provider = reasoning.provider;
+    if (modelsFor === provider) return;
+    modelsFor = provider;
+    modelError = null;
+    reasoning.models = [];
+    reasoning.model = null;
+    reasoner.listModels(provider).then(
+      (models) => { if (modelsFor === provider) { reasoning.models = models; reasoning.model = models[0] ?? null; } },
+      (e: Error) => { if (modelsFor === provider) modelError = e.message; },
+    );
+  });
+  // The budget bar: preview on every change of inputs, before anything is sent.
+  $effect(() => {
+    if (!s || !reasoning.model) { reasoning.preview = null; return; }
+    reasoner.preview(s, reasoning.task, selected, reasoning.input, reasoning.model, settings.prefs.budgetPercent, settings.prefs.setDescriptionPlacement);
+  });
+
+  const preview = $derived(reasoning.preview);
+  const budget = $derived(reasoning.model ? Math.floor((reasoning.model.contextWindow * settings.prefs.budgetPercent) / 100) : 0);
+  const used = $derived(preview?.ok ? preview.tokensUsed : preview ? (preview.error === 'SETS_EXCEED_BUDGET' ? preview.neededTokens : budget) : 0);
+  const fill = $derived(budget ? Math.min(100, Math.round((used / budget) * 100)) : 0);
+  const canSend = $derived(!!s && !!reasoning.model && !reasoning.streaming && selected.length > 0 && !!preview?.ok && (reasoning.task === 'compare' || reasoning.input.trim() !== ''));
+
+  function toggle(slug: string) {
+    selected = selected.includes(slug) ? selected.filter((x) => x !== slug) : [...selected, slug];
+    void savePrefs({ lastSelectedSets: selected });
+  }
+  async function send() {
+    if (!s || !reasoning.model) return;
+    const input = reasoning.input;
+    reasoning.input = '';
+    await reasoner.run(s, reasoning.provider, reasoning.model, reasoning.task, selected, input, settings.prefs.budgetPercent, settings.prefs.setDescriptionPlacement);
+    void brain;
+  }
+</script>
+
+<h2>Reason</h2>
+{#if !session.driver}
+  <p>No brain connected. <a href="#/settings">Connect one in Settings.</a></p>
+{:else if !s}
+  <p>Loading…</p>
+{:else}
+  <section class="picker">
+    <div class="chips" data-testid="set-picker">
+      {#each s.sets as set (set.path)}
+        {@const slug = set.path.split('/')[1]!}
+        <button type="button" class="chip" class:on={selected.includes(slug)} aria-pressed={selected.includes(slug)} onclick={() => toggle(slug)} data-testid="chip-{slug}">{setLabel(set.fm)}</button>
+      {/each}
+    </div>
+    <div class="row">
+      <label>Task
+        <select bind:value={reasoning.task} data-testid="task">
+          {#each TASKS as t (t)}<option value={t}>{taskLabel(t)}</option>{/each}
+        </select>
+      </label>
+      <label>Provider
+        <select bind:value={reasoning.provider} data-testid="provider">
+          {#each reasoner.providerIds as id (id)}<option value={id}>{PROVIDER_LABELS[id]}</option>{/each}
+        </select>
+      </label>
+      <label>Model
+        <select bind:value={reasoning.model} data-testid="model" disabled={!reasoning.models.length}>
+          {#each reasoning.models as m (m.id)}<option value={m}>{m.label}</option>{/each}
+        </select>
+      </label>
+    </div>
+    {#if modelError}<p class="error" role="alert">Could not list models: {modelError}</p>{/if}
+    {#if reasoning.task !== 'compare'}
+      <label>{reasoning.task === 'relate' ? 'New text' : reasoning.task === 'free' ? 'Message' : 'Question'}
+        <textarea bind:value={reasoning.input} rows={reasoning.task === 'relate' ? 6 : 3} data-testid="input" placeholder={reasoning.task === 'relate' ? 'Paste the text to relate to the selected sets.' : 'What should the principles be applied to?'}></textarea>
+      </label>
+    {/if}
+    <div class="budget" data-testid="budget">
+      <div class="bar"><div class="fill" class:over={!!preview && !preview.ok} style="width: {fill}%"></div></div>
+      {#if !selected.length}
+        <p class="hint">Select at least one set.</p>
+      {:else if preview?.ok}
+        <p class="hint" data-testid="budget-note">{preview.included.filter((r) => r.startsWith('principles/')).length} principles and {preview.included.filter((r) => r.startsWith('sources/')).length} of {preview.included.filter((r) => r.startsWith('sources/')).length + preview.excluded.length} grounding passages fit the budget{preview.excluded.length ? `; ${preview.excluded.length} named but not sent` : ''}.</p>
+      {:else if preview}
+        <p class="error" data-testid="budget-note">{describeAssemblyError(preview)}</p>
+      {/if}
+    </div>
+    <div class="row">
+      <button onclick={send} disabled={!canSend} data-testid="send">Send</button>
+      {#if reasoning.streaming}<button onclick={() => reasoner.stop()} data-testid="stop">Stop</button>{/if}
+      {#if reasoning.transcript.length}<button class="quiet" onclick={() => reasoner.clear()} disabled={reasoning.streaming}>Clear</button>{/if}
+    </div>
+    {#if reasoning.error}<p class="error" role="alert">{reasoning.error}</p>{/if}
+  </section>
+
+  <section class="transcript" data-testid="transcript">
+    {#each reasoning.transcript as turn, i (i)}
+      <article class={turn.role} data-testid="turn-{turn.role}">
+        {#if turn.role === 'user'}
+          <p class="meta">{taskLabel(turn.task)} · {turn.sets.map((slug) => setLabel(s.sets.find((f) => f.path === `principles/${slug}/_set.md`)?.fm ?? { type: 'principle-set', order: 0, curated: 'human', created: '', updated: '' })).join(', ')}</p>
+          <p class="text">{turn.text}</p>
+        {:else}
+          <div class="markdown answer">{@html renderAnswer(turn.text, s)}</div>
+          {#if !reasoning.streaming || i < reasoning.transcript.length - 1}
+            {#if turn.citations.length}
+              <p class="meta">{turn.citations.filter((c) => c.resolved).length} citation{turn.citations.filter((c) => c.resolved).length === 1 ? '' : 's'}{turn.citations.some((c) => !c.resolved) ? `, ${turn.citations.filter((c) => !c.resolved).length} not in this brain` : ''}</p>
+            {/if}
+          {/if}
+        {/if}
+      </article>
+    {/each}
+  </section>
+{/if}
+
+<style>
+  .picker { display: grid; gap: 0.75rem; margin-bottom: 1rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .chip { border: 1px solid rgba(127, 127, 127, 0.5); border-radius: 1rem; padding: 0.3rem 0.8rem; background: transparent; color: inherit; cursor: pointer; }
+  .chip.on { background: #1c1917; color: #fafaf9; border-color: #1c1917; }
+  @media (prefers-color-scheme: dark) { .chip.on { background: #fafaf9; color: #1c1917; border-color: #fafaf9; } }
+  .row { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: end; }
+  .row label { display: grid; gap: 0.25rem; flex: 1 1 8rem; }
+  select, textarea { font: inherit; padding: 0.4rem; width: 100%; box-sizing: border-box; }
+  .bar { height: 0.5rem; background: rgba(127, 127, 127, 0.25); border-radius: 0.25rem; overflow: hidden; }
+  .fill { height: 100%; background: #15803d; transition: width 0.2s; }
+  .fill.over { background: #b91c1c; }
+  .transcript article { padding: 0.75rem 1rem; border-radius: 0.75rem; margin-bottom: 0.75rem; }
+  .transcript .user { background: rgba(127, 127, 127, 0.12); }
+  .transcript .assistant { border: 1px solid rgba(127, 127, 127, 0.3); }
+  .meta { opacity: 0.6; font-size: 0.85rem; margin: 0 0 0.25rem; }
+  .text { white-space: pre-wrap; margin: 0; }
+  .hint { opacity: 0.7; margin: 0.25rem 0 0; font-size: 0.9rem; }
+  .error { color: #b91c1c; margin: 0.25rem 0 0; }
+  .quiet { opacity: 0.7; }
+  button { padding: 0.5rem 1rem; }
+  .answer :global(code) { background: rgba(127, 127, 127, 0.15); padding: 0 0.25rem; border-radius: 0.25rem; }
+</style>
