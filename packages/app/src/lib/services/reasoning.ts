@@ -46,6 +46,12 @@ export class ReasoningService {
     return [...this.drivers.keys()];
   }
 
+  driver(provider: ProviderId): ProviderDriver {
+    const d = this.drivers.get(provider);
+    if (!d) throw new Error(`provider '${provider}' is not configured`);
+    return d;
+  }
+
   listModels(provider: ProviderId): Promise<ModelInfo[]> {
     const d = this.drivers.get(provider);
     if (!d) throw new Error(`provider '${provider}' is not configured`);

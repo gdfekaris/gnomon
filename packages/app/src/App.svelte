@@ -15,6 +15,7 @@
   import Sets from './routes/Sets.svelte';
   import Editor from './routes/Editor.svelte';
   import Reason from './routes/Reason.svelte';
+  import Inbox from './routes/Inbox.svelte';
 
   // Launch: rebuild the session from on-device settings (spec §10.2), off the
   // critical path so Capture renders first (spec §10.4).
@@ -40,6 +41,7 @@
     <nav>
       <a href="#/capture" class:active={route.name === 'capture'}>Capture</a>
       <a href="#/browse" class:active={route.name === 'browse'}>Browse</a>
+      <a href="#/inbox" class:active={route.name === 'inbox'}>Inbox</a>
       <a href="#/sets" class:active={route.name === 'sets'}>Sets</a>
       <a href="#/reason" class:active={route.name === 'reason'}>Reason</a>
       <a href="#/settings" class:active={route.name === 'settings'}>Settings</a>
@@ -57,6 +59,8 @@
     <Editor path={route.path} />
   {:else if route.name === 'reason'}
     <Reason />
+  {:else if route.name === 'inbox'}
+    <Inbox />
   {:else if route.name === 'settings'}
     <Settings />
   {:else if route.name === 'capture'}

@@ -21,8 +21,21 @@ export const MOCK_MODEL: ModelInfo = { id: 'mock-reasoner', label: 'Demo model (
 
 const refsIn = (text: string, prefix: string) => [...text.matchAll(/<!-- ref: ([^\s>]+) -->/g)].map((m) => m[1]!).filter((r) => r.startsWith(prefix));
 
-/** The default script: cite the principles and passages it was given, name precedence when a set has several principles. */
+/** Task C (spec §8.5) for the demo: a well-formed filing reply built from the capture and the first set it was shown. */
+export function demoFilingScript(req: CompletionRequest): string {
+  const context = req.messages.filter((m) => m.role === 'user').map((m) => m.content).join('\n\n');
+  const capture = (context.split(/^## The capture\n/m)[1] ?? '').replace(/^Curator's note: .*\n+/m, '').replace(/^An attachment .*\n+/m, '').trim();
+  const firstLine = capture.split('\n').find((l) => l.trim()) ?? 'Untitled capture';
+  const title = firstLine.replace(/^#+\s*/, '').split(/\s+/).slice(0, 6).join(' ').replace(/[.,;:!?]+$/, '');
+  const set = /set slug: (ps-[^\s]+)/.exec(context)?.[1];
+  const proposals: unknown[] = [{ kind: 'tag', title: 'Tag as a demo filing', rationale: 'Filed by the demo model; retag by hand.' }];
+  if (set) proposals.push({ kind: 'principle', title: `What "${title}" asks of me`, target_set: set, rationale: 'The demo model suggests a principle wherever a capture makes a claim. Decide whether you hold it.' });
+  return JSON.stringify({ meta: { title: title || 'Untitled capture', author: 'unknown', tags: ['demo'] }, proposals });
+}
+
+/** The default script: a filing reply for the Task C prompt, otherwise a cited answer that names precedence. */
 export function demoScript(req: CompletionRequest): string {
+  if (req.system.startsWith('You are filing a capture')) return demoFilingScript(req);
   const context = req.messages.filter((m) => m.role === 'user').map((m) => m.content).join('\n\n');
   const principles = refsIn(context, 'principles/');
   const passages = refsIn(context, 'sources/');

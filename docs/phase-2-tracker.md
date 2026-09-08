@@ -168,7 +168,7 @@ API key is needed. Real keys matter only for trying the Reason screen live.
   task presets, provider and model pickers, the budget bar with a note
   on what fits, Send/Stop/Clear. `maxTokens` is the model's output cap
   capped at 8192. Live provider calls remain the maintainer's to try.*
-- [ ] **8. Inbox screen** (L) — US-2, US-3, spec §9, proposal §9
+- [x] **8. Inbox screen** (L) — US-2, US-3, spec §9, proposal §9
   decision 3. `routes/Inbox.svelte`: captures with their status, "process
   inbox with AI" running block 4 per capture with one commit each, recent
   filing commits from `history({limit: 50})`, the review view built from
@@ -176,7 +176,23 @@ API key is needed. Real keys matter only for trying the Reason screen live.
   size, the capture's `+` lines only), ratify and reject with the conflict
   explanation. Done when a flow files a capture through the mock
   provider, reviews it, ratifies it, files another and rejects it, and
-  the inbox shows the right states throughout.
+  the inbox shows the right states throughout. *Done 2026-09-08.
+  `providers/mock.ts` `demoFilingScript` answers the Task C prompt with a
+  valid JSON reply (title from the capture's first words, author
+  unknown, a tag proposal and a principle proposal for the first set), so
+  the demo brain files without a key. `services/inbox.ts` (unit-tested):
+  `processInbox` runs prompt → provider → `parseFilingReply` →
+  attachment bytes → `buildFiling` → commit per capture, a bad reply
+  stopping that capture only; `loadFilings` (history + compare +
+  `filingState`); `reviewOf`; `ratify`; `reject` returning the conflict
+  paths. `routes/Inbox.svelte`: unfiled captures, provider and model
+  pickers, process with progress and per-capture results, recent filings
+  with state badges, the review panel (added files rendered in full,
+  attachments by name and size, the capture's `+` lines), Ratify and
+  Reject, and the conflict explanation with the paths to handle by hand.
+  The fixture's own pending filing is not in the demo brain's git
+  history (it was seeded in one commit), so it does not appear in the
+  list; its state is visible in Browse.*
 - [ ] **9. Proposals screen** (M) — US-3, schema §4.7, §7.10.
   `routes/Proposals.svelte`: open proposals grouped by target set with
   kind, title, rationale, and links; accept and decline via

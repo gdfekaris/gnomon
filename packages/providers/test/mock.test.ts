@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { MOCK_MODEL, MockProvider, demoScript } from '../src/index';
+import { FILING_PROMPT, parseFilingReply } from '@gnomon/core';
+import { MOCK_MODEL, MockProvider, demoFilingScript, demoScript } from '../src/index';
 import { collect } from './contract';
 
 const request = (content: string, signal = new AbortController().signal) => ({ model: 'mock-reasoner', system: 'rules', messages: [{ role: 'user' as const, content }], maxTokens: 100, signal });
@@ -54,5 +55,14 @@ describe('MockProvider', () => {
     expect(two).toContain('Reasoning from each set separately: Set 1, Set 2 — Work.');
     expect(two).toContain('stands ungrounded');
     expect(demoScript(request('## Set 1\n\n(nothing)'))).toContain('no principles');
+  });
+
+  it('answers the filing prompt with a reply parseFilingReply accepts', () => {
+    const context = '## Principle sets you may target\n\n### Set 1 — set slug: ps-g8xw\n\n- ref `ps-g8xw/a` — A\n\n## Existing sources (slugs you may cite in grounds)\n\n(none yet)\n\n## The capture\n\nCurator\'s note: from a train.\n\nThe only way to make sense out of change is to plunge into it.\nSecond line.';
+    const req = { model: 'mock-reasoner', system: FILING_PROMPT, messages: [{ role: 'user' as const, content: context }], maxTokens: 100, signal: new AbortController().signal };
+    expect(demoScript(req)).toBe(demoFilingScript(req));
+    const parsed = parseFilingReply(demoScript(req));
+    expect(parsed.meta).toEqual({ title: 'The only way to make sense', author: 'unknown', tags: ['demo'] });
+    expect(parsed.proposals.map((p) => [p.kind, p.target_set])).toEqual([['tag', undefined], ['principle', 'ps-g8xw']]);
   });
 });
