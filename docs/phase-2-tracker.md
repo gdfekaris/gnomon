@@ -104,13 +104,25 @@ API key is needed. Real keys matter only for trying the Reason screen live.
   not exist are refused with a `FilingReplyError` naming the field; tags
   are lowercased and deduplicated; an optional `meta.slug` is accepted).
   The mock-provider end-to-end lands with the Inbox screen (block 8).*
-- [ ] **5. Sets screen** (M) — proposal §6, US-18, US-20, spec §7.3.
+- [x] **5. Sets screen** (M) — proposal §6, US-18, US-20, spec §7.3.
   `routes/Sets.svelte`: sets with ordinal and sub-name, new set, rename,
   reorder (drag, with a keyboard fallback), delete with confirmation
   naming the principle count and the dangling report, per-set description
   editor, principle drag-reorder within a set. Done when a Playwright flow
   over the demo brain creates Set 3, names it, reorders, deletes Set 1,
-  and the survivors read "Set 1 — Work" with every link intact.
+  and the survivors read "Set 1 — Work" with every link intact. *Done
+  2026-09-07. `services/sets.ts` (unit-tested): `newSet`, `renameSet`,
+  `describeSet`, `moveSet`/`movePrinciple` (one step), `placeSet`/
+  `placePrinciple` (drag target index), `planDeleteSet`/
+  `planDeletePrinciple` (count, dangling report, and the commit to run
+  after confirmation). `routes/Sets.svelte`: HTML5 drag-and-drop plus
+  Move up/down buttons as the keyboard path (the flows drive the
+  buttons); inline delete confirmation naming the principle count and
+  every dangling reference; description editor; the last set's Delete
+  is disabled. Principle deletion lives here too since it is the same
+  screen (US-4's editors are block 6). Flows: create/rename/reorder/
+  delete with survivors renumbered and paths intact, set reorder and
+  description, last-set guard.*
 - [ ] **6. Editors with curation enforcement** (L) — US-4, US-5, US-6,
   US-7. Principle create and edit from `templates/principle.md`, with a
   link-insertion helper that writes dual links and a one-tap sync when

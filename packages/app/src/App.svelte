@@ -12,6 +12,7 @@
   import FileView from './routes/FileView.svelte';
   import Capture from './routes/Capture.svelte';
   import Settings from './routes/Settings.svelte';
+  import Sets from './routes/Sets.svelte';
 
   // Launch: rebuild the session from on-device settings (spec §10.2), off the
   // critical path so Capture renders first (spec §10.4).
@@ -37,6 +38,7 @@
     <nav>
       <a href="#/capture" class:active={route.name === 'capture'}>Capture</a>
       <a href="#/browse" class:active={route.name === 'browse'}>Browse</a>
+      <a href="#/sets" class:active={route.name === 'sets'}>Sets</a>
       <a href="#/settings" class:active={route.name === 'settings'}>Settings</a>
     </nav>
   </header>
@@ -44,6 +46,8 @@
     <FileView path={route.path} anchor={route.anchor} />
   {:else if route.name === 'browse'}
     <Browse />
+  {:else if route.name === 'sets'}
+    <Sets />
   {:else if route.name === 'settings'}
     <Settings />
   {:else if route.name === 'capture'}
