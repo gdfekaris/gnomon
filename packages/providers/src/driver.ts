@@ -14,7 +14,5 @@ export interface ProviderDriver {
   complete(req: CompletionRequest): AsyncIterable<CompletionEvent>;
 }
 
-/** Conservative pre-request estimate (spec §8.2): ceil(utf8Bytes / 3.6). */
-export function estimateTokens(text: string): number {
-  return Math.ceil(new TextEncoder().encode(text).length / 3.6);
-}
+// Token estimation lives in core/assembly (spec §8.2); re-exported here for callers that only know providers.
+export { estimateTokens } from '@gnomon/core';

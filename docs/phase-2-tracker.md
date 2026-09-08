@@ -14,7 +14,7 @@ Blocks 1–4 are library work, testable offline. Blocks 5–9 are screens; each
 ends in a Playwright flow over the demo brain with the mock provider, so no
 API key is needed. Real keys matter only for trying the Reason screen live.
 
-- [ ] **1. Assembly** (M) — spec §8.2–§8.4, schema §8. `core/assembly`:
+- [x] **1. Assembly** (M) — spec §8.2–§8.4, schema §8. `core/assembly`:
   `assemble(snapshot, task, selectedSets, input, budgetTokens)` returning
   `AssemblyResult` (`included`, `excluded`, `tokensUsed`, or the
   `SETS_EXCEED_BUDGET` / `INPUT_EXCEEDS_BUDGET` errors); the four system
@@ -26,7 +26,19 @@ API key is needed. Real keys matter only for trying the Reason screen live.
   byte in tests: sets are never truncated, grounding passages fill in
   order of first reference, overflow lands under "Passages referenced but
   not included", Task B appends the new text last, `setDescriptionPlacement`
-  flips the `_set.md` body between context and system prompt.
+  flips the `_set.md` body between context and system prompt. *Done
+  2026-09-07. Prompts are TypeScript constants in `assembly/prompts/`
+  (Task type: `reason` | `relate` | `compare` | `free`). Decisions beyond
+  the spec text: the input is reserved before passages fill, so passages
+  can never crowd out the question or text (Task A gets `## Question`,
+  free-form `## Message`, Task D none); the "not included" section counts
+  as mandatory material, at minimum one title line per passage, so
+  `SETS_EXCEED_BUDGET` reports the true floor and a successful assembly
+  never exceeds the budget; that section carries notes bodies only when
+  they fit; an `EMPTY_SET` error refuses a selected set with no
+  principles (AGENTS.md: reasoning without premises). Passages sit under
+  a `## Grounding passages` heading. `parseCitations` wraps
+  `parseLinks`. `estimateTokens` lives here; providers re-exports it.*
 - [ ] **2. Provider drivers** (L) — spec §8.1. `providers`: a `MockProvider`
   that replays scripted responses (for tests and the demo brain; not in
   the spec but assumed by §17); `AnthropicDriver` (`/v1/messages` with the
