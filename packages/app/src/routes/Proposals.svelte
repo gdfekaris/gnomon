@@ -6,6 +6,7 @@
   import type { BrainFile, ProposalFm } from '@gnomon/core';
   import MarkdownView from '../lib/components/MarkdownView.svelte';
   import { browseHref, linkLabel } from '../lib/markdown';
+  import ConnectionNotice from '../lib/components/ConnectionNotice.svelte';
   import { brain, describeError } from '../lib/services/index';
   import { acceptanceRoute, decide, groupProposals, proposalId, writtenAs } from '../lib/services/proposals';
   import { session } from '../lib/stores/session.svelte';
@@ -37,10 +38,8 @@
 </script>
 
 <h2>Proposals</h2>
-{#if !session.driver}
-  <p>No brain connected. <a href="#/settings">Connect one in Settings.</a></p>
-{:else if !s}
-  <p>Loading…</p>
+{#if !s}
+  <ConnectionNotice />
 {:else}
   <p class="hint">Suggestions from filing and desktop sessions. You decide; nothing here changes a principle until you write it yourself.</p>
   {#each groups as g (g.key)}
@@ -82,7 +81,7 @@
       {/if}
     </section>
   {:else}
-    <p class="empty">No proposals yet. Filing a capture produces them.</p>
+    <p class="empty">No proposals yet. Filing a capture from the Inbox produces the first ones.</p>
   {/each}
   {#if error}<p class="error" role="alert">{error}</p>{/if}
 {/if}

@@ -2,6 +2,7 @@
   // Spec §15: images inline from a blob: URL; PDFs opened in a new tab from a
   // blob: URL; HTML shown as source, never rendered; the rest as a download.
   import { type LoadedAttachment, loadAttachment } from '../attachments';
+  import { describeError } from '../services/index';
   import { session } from '../stores/session.svelte';
   import { snapshot } from '../stores/snapshot.svelte';
 
@@ -16,7 +17,7 @@
     error = null;
     const driver = session.driver;
     if (!driver) return;
-    loadAttachment(driver, path, entry?.sha || undefined).then((a) => (loaded = a), (e: Error) => (error = e.message));
+    loadAttachment(driver, path, entry?.sha || undefined).then((a) => (loaded = a), (e: unknown) => (error = describeError(e)));
   });
   const openPdf = () => { if (loaded) window.open(loaded.url, '_blank', 'noopener'); };
   const asText = () => (loaded ? new TextDecoder().decode(loaded.bytes) : '');

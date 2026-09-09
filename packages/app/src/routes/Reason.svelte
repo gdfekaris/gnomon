@@ -8,7 +8,8 @@
   import { taskLabel, describeAssemblyError } from '../lib/services/reasoning';
   import { configureReasoner, reasoner, reasoning } from '../lib/stores/reasoning.svelte';
   import { savePrefs, settings } from '../lib/stores/settings.svelte';
-  import { session } from '../lib/stores/session.svelte';
+  import ConnectionNotice from '../lib/components/ConnectionNotice.svelte';
+  import { describeError } from '../lib/services/index';
   import { snapshot } from '../lib/stores/snapshot.svelte';
 
   const s = $derived(snapshot.current);
@@ -42,7 +43,7 @@
     reasoning.model = null;
     reasoner.listModels(provider).then(
       (models) => { if (modelsFor === provider) { reasoning.models = models; reasoning.model = models[0] ?? null; } },
-      (e: Error) => { if (modelsFor === provider) modelError = e.message; },
+      (e: unknown) => { if (modelsFor === provider) modelError = describeError(e); },
     );
   });
   // The budget bar: preview on every change of inputs, before anything is sent.
@@ -71,10 +72,14 @@
 </script>
 
 <h2>Reason</h2>
-{#if !session.driver}
-  <p>No brain connected. <a href="#/settings">Connect one in Settings.</a></p>
-{:else if !s}
-  <p>Loading…</p>
+{#if !s}
+  <ConnectionNotice />
+{:else if !s.byType('principle').length}
+  <p class="empty" data-testid="empty-reason">
+    Nothing to reason from yet: your sets have no principles, and reasoning without premises would make the answer the
+    model's, not yours. <a href="#/capture">Capture</a> a passage, file it from the Inbox, ratify the filing, then accept
+    a proposal or <a href="#/sets">write a principle</a> yourself.
+  </p>
 {:else}
   <section class="picker">
     <div class="chips" data-testid="set-picker">
@@ -144,6 +149,7 @@
 {/if}
 
 <style>
+  .empty { opacity: 0.8; }
   .picker { display: grid; gap: 0.75rem; margin-bottom: 1rem; }
   .chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
   .chip { border: 1px solid rgba(127, 127, 127, 0.5); border-radius: 1rem; padding: 0.3rem 0.8rem; background: transparent; color: inherit; cursor: pointer; }

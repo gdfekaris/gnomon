@@ -64,7 +64,7 @@ test('reorder sets with the buttons and edit a set description', async ({ page }
 test('the last set cannot be deleted and an empty new set says so', async ({ page }) => {
   await page.getByTestId('new-set').click();
   await expect.poll(() => labels(page)).toEqual(['Set 1', 'Set 2 — Work', 'Set 3']);
-  await expect(page.getByTestId('sets').locator('li.set').nth(2)).toContainText('(no principles yet)');
+  await expect(page.getByTestId('sets').locator('li.set').nth(2)).toContainText('No principles yet');
   for (const slug of ['ps-g8xw', 'ps-7k2m']) {
     await page.getByTestId(`set-${slug}`).getByTestId('set-delete').click();
     await page.getByTestId('delete-confirm-yes').click();

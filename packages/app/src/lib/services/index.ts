@@ -1,11 +1,12 @@
 // The app's single BrainService, bound to the snapshot store, plus the two
 // ways to connect: the demo brain and a GitHub repository.
-import { AuthError, GitHubDriver, NetworkError, NotFoundError, RateLimitError } from '@gnomon/storage';
+import { GitHubDriver } from '@gnomon/storage';
 import { demoDriver } from '../demo/fixture';
 import { session } from '../stores/session.svelte';
 import { snapshot } from '../stores/snapshot.svelte';
 import { type GitSettings, savePrefs } from '../stores/settings.svelte';
 import { BrainService } from './brain';
+export { describeError } from './errors';
 
 export const brain = new BrainService(snapshot);
 
@@ -34,13 +35,4 @@ export function disconnect(): void {
   session.mode = null;
   session.label = '';
   void savePrefs({ mode: null });
-}
-
-/** A user-facing sentence for a connection failure (spec §14). */
-export function describeError(e: unknown): string {
-  if (e instanceof AuthError) return 'GitHub rejected the token. Check that it is a fine-grained token with Contents read and write on this repository.';
-  if (e instanceof NotFoundError) return 'Repository not found, or the token cannot see it.';
-  if (e instanceof RateLimitError) return 'GitHub rate limit reached. Try again in a while.';
-  if (e instanceof NetworkError) return 'Could not reach GitHub. Check the connection.';
-  return (e as Error).message;
 }

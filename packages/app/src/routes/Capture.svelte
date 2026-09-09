@@ -2,7 +2,10 @@
   // Capture — spec §10.4, US-1, and the offline queue of spec §14. The
   // default screen: paste target, note, attach-a-file, save. One commit.
   import { AttachmentTooLargeError, ATTACHMENT_LIMIT_BYTES } from '@gnomon/storage';
-  import { brain } from '../lib/services/index';
+  import ConnectionNotice from '../lib/components/ConnectionNotice.svelte';
+  import Nudge from '../lib/components/Nudge.svelte';
+  import { brain, describeError } from '../lib/services/index';
+  import { snapshot } from '../lib/stores/snapshot.svelte';
   import type { CaptureResult } from '../lib/services/capture';
   import { session } from '../lib/stores/session.svelte';
   import { network, offlineQueue, pending } from '../lib/stores/pending.svelte';
@@ -46,9 +49,7 @@
       files = null;
       if (fileInput) fileInput.value = '';
     } catch (e) {
-      error = e instanceof AttachmentTooLargeError
-        ? `That file is ${mb(e.size)} MB; the limit is ${mb(e.limit)} MB. The capture is kept below; remove or replace the file.`
-        : (e as Error).message;
+      error = e instanceof AttachmentTooLargeError ? `${describeError(e)} The capture is kept below.` : describeError(e);
     } finally {
       saving = false;
     }
@@ -56,9 +57,10 @@
 </script>
 
 <h2>Capture</h2>
-{#if !session.driver}
-  <p>No brain connected yet. <a href="#/onboarding">Set one up</a>, or <a href="#/settings">open Settings</a> to reconnect.</p>
+{#if !session.driver || (!snapshot.current && network.online)}
+  <ConnectionNotice />
 {:else}
+  <Nudge />
   {#if !network.online}
     <p class="offline" role="status" data-testid="offline">You are offline. A text capture will be kept here and saved when you are back online.</p>
   {/if}

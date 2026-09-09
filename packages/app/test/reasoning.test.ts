@@ -77,7 +77,7 @@ describe('ReasoningService (spec §8.3, §10.2)', () => {
     const failing: ProviderDriver = { id: 'mock', listModels: async () => [MOCK_MODEL], complete: async function* () { throw new ProviderAuthError('bad key'); } };
     const svc2 = new ReasoningService(state, {}, failing);
     await svc2.run(snapshot, 'mock', MOCK_MODEL, 'reason', ['ps-7k2m'], 'q', 60, 'context');
-    expect(state.error).toBe('bad key');
+    expect(state.error).toBe('The AI provider rejected the API key. Check it in Settings.');
     expect(state.transcript.length).toBe(2);
   });
 

@@ -6,6 +6,7 @@
   import type { ModelInfo } from '@gnomon/providers';
   import MarkdownView from '../lib/components/MarkdownView.svelte';
   import { browseHref, linkLabel } from '../lib/markdown';
+  import ConnectionNotice from '../lib/components/ConnectionNotice.svelte';
   import { brain, describeError } from '../lib/services/index';
   import { type FilingEntry, loadFilings, processInbox, ratify, reject, reviewOf, unfiledCaptures } from '../lib/services/inbox';
   import { ReasoningService } from '../lib/services/reasoning';
@@ -35,7 +36,7 @@
     modelsFor = provider;
     models = [];
     model = null;
-    reasoner.listModels(provider).then((m) => { if (modelsFor === provider) { models = m; model = m[0] ?? null; } }, (e: Error) => (error = e.message));
+    reasoner.listModels(provider).then((m) => { if (modelsFor === provider) { models = m; model = m[0] ?? null; } }, (e: unknown) => (error = describeError(e)));
   });
   $effect(() => {
     const head = s?.head ?? null;
@@ -83,10 +84,8 @@
 </script>
 
 <h2>Inbox</h2>
-{#if !session.driver}
-  <p>No brain connected. <a href="#/settings">Connect one in Settings.</a></p>
-{:else if !s}
-  <p>Loading…</p>
+{#if !s}
+  <ConnectionNotice />
 {:else}
   <section>
     <h3>Unfiled captures</h3>
@@ -171,7 +170,7 @@
           {/if}
         </li>
       {:else}
-        <li class="empty">No filings yet.</li>
+        <li class="empty">No filings yet. Filing a capture with AI makes the first one; it waits here for your review.</li>
       {/each}
     </ul>
   </section>

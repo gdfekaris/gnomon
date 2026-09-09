@@ -3,6 +3,7 @@
 // transcript, and parses citations. Framework-free: it writes into a plain
 // state object so it runs under vitest without Svelte.
 
+import { describeError } from './errors';
 import { type Assembly, type AssemblyResult, type BrainSnapshot, type Citation, type Task, assemble, parseCitations } from '@gnomon/core';
 import { AnthropicDriver, type ChatMessage, MockProvider, type ModelInfo, OpenRouterDriver, type ProviderDriver } from '@gnomon/providers';
 
@@ -117,7 +118,7 @@ export class ReasoningService {
       }
     } catch (e) {
       if ((e as Error).name === 'AbortError') answer.text += answer.text ? '\n\n(stopped)' : '(stopped)';
-      else this.state.error = (e as Error).message;
+      else this.state.error = describeError(e);
     } finally {
       this.controller = null;
       this.state.streaming = false;

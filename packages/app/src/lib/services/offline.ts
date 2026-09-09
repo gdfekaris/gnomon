@@ -3,6 +3,7 @@
 // (§10.3), and saves it when the connection returns. Attachments are not
 // queued. Framework-free so it is unit-tested; the store wraps it.
 
+import { describeError } from './errors';
 import { NetworkError } from '@gnomon/storage';
 import type { BrainService } from './brain';
 import { type CaptureInput, type CaptureResult, captureToInbox } from './capture';
@@ -57,7 +58,7 @@ export class OfflineQueue {
     } catch (e) {
       if (e instanceof NetworkError) return null; // still unreachable; keep waiting
       this.state.pending = null;
-      this.state.flushError = (e as Error).message;
+      this.state.flushError = describeError(e);
       throw e;
     }
   }

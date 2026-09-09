@@ -16,10 +16,17 @@ const cors = {
   'access-control-expose-headers': '*',
 };
 
-export async function serveGitHub(page: Page, gh: FakeGitHub): Promise<void> {
+export interface Bridge {
+  /** added to every answer; a slow connection for loading-state checks */
+  latencyMs: number;
+}
+
+export async function serveGitHub(page: Page, gh: FakeGitHub): Promise<Bridge> {
+  const bridge: Bridge = { latencyMs: 0 };
   await page.route('https://api.github.com/**', async (route) => {
     const req = route.request();
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
+    if (bridge.latencyMs) await new Promise((r) => setTimeout(r, bridge.latencyMs));
     const init: RequestInit = { method: req.method(), headers: req.headers() };
     const body = req.postData();
     if (body !== null) init.body = body;
@@ -28,4 +35,5 @@ export async function serveGitHub(page: Page, gh: FakeGitHub): Promise<void> {
     res.headers.forEach((v, k) => { headers[k] = v; });
     return route.fulfill({ status: res.status, headers, body: await res.text() });
   });
+  return bridge;
 }

@@ -7,7 +7,7 @@
   import { brain, describeError } from '../lib/services/index';
   import { type DeletePlan, describeSet, moveSet, movePrinciple, newSet, placePrinciple, placeSet, planDeletePrinciple, planDeleteSet, renameSet } from '../lib/services/sets';
   import { browseHref } from '../lib/markdown';
-  import { session } from '../lib/stores/session.svelte';
+  import ConnectionNotice from '../lib/components/ConnectionNotice.svelte';
   import { snapshot } from '../lib/stores/snapshot.svelte';
 
   const s = $derived(snapshot.current);
@@ -57,10 +57,8 @@
 </script>
 
 <h2>Principle sets</h2>
-{#if !session.driver}
-  <p>No brain connected. <a href="#/settings">Connect one in Settings.</a></p>
-{:else if !s}
-  <p>Loading…</p>
+{#if !s}
+  <ConnectionNotice />
 {:else}
   <p class="hint">A set is a stance. Order within a set is precedence: when two principles pull against each other, the earlier one governs.</p>
 
@@ -136,7 +134,7 @@
               </span>
             </li>
           {:else}
-            <li class="empty">(no principles yet)</li>
+            <li class="empty">No principles yet. Write one below, or accept a proposal.</li>
           {/each}
         </ol>
         <p><a href="#/sets/{slug}/new-principle" data-testid="new-principle">+ New principle</a></p>

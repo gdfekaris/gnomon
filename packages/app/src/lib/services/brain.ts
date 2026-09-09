@@ -5,6 +5,7 @@
 
 import { type BrainSnapshot, type CommitBatch, ValidationError, applyBatch, validateBatch } from '@gnomon/core';
 import { HeadMovedError, type StorageDriver, loadSnapshot } from '@gnomon/storage';
+import { describeError } from './errors';
 
 export interface SnapshotState {
   current: BrainSnapshot | null;
@@ -47,7 +48,7 @@ export class BrainService {
       this.state.stale = false;
       return s;
     } catch (e) {
-      this.state.error = (e as Error).message;
+      this.state.error = describeError(e);
       throw e;
     } finally {
       this.state.loading = false;

@@ -2,6 +2,7 @@
 // provider one commit each, list recent filings with where they stand,
 // ratify, and reject. Framework-free; the screen renders the state object.
 
+import { describeError } from './errors';
 import {
   type BrainFile, type BrainSnapshot, type FileChange, type FilingReview, type FilingState, type InboxFm, buildFiling, buildFilingPrompt, buildRatify,
   filingState, nowUtc, parseFilingReply, reviewFiling,
@@ -39,7 +40,7 @@ export async function loadFilings(state: InboxState, brain: BrainService, driver
     const filings = await listFilings(driver, limit);
     state.filings = filings.map((f) => ({ ...f, state: filingState(s, f.changes) }));
   } catch (e) {
-    state.error = (e as Error).message;
+    state.error = describeError(e);
   } finally {
     state.loading = false;
   }
@@ -82,13 +83,13 @@ export async function processInbox(state: InboxState, brain: BrainService, drive
         result.proposals = proposals.length;
       } catch (e) {
         if ((e as Error).name === 'AbortError') throw e;
-        result.error = (e as Error).message;
+        result.error = describeError(e);
       }
       state.results = [...state.results, result];
       state.processing = { done: state.results.length, total: captures.length };
     }
   } catch (e) {
-    if ((e as Error).name !== 'AbortError') state.error = (e as Error).message;
+    if ((e as Error).name !== 'AbortError') state.error = describeError(e);
   } finally {
     state.processing = null;
   }

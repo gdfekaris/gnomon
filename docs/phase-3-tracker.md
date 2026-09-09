@@ -35,7 +35,7 @@ GitHub. Block 4 is the design pass, taken up now that every screen exists.
   for iPhone. Done when a flow over a mocked GitHub walks from nothing to
   a connected, valid brain and lands on Capture, and a second flow
   connects an existing one showing its validation results.
-- [ ] **3. Non-technical polish** (M) — proposal §8 Phase 3, US-14. First-
+- [x] **3. Non-technical polish** (M) — proposal §8 Phase 3, US-14. First-
   run empty states on every screen; plain-language errors everywhere
   (audit `describeError` callers); a "what next" nudge on Capture and
   Browse mirroring the CLI's status line (unfiled captures, filings
@@ -93,9 +93,13 @@ are handled with the deferred items when Phase 3 is finished.
   connect-existing has used it since Phase 1 and block 1 uses it for the
   template commit. Add it to the schema (and CLAUDE.md's list) or rename.
   *After Phase 3; schema change, needs the maintainer.*
-- [ ] **G5. `describeError`'s auth sentence assumes Settings** ("on this
+- [x] **G5. `describeError`'s auth sentence assumes Settings** ("on this
   repository"); onboarding needs different wording per step. Block 1
-  gives `validateToken` its own sentences; the audit is block 3.
+  gave `validateToken` its own sentences. *Done in block 3:*
+  `describeError` moved to `services/errors.ts`, covers every storage,
+  provider, and core error class with one sentence each, and every
+  screen and service routes through it; the auth sentence points at
+  Settings from wherever it appears.
 - [x] **G6. `#/onboarding` renders the "later block" placeholder** and the
   shell launches to Capture when nothing is connected. *Done in block 2:*
   the default route redirects to `#/onboarding` once launch has settled
@@ -198,8 +202,21 @@ this phase is the natural moment for the first three and P2-live.
   annotated screenshots are not bundled and belong to the design pass
   (block 4) if wanted at all. The privacy text there and in Settings
   should be kept in step by hand.
+- The "what next" nudge is `services/status.ts` (`brainStatus`, `nudge`)
+  rendered by `components/Nudge.svelte` on Capture and Browse, in the
+  CLI's order: refusals, unfiled, awaiting review, open proposals, stale
+  indexes, all clear. Every app commit regenerates the indexes on the
+  way, so "stale indexes" only ever follows a desktop session; the flow
+  covers it with a demo that omits an index file. Screens show
+  `components/ConnectionNotice.svelte` (not connected, loading by name,
+  or a load error with a retry) whenever there is no snapshot; Capture
+  keeps its form without a snapshot only while offline, so the queued
+  capture of spec §14 still works.
 - `e2e/github-fake.ts` serves `storage/test/fake-github.ts` to the
   browser through `page.route`, so a flow can drive the real
   `GitHubDriver` end to end (create-from-template, commits, snapshot
   loads) without a hand-rolled mock. Flip the fake's switches
-  (`canCreate`, `readOnly`, `scopes`) from the test between clicks.
+  (`canCreate`, `readOnly`, `scopes`) from the test between clicks; the
+  returned bridge's `latencyMs` slows every answer for loading-state
+  checks, and `gh.externalCommit` models another device for stale-state
+  checks.

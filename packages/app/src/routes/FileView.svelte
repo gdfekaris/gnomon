@@ -1,6 +1,7 @@
 <script lang="ts">
   // One brain file: frontmatter summary, rendered body, backlinks, attachment.
   // No editor in Phase 1; raw.md bodies never get one at all (US-5).
+  import ConnectionNotice from '../lib/components/ConnectionNotice.svelte';
   import { type BrainFile, backlinks, setLabel } from '@gnomon/core';
   import MarkdownView from '../lib/components/MarkdownView.svelte';
   import AttachmentView from '../lib/components/AttachmentView.svelte';
@@ -22,7 +23,7 @@
 
 <p><a href="#/browse">← Browse</a></p>
 {#if !s}
-  <p>No brain loaded.</p>
+  <ConnectionNotice />
 {:else if attachment}
   <h2>Attachment</h2>
   <AttachmentView path={attachment} />

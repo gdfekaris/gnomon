@@ -64,7 +64,7 @@ describe('inbox service (US-2, US-3)', () => {
     const { brain, driver, inbox } = await connected();
     const head = await driver.head();
     const results = await processInbox(inbox, brain, driver, new MockProvider({ script: () => 'I would rather not.' }), MOCK_MODEL, 19_200);
-    expect(results).toEqual([{ path: 'inbox/20260906-070000-2bq.md', error: 'reply contains no JSON object' }]);
+    expect(results).toEqual([{ path: 'inbox/20260906-070000-2bq.md', error: "The model's reply could not be used: reply contains no JSON object. Try again, or pick another model." }]);
     expect(await driver.head()).toBe(head);
     const hallucinated = new MockProvider({ script: () => JSON.stringify({ meta: { title: 'T', author: 'A' }, proposals: [{ kind: 'link', title: 't', target_set: 'ps-g8xw', target: 'ps-g8xw/invented', rationale: 'r' }] }) });
     expect((await processInbox(inbox, brain, driver, hallucinated, MOCK_MODEL, 19_200))[0]!.error).toContain('not a principle in this brain');

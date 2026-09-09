@@ -3,6 +3,7 @@
   // principle (create or edit), notes, or source metadata. Sets are edited
   // on the Sets screen; raw.md bodies and attachments have no editor.
   import { type BrainFile, type NotesFm, type PrincipleFm, type SourceFm, setLabel } from '@gnomon/core';
+  import ConnectionNotice from '../lib/components/ConnectionNotice.svelte';
   import { brain, describeError } from '../lib/services/index';
   import { appendGroundingLink, createPrincipleIn, driftOf, parseList, saveNotes, savePrinciple, saveSourceMeta, slugOfSource, tagList } from '../lib/services/edit';
   import { browseHref } from '../lib/markdown';
@@ -82,8 +83,8 @@
   const addLinksForGrounds = () => { for (const g of drift.inGroundsOnly) body = appendGroundingLink(body, targetPath, g); };
 </script>
 
-{#if !session.driver || !s}
-  <p>No brain connected. <a href="#/settings">Connect one in Settings.</a></p>
+{#if !s}
+  <ConnectionNotice />
 {:else if kind === 'none'}
   <p><a href={browseHref(path)}>← Back</a></p>
   <p class="error">Nothing editable at <code>{path}</code>. Passages and attachments are immutable; corrections go in the notes file.</p>
