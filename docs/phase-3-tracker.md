@@ -69,6 +69,92 @@ GitHub. Block 4 is the design pass, taken up now that every screen exists.
   Done when `npm pack --dry-run` for the CLI lists only `dist/`, the
   README, and `package.json`, and the checklist is in `docs/`.
 
+## Block 1 scope (2026-09-09)
+
+Written before starting; delete this section in the commit that ticks
+block 1. Spec §12 steps 2–4, US-14, US-15.
+
+**New: `packages/app/src/lib/services/onboarding.ts`.**
+
+- `validateToken({ token, owner?, name?, fetch? })` → `{ ok: true, login }`
+  or `{ ok: false, reason }`. Always `GET /user`; a 401 is "GitHub
+  rejected the token", a rate limit and a network failure get their own
+  sentences. When `owner`/`name` are given (connect-existing) it also
+  probes the repository: `GET /repos/<owner>/<name>` and reads
+  `permissions.push`; a 404 is "the token cannot see this repository",
+  `push: false` is "this token can read but not write". Create-from-
+  template has no repository to probe, so a token that cannot create one
+  is explained by `createFromTemplate` when `POST /user/repos` is refused
+  with a 403. Sentences are the service's own; block 3 audits them with
+  the other `describeError` callers.
+- `createFromTemplate(driver, name, scaffold)` → `{ fullName, head }`.
+  `driver.createRepo({ name, private: true })`, then exactly one commit
+  `Scaffold: template` on top whose writes are every entry of `SCAFFOLD`
+  (the template's own `README.md` replaces the auto-generated one in the
+  same tree; nothing is generated per user). Set 1 and both generated-
+  empty index files arrive as template files, so `indexWrites` over the
+  resulting snapshot is empty. `Scaffold:` is the prefix connect-existing
+  already uses (Phase 1); it is not in schema §7's list, which is a doc
+  gap noted below.
+- Connect-existing stays in `connect.ts` (`inspectBrain`, `applyOffer`);
+  block 1 adds nothing there beyond what the scaffold change gives it.
+
+**Changed.**
+
+- `lib/scaffold.ts`: `SCAFFOLD` becomes the whole `template/` tree, not
+  just `**/*.md`: `.gitignore`, the three `.gitkeep`s, and
+  `.claude/commands/*.md`. A test asserts its key set equals the on-disk
+  file list under `template/`, so the glob cannot silently drift again.
+- `storage/src/github.ts`: two small public methods that `validateToken`
+  uses so error mapping stays in one place: `whoami()` (`GET /user`) and
+  `repository()` (`GET /repos/<owner>/<name>` with `permissions`). They
+  are GitHub-only and not on `StorageDriver`; the contract suite is
+  untouched.
+- `storage/test/fake-github.ts`: serve `GET /user` (`{ login }`) and
+  `GET /repos/<owner>/<name>` (`{ full_name, default_branch, permissions:
+  { pull, push } }`), plus two switches: `readOnly` makes `push: false`,
+  and `canCreate = false` makes `POST /user/repos` a 403. Both added to
+  the P1-13b list of assumptions to confirm against real GitHub.
+
+**Tests.** `app/test/onboarding.test.ts` over the fake: a fresh repository
+ends as exactly the template file list with two commits (`Initial
+commit`, `Scaffold: template`), validates with zero issues, has Set 1 at
+`ps-g8xw`, and needs no index write; a wrong token, a read-only token on
+an existing repository, and a refused creation each produce their
+sentence. `storage/test/github.test.ts` covers the two new methods.
+
+**Not in block 1.** Any screen or route (block 2), the privacy and token-
+swap steps (block 2), the token swap's single-repo re-validation (block
+2 reuses `validateToken` with `owner`/`name`), Settings changes, and the
+real-GitHub confirmation of the fake's new endpoints (P1-13b).
+
+## Gaps noted (2026-09-09)
+
+Found while orienting for Phase 3. Those marked *block 1* are inside
+its scope because its "done when" cannot be met without them; the rest
+are handled with the deferred items when Phase 3 is finished.
+
+- [ ] **G1. The fake GitHub has no `GET /user`** and no way to model an
+  under-privileged token. *Block 1.*
+- [ ] **G2. `SCAFFOLD` misses the template's dot-files.** The glob is
+  `**/*.md`, so `.gitignore`, `.gitkeep` keepers, and `.claude/commands/`
+  are absent; connect-existing never noticed because it writes its own
+  keepers and offers only markdown. *Block 1.*
+- [ ] **G3. Cross-package test import.** App unit tests reach only
+  `@gnomon/storage`'s public entry; block 1's test imports
+  `storage/test/fake-github.ts` by relative path. Decide later whether
+  to publish it as a `@gnomon/storage/testing` subpath. *After Phase 3.*
+- [ ] **G4. `Scaffold:` is not in schema §7's commit vocabulary** but
+  connect-existing has used it since Phase 1 and block 1 uses it for the
+  template commit. Add it to the schema (and CLAUDE.md's list) or rename.
+  *After Phase 3; schema change, needs the maintainer.*
+- [ ] **G5. `describeError`'s auth sentence assumes Settings** ("on this
+  repository"); onboarding needs different wording per step. Block 1
+  gives `validateToken` its own sentences; the audit is block 3.
+- [ ] **G6. `#/onboarding` renders the "later block" placeholder** and the
+  shell launches to Capture when nothing is connected. That is block 2's
+  work, listed here so nobody reads it as a bug.
+
 ## Deferred
 
 Carried over unchanged from Phase 1 and Phase 2; each needs something
