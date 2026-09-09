@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { isFrontmatterPath, validateSnapshot } from '@gnomon/core';
-import { AuthError, GRAPHQL_BATCH, GitHubDriver, HeadMovedError, NetworkError, RateLimitError, loadSnapshot } from '../src/index';
+import { AuthError, GRAPHQL_BATCH, GitHubDriver, HeadMovedError, NetworkError, NotFoundError, RateLimitError, loadSnapshot } from '../src/index';
 import { driverContract } from './contract';
 import { FakeGitHub } from './fake-github';
 import { readBrainBytes } from './fixture';
@@ -94,6 +94,34 @@ describe('GitHubDriver against the fake API (spec §6.2)', () => {
     expect((err as Error).message).toContain('1800000000');
     const offline = new GitHubDriver({ owner: 'octocat', name: 'brain', token: 'test-token', fetch: async () => { throw new TypeError('fetch failed'); } });
     await expect(offline.head()).rejects.toBeInstanceOf(NetworkError);
+  });
+
+  it('whoami returns the login and, for a classic token only, the scopes header', async () => {
+    const { gh, driver } = await pair();
+    expect(await driver.whoami()).toEqual({ login: 'octocat', scopes: null });
+    gh.scopes = 'repo, read:org';
+    expect(await driver.whoami()).toEqual({ login: 'octocat', scopes: ['repo', 'read:org'] });
+    gh.scopes = '';
+    expect(await driver.whoami()).toEqual({ login: 'octocat', scopes: [] });
+    await expect(new GitHubDriver({ owner: 'octocat', name: 'brain', token: 'nope', fetch: gh.fetch }).whoami()).rejects.toBeInstanceOf(AuthError);
+  });
+
+  it('repository reports push permission; a read-only token also gets a 403 on every write', async () => {
+    const { gh, driver } = await pair();
+    expect(await driver.repository()).toEqual({ fullName: 'octocat/brain', defaultBranch: 'main', permissions: { pull: true, push: true } });
+    gh.readOnly = true;
+    expect((await driver.repository()).permissions.push).toBe(false);
+    const head = await driver.head();
+    await expect(driver.commit({ message: 'x', expectedHead: head, writes: [{ path: 'a.md', text: 'a' }], deletes: [] })).rejects.toBeInstanceOf(AuthError);
+    const other = new GitHubDriver({ owner: 'octocat', name: 'elsewhere', token: 'test-token', fetch: gh.fetch });
+    await expect(other.repository()).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it('createRepo is refused with an AuthError when the token may not create repositories', async () => {
+    const { gh, driver } = await pair();
+    gh.canCreate = false;
+    await expect(driver.createRepo({ name: 'second-brain', private: true })).rejects.toBeInstanceOf(AuthError);
+    expect(driver.repo).toBe('octocat/brain');
   });
 
   it('createRepo uses auto_init and retargets the driver at the new repository', async () => {

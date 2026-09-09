@@ -33,6 +33,12 @@ export class FakeGitHub {
   readonly requests: Array<{ method: string; path: string }> = [];
   token = 'test-token';
   rateLimited = false;
+  /** the token can read but not write: `permissions.push` is false and every write is a 403 */
+  readOnly = false;
+  /** the token may not create repositories: `POST /user/repos` is a 403 */
+  canCreate = true;
+  /** a classic token's scopes, sent as `X-OAuth-Scopes` on `GET /user`; unset models a fine-grained token, which has no such header */
+  scopes: string | undefined;
   /** runs before every PATCH of a ref; lets a test move the head between the driver's check and its update */
   beforePatch: (() => Promise<void>) | undefined;
   private seq = 0;
@@ -97,7 +103,12 @@ export class FakeGitHub {
     if (this.rateLimited) return json(403, { message: 'API rate limit exceeded' }, { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': '1800000000' });
 
     if (url.pathname === '/graphql' && method === 'POST') return this.graphql(body as { query: string; variables: { owner: string; name: string } });
+    if (url.pathname === '/user' && method === 'GET') {
+      return json(200, { login: this.owner, type: 'User' }, this.scopes === undefined ? {} : { 'x-oauth-scopes': this.scopes });
+    }
+    if (this.readOnly && method !== 'GET') return json(403, { message: 'Resource not accessible by personal access token' });
     if (url.pathname === '/user/repos' && method === 'POST') {
+      if (!this.canCreate) return json(403, { message: 'Resource not accessible by personal access token' });
       const name = String(body['name']);
       this.owner = 'octocat';
       this.name = name;
@@ -108,6 +119,15 @@ export class FakeGitHub {
       const tree = new Map([['README.md', await this.putBlob(readme)]]);
       await this.putCommit(await this.putTree(tree), [], 'Initial commit');
       return json(201, { full_name: `octocat/${name}`, owner: { login: 'octocat' }, name, default_branch: 'main' });
+    }
+
+    const bare = /^\/repos\/([^/]+)\/([^/]+)$/.exec(url.pathname);
+    if (bare && method === 'GET') {
+      if (bare[1] !== this.owner || bare[2] !== this.name) return json(404, { message: 'Not Found' });
+      return json(200, {
+        full_name: `${this.owner}/${this.name}`, name: this.name, owner: { login: this.owner }, private: true, default_branch: 'main',
+        permissions: { admin: false, maintain: false, push: !this.readOnly, triage: false, pull: true },
+      });
     }
 
     const m = /^\/repos\/([^/]+)\/([^/]+)(\/.*)$/.exec(url.pathname);

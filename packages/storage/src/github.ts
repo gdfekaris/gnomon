@@ -51,6 +51,10 @@ export class GitHubDriver implements StorageDriver {
   // ---------------------------------------------------------------- http
 
   private async request<T>(method: string, path: string, body?: unknown, okStatuses: number[] = [200, 201]): Promise<T> {
+    return (await this.requestWithHeaders<T>(method, path, body, okStatuses)).data;
+  }
+
+  private async requestWithHeaders<T>(method: string, path: string, body?: unknown, okStatuses: number[] = [200, 201]): Promise<{ data: T; headers: Headers }> {
     const url = path.startsWith('/repos/') || path.startsWith('/user') || path === '/graphql' ? `${this.apiBase}${path}` : `${this.apiBase}/repos/${this.repo}${path}`;
     let res: Response;
     try {
@@ -67,7 +71,7 @@ export class GitHubDriver implements StorageDriver {
     } catch (e) {
       throw new NetworkError(`${method} ${path}: ${(e as Error).message}`);
     }
-    if (okStatuses.includes(res.status)) return (res.status === 204 ? undefined : await res.json()) as T;
+    if (okStatuses.includes(res.status)) return { data: (res.status === 204 ? undefined : await res.json()) as T, headers: res.headers };
     const text = await res.text();
     let message = text;
     try {
@@ -82,6 +86,26 @@ export class GitHubDriver implements StorageDriver {
     if (res.status === 403) throw new AuthError(`GitHub refused ${method} ${path}: ${message}`);
     if (res.status === 404) throw new NotFoundError(path);
     throw new StorageError(`GitHub ${res.status} on ${method} ${path}: ${message}`);
+  }
+
+  // ---------------------------------------------------------------- token probes (spec §12 step 2)
+
+  /**
+   * `GET /user`: who the token belongs to. `scopes` is the parsed
+   * `X-OAuth-Scopes` header, which only classic tokens carry; a fine-grained
+   * token yields null, and GitHub offers no endpoint that lists its permissions.
+   */
+  async whoami(): Promise<{ login: string; scopes: string[] | null }> {
+    const { data, headers } = await this.requestWithHeaders<{ login: string }>('GET', '/user');
+    const raw = headers.get('x-oauth-scopes');
+    const scopes = raw === null ? null : raw.split(',').map((s) => s.trim()).filter(Boolean);
+    return { login: data.login, scopes };
+  }
+
+  /** `GET /repos/<owner>/<name>`: what this token may do to the repository. A repository the token cannot see is a NotFoundError. */
+  async repository(): Promise<{ fullName: string; defaultBranch: string; permissions: { pull: boolean; push: boolean } }> {
+    const r = await this.request<{ full_name: string; default_branch: string; permissions?: { pull?: boolean; push?: boolean } }>('GET', `/repos/${this.repo}`);
+    return { fullName: r.full_name, defaultBranch: r.default_branch, permissions: { pull: r.permissions?.pull ?? false, push: r.permissions?.push ?? false } };
   }
 
   // ---------------------------------------------------------------- reads

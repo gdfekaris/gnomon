@@ -15,7 +15,7 @@ Blocks 1–6 are the app; block 1 is library-shaped and tested over the fake
 GitHub, the rest end in Playwright flows over the demo brain or a mocked
 GitHub. Block 4 is the design pass, taken up now that every screen exists.
 
-- [ ] **1. Onboarding service** (M) — spec §12 steps 2–4, US-14, US-15.
+- [x] **1. Onboarding service** (M) — spec §12 steps 2–4, US-14, US-15.
   `services/onboarding.ts`: `validateToken` (`GET /user` and a permission
   probe, mapping a rejected or under-privileged token to a sentence);
   `createFromTemplate` (`createRepo` with `auto_init`, then one commit on
@@ -69,77 +69,22 @@ GitHub. Block 4 is the design pass, taken up now that every screen exists.
   Done when `npm pack --dry-run` for the CLI lists only `dist/`, the
   README, and `package.json`, and the checklist is in `docs/`.
 
-## Block 1 scope (2026-09-09)
-
-Written before starting; delete this section in the commit that ticks
-block 1. Spec §12 steps 2–4, US-14, US-15.
-
-**New: `packages/app/src/lib/services/onboarding.ts`.**
-
-- `validateToken({ token, owner?, name?, fetch? })` → `{ ok: true, login }`
-  or `{ ok: false, reason }`. Always `GET /user`; a 401 is "GitHub
-  rejected the token", a rate limit and a network failure get their own
-  sentences. When `owner`/`name` are given (connect-existing) it also
-  probes the repository: `GET /repos/<owner>/<name>` and reads
-  `permissions.push`; a 404 is "the token cannot see this repository",
-  `push: false` is "this token can read but not write". Create-from-
-  template has no repository to probe, so a token that cannot create one
-  is explained by `createFromTemplate` when `POST /user/repos` is refused
-  with a 403. Sentences are the service's own; block 3 audits them with
-  the other `describeError` callers.
-- `createFromTemplate(driver, name, scaffold)` → `{ fullName, head }`.
-  `driver.createRepo({ name, private: true })`, then exactly one commit
-  `Scaffold: template` on top whose writes are every entry of `SCAFFOLD`
-  (the template's own `README.md` replaces the auto-generated one in the
-  same tree; nothing is generated per user). Set 1 and both generated-
-  empty index files arrive as template files, so `indexWrites` over the
-  resulting snapshot is empty. `Scaffold:` is the prefix connect-existing
-  already uses (Phase 1); it is not in schema §7's list, which is a doc
-  gap noted below.
-- Connect-existing stays in `connect.ts` (`inspectBrain`, `applyOffer`);
-  block 1 adds nothing there beyond what the scaffold change gives it.
-
-**Changed.**
-
-- `lib/scaffold.ts`: `SCAFFOLD` becomes the whole `template/` tree, not
-  just `**/*.md`: `.gitignore`, the three `.gitkeep`s, and
-  `.claude/commands/*.md`. A test asserts its key set equals the on-disk
-  file list under `template/`, so the glob cannot silently drift again.
-- `storage/src/github.ts`: two small public methods that `validateToken`
-  uses so error mapping stays in one place: `whoami()` (`GET /user`) and
-  `repository()` (`GET /repos/<owner>/<name>` with `permissions`). They
-  are GitHub-only and not on `StorageDriver`; the contract suite is
-  untouched.
-- `storage/test/fake-github.ts`: serve `GET /user` (`{ login }`) and
-  `GET /repos/<owner>/<name>` (`{ full_name, default_branch, permissions:
-  { pull, push } }`), plus two switches: `readOnly` makes `push: false`,
-  and `canCreate = false` makes `POST /user/repos` a 403. Both added to
-  the P1-13b list of assumptions to confirm against real GitHub.
-
-**Tests.** `app/test/onboarding.test.ts` over the fake: a fresh repository
-ends as exactly the template file list with two commits (`Initial
-commit`, `Scaffold: template`), validates with zero issues, has Set 1 at
-`ps-g8xw`, and needs no index write; a wrong token, a read-only token on
-an existing repository, and a refused creation each produce their
-sentence. `storage/test/github.test.ts` covers the two new methods.
-
-**Not in block 1.** Any screen or route (block 2), the privacy and token-
-swap steps (block 2), the token swap's single-repo re-validation (block
-2 reuses `validateToken` with `owner`/`name`), Settings changes, and the
-real-GitHub confirmation of the fake's new endpoints (P1-13b).
-
 ## Gaps noted (2026-09-09)
 
 Found while orienting for Phase 3. Those marked *block 1* are inside
 its scope because its "done when" cannot be met without them; the rest
 are handled with the deferred items when Phase 3 is finished.
 
-- [ ] **G1. The fake GitHub has no `GET /user`** and no way to model an
-  under-privileged token. *Block 1.*
-- [ ] **G2. `SCAFFOLD` misses the template's dot-files.** The glob is
+- [x] **G1. The fake GitHub has no `GET /user`** and no way to model an
+  under-privileged token. *Done in block 1:* `GET /user` with an optional
+  `X-OAuth-Scopes` header, `GET /repos/<owner>/<name>` with `permissions`,
+  and the `readOnly`, `canCreate`, and `scopes` switches.
+- [x] **G2. `SCAFFOLD` misses the template's dot-files.** The glob was
   `**/*.md`, so `.gitignore`, `.gitkeep` keepers, and `.claude/commands/`
-  are absent; connect-existing never noticed because it writes its own
-  keepers and offers only markdown. *Block 1.*
+  were absent; connect-existing never noticed because it writes its own
+  keepers and offers only markdown. *Done in block 1:* the glob is
+  `**/*` with `exhaustive: true`, and a test holds it equal to the tree
+  on disk.
 - [ ] **G3. Cross-package test import.** App unit tests reach only
   `@gnomon/storage`'s public entry; block 1's test imports
   `storage/test/fake-github.ts` by relative path. Decide later whether
@@ -171,7 +116,15 @@ this phase is the natural moment for the first three and P2-live.
   with `patch` for text; blob `size` is present in recursive tree
   listings; `auto_init` exposes the ref within the driver's ten retries.
   Since Phase 2, the fake also serves onboarding (`POST /user/repos`), so
-  the real run should cover create-from-template too.
+  the real run should cover create-from-template too. Phase 3 block 1
+  added more to confirm: `GET /user` carries `X-OAuth-Scopes` for a
+  classic token and no such header for a fine-grained one; `GET
+  /repos/<owner>/<name>` returns `permissions.push` false for a token
+  with Contents read only, and that token's writes are 403; a fine-
+  grained token without Administration on all repositories gets a 403
+  from `POST /user/repos` (not a 404 or 422); a name collision is a 422
+  whose top-level `message` is generic, which is why the service says
+  the name "may already exist".
 - [ ] **P1-18b. Pages deploy** (S) — deferred until the live human test.
   Pages does not publish from a private repository on a Free plan: make
   `gdfekaris/gnomon` public, deploy to a separate public repository, use
@@ -210,6 +163,12 @@ this phase is the natural moment for the first three and P2-live.
   lets the demo brain file and reason without a key.
 - **Editing a pending filing's metadata makes it yours** (Phase 2, block
   6): the source becomes `human`, so ratify then refuses it as changed.
+- **Create-from-template is not pre-probed** (Phase 3, block 1): GitHub
+  has no endpoint that lists a fine-grained token's permissions, so a
+  token that cannot create a repository is explained when `POST
+  /user/repos` is refused, which leaves nothing behind. Classic tokens
+  get an early warning from the scopes header. Block 2 returns to the
+  token step with the sentence shown and the token kept.
 - **Accepting a principle proposal never writes the principle** (schema
   §4.7): the decision is one commit, the editor opens pre-filled, and the
   draft body links back to the proposal so the screen can show what it
