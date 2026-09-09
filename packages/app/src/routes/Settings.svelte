@@ -64,7 +64,7 @@
     <ValidationPanel />
     <button onclick={signOut} disabled={busy}>Disconnect</button>
   {:else}
-    <p>Not connected.</p>
+    <p>Not connected. <a href="#/onboarding">Set up or connect a brain</a>.</p>
   {/if}
 </section>
 

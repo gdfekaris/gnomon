@@ -17,21 +17,35 @@
   import Reason from './routes/Reason.svelte';
   import Inbox from './routes/Inbox.svelte';
   import Proposals from './routes/Proposals.svelte';
+  import Onboarding from './routes/Onboarding.svelte';
 
   // Launch: rebuild the session from on-device settings (spec §10.2), off the
   // critical path so Capture renders first (spec §10.4).
+  let booting = $state(true);
   onMount(async () => {
     startServiceWorker();
     watchNetwork();
-    await loadSettings();
-    if (session.driver) return;
     try {
+      await loadSettings();
+      if (session.driver) return;
       if (settings.prefs.mode === 'github' && settings.git) await connectGitHub(settings.git);
       else if (settings.prefs.mode === 'demo') await connectDemo();
     } catch {
       // the screens show the error state; the user can reconnect in Settings
+    } finally {
+      booting = false;
     }
   });
+
+  // Onboarding is the first screen when no brain is connected (Phase 3 block
+  // 2): the default route redirects to it once launch has settled and there
+  // is nothing to reconnect, so the flow owns its URL until it finishes on
+  // Capture. A saved connection that fails to reconnect stays on Capture,
+  // which says so.
+  $effect(() => {
+    if (route.name === 'capture' && !booting && !session.driver && !(settings.prefs.mode === 'github' && settings.git)) location.hash = '#/onboarding';
+  });
+  const onboarding = $derived(route.name === 'onboarding');
 </script>
 
 <StaleBanner />
@@ -39,17 +53,21 @@
 <main>
   <header>
     <h1>Gnomon</h1>
-    <nav>
-      <a href="#/capture" class:active={route.name === 'capture'}>Capture</a>
-      <a href="#/browse" class:active={route.name === 'browse'}>Browse</a>
-      <a href="#/inbox" class:active={route.name === 'inbox'}>Inbox</a>
-      <a href="#/proposals" class:active={route.name === 'proposals'}>Proposals</a>
-      <a href="#/sets" class:active={route.name === 'sets'}>Sets</a>
-      <a href="#/reason" class:active={route.name === 'reason'}>Reason</a>
-      <a href="#/settings" class:active={route.name === 'settings'}>Settings</a>
-    </nav>
+    {#if !onboarding}
+      <nav>
+        <a href="#/capture" class:active={route.name === 'capture'}>Capture</a>
+        <a href="#/browse" class:active={route.name === 'browse'}>Browse</a>
+        <a href="#/inbox" class:active={route.name === 'inbox'}>Inbox</a>
+        <a href="#/proposals" class:active={route.name === 'proposals'}>Proposals</a>
+        <a href="#/sets" class:active={route.name === 'sets'}>Sets</a>
+        <a href="#/reason" class:active={route.name === 'reason'}>Reason</a>
+        <a href="#/settings" class:active={route.name === 'settings'}>Settings</a>
+      </nav>
+    {/if}
   </header>
-  {#if route.name === 'browse' && route.path}
+  {#if onboarding}
+    <Onboarding />
+  {:else if route.name === 'browse' && route.path}
     <FileView path={route.path} anchor={route.anchor} />
   {:else if route.name === 'browse'}
     <Browse />

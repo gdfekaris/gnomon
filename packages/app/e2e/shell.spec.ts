@@ -27,8 +27,14 @@ test('the demo connection survives a reload through on-device settings', async (
   await expect(page.getByText('24 files')).toBeVisible();
 });
 
-test('capture is the default route and says how to connect', async ({ page }) => {
+test('the first run lands on onboarding; once a brain is connected the default route is Capture', async ({ page }) => {
   await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Welcome to Gnomon' })).toBeVisible();
+  await expect(page.getByRole('navigation')).toHaveCount(0);
+  await page.getByTestId('onboard-demo').click();
   await expect(page.getByRole('heading', { name: 'Capture' })).toBeVisible();
-  await expect(page.getByText('No brain connected yet.')).toBeVisible();
+  await expect(page.getByRole('navigation')).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Capture' })).toBeVisible();
+  await expect(page.getByTestId('capture-text')).toBeVisible();
 });

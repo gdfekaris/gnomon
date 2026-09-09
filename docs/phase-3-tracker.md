@@ -25,7 +25,7 @@ GitHub. Block 4 is the design pass, taken up now that every screen exists.
   `inspectBrain`. Done when, over `storage/test/fake-github.ts`, a fresh
   repository ends up as the template with Set 1 and both index files in
   one commit and validates clean, and a bad token is explained.
-- [ ] **2. Onboarding screens** (L) — spec §12 steps 1, 5, 6; US-14,
+- [x] **2. Onboarding screens** (L) — spec §12 steps 1, 5, 6; US-14,
   US-16; spec §11 iOS steps. `routes/Onboarding.svelte` on `#/onboarding`,
   the first screen when no brain is connected: the token walkthrough
   with annotated steps (classic and fine-grained differ), create-from-
@@ -96,9 +96,10 @@ are handled with the deferred items when Phase 3 is finished.
 - [ ] **G5. `describeError`'s auth sentence assumes Settings** ("on this
   repository"); onboarding needs different wording per step. Block 1
   gives `validateToken` its own sentences; the audit is block 3.
-- [ ] **G6. `#/onboarding` renders the "later block" placeholder** and the
-  shell launches to Capture when nothing is connected. That is block 2's
-  work, listed here so nobody reads it as a bug.
+- [x] **G6. `#/onboarding` renders the "later block" placeholder** and the
+  shell launches to Capture when nothing is connected. *Done in block 2:*
+  the default route redirects to `#/onboarding` once launch has settled
+  with nothing to reconnect; the flow ends on Capture.
 
 ## Deferred
 
@@ -190,3 +191,15 @@ this phase is the natural moment for the first three and P2-live.
   must be date-agnostic.
 - Source slugs are the author's surname plus the first four words of the
   title fragment (`unknown-the-only-way-to`).
+- Onboarding (block 2) is one component, `routes/Onboarding.svelte`, with
+  a step state machine: welcome → token → check → privacy → swap (create
+  path only) → install. The token walkthrough is text that names GitHub's
+  exact labels, one list per token kind and intent; spec §12 step 1's
+  annotated screenshots are not bundled and belong to the design pass
+  (block 4) if wanted at all. The privacy text there and in Settings
+  should be kept in step by hand.
+- `e2e/github-fake.ts` serves `storage/test/fake-github.ts` to the
+  browser through `page.route`, so a flow can drive the real
+  `GitHubDriver` end to end (create-from-template, commits, snapshot
+  loads) without a hand-rolled mock. Flip the fake's switches
+  (`canCreate`, `readOnly`, `scopes`) from the test between clicks.

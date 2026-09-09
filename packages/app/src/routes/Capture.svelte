@@ -57,7 +57,7 @@
 
 <h2>Capture</h2>
 {#if !session.driver}
-  <p>No brain connected yet. <a href="#/settings">Open Settings</a> to use the demo brain or connect a repository.</p>
+  <p>No brain connected yet. <a href="#/onboarding">Set one up</a>, or <a href="#/settings">open Settings</a> to reconnect.</p>
 {:else}
   {#if !network.online}
     <p class="offline" role="status" data-testid="offline">You are offline. A text capture will be kept here and saved when you are back online.</p>
