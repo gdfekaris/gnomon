@@ -1,0 +1,33 @@
+name: nightly
+
+# Spec §18: the storage contract suite against real GitHub, nightly and on
+# demand. It touches only gdfekaris/gnomon-scratch (reset to the reference
+# fixture before each test) and repositories it creates itself, named
+# gnomon-scratch-<run id>, which it deletes at the end.
+on:
+  schedule:
+    - cron: '17 4 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: nightly-scratch
+  cancel-in-progress: false
+
+jobs:
+  live-github:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm install -g npm@latest
+      - run: npm ci
+      - name: Storage contract suite against real GitHub
+        run: npx vitest run --project storage github-live
+        env:
+          GNOMON_TEST_TOKEN: ${{ secrets.GNOMON_TEST_TOKEN }}
+          GNOMON_TEST_REPO: gdfekaris/gnomon-scratch
+          GNOMON_TEST_RUN: ${{ github.run_id }}

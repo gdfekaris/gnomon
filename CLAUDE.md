@@ -51,6 +51,16 @@ break down Phase 4 (encryption, spec §6.4), and write
 - Commit messages in a brain are fixed vocabulary (schema §7): `Capture:`,
   `File:`, `Ratify:`, `Reject:`, `Decide:`, `Add principle:`, `Add
   proposal:`, `Scaffold:`, `Index`, plus the set procedures' own messages.
+- Other repositories are off limits. Agents touch only `gdfekaris/gnomon`
+  and the nightly's scratch repositories (`gnomon-scratch`, and the
+  `gnomon-scratch-<run>` ones it creates and deletes itself). Never read,
+  write, create, delete, or change settings on any other repository, even
+  when the credential at hand allows it; the local `gh` login and the
+  `GNOMON_TEST_TOKEN` secret both reach every repo the maintainer owns.
+  Settings changes on this repo (visibility, Pages, secrets, branch rules)
+  happen only when the maintainer asks for that change in the current
+  session. The maintainer's own brain, `~/Desktop/main/geo-brain-2`, has no
+  remote; never push it anywhere.
 - Styling: the app is a late-1980s GUI in three skins (`data-skin` on
   `<html>`, Monochrome default), all tokens and shared element styles in
   `packages/app/src/app.css`. Screens carry layout only, never a raw

@@ -122,25 +122,25 @@ Carried over unchanged from Phase 1 and Phase 2; each needs something
 from the maintainer or a later phase. The live human test at the end of
 this phase is the natural moment for the first three and P2-live.
 
-- [ ] **P1-13b. `GitHubDriver` against real GitHub** (S) — needs a
-  disposable fine-grained token (Contents read/write) and a scratch
-  private repo. Done when the storage contract suite passes against it on
-  a nightly schedule (spec §18). The fake's assumptions to confirm: a
-  `POST /git/trees` entry with `sha: null` for a path absent from
-  `base_tree` is a 422; the ref PATCH with `force: false` returns 422 on a
-  non-fast-forward; `/compare` statuses are `added`/`modified`/`removed`
-  with `patch` for text; blob `size` is present in recursive tree
-  listings; `auto_init` exposes the ref within the driver's ten retries.
-  Since Phase 2, the fake also serves onboarding (`POST /user/repos`), so
-  the real run should cover create-from-template too. Phase 3 block 1
-  added more to confirm: `GET /user` carries `X-OAuth-Scopes` for a
-  classic token and no such header for a fine-grained one; `GET
-  /repos/<owner>/<name>` returns `permissions.push` false for a token
-  with Contents read only, and that token's writes are 403; a fine-
-  grained token without Administration on all repositories gets a 403
-  from `POST /user/repos` (not a 404 or 422); a name collision is a 422
-  whose top-level `message` is generic, which is why the service says
-  the name "may already exist".
+- [x] **P1-13b. `GitHubDriver` against real GitHub** (S) — *done
+  2026-09-10:* `.github/workflows/nightly.yml` (04:17 UTC daily and on
+  demand) runs `storage/test/github-live.test.ts`, which is skipped unless
+  `GNOMON_TEST_TOKEN` and `GNOMON_TEST_REPO` are set. It resets
+  `gdfekaris/gnomon-scratch` to the reference fixture before each contract
+  test, runs the whole driver contract, then checks the fake's assumptions
+  directly: `sha: null` for a path absent from `base_tree` is a 422; a
+  non-fast-forward ref PATCH with `force: false` is a 422; `compare`
+  statuses and text patches; blob `size` in recursive listings; `GET
+  /user` has no `X-OAuth-Scopes` for a fine-grained token; `permissions.push`
+  true; `auto_init` exposes the ref within the retries; the template lands
+  in one commit on top of `Initial commit`; a name collision is a generic
+  422. Temporary repositories are `gnomon-scratch-<run id>` and are deleted
+  at the end (leftovers from a dead run too). *Still unconfirmed, needing
+  tokens we do not keep:* a Contents-read-only token reports `push: false`
+  and gets 403 on writes; a fine-grained token without Administration gets
+  a 403 (not 404 or 422) from `POST /user/repos`. The secret is a
+  fine-grained token with a short expiry; when it lapses, the nightly
+  fails on `GET /user` and a new token is the whole fix.
 - [x] **P1-18b. Pages deploy** (S) — *done 2026-09-10:* the maintainer
   made `gdfekaris/gnomon` public; Pages is enabled with Source = GitHub
   Actions; `ci.yml` uploads `packages/app/dist` on every run and a
