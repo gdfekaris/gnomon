@@ -33,6 +33,30 @@ export function demoFilingScript(req: CompletionRequest): string {
   return JSON.stringify({ meta: { title: title || 'Untitled capture', author: 'unknown', tags: ['demo'] }, proposals });
 }
 
+/** The relate task's four sections (prompts §relate), with the Proposal given as the labeled lines the app saves from. */
+function demoRelateScript(input: string, principles: string[], passages: string[]): string {
+  const sentence = (input.split(/(?<=[.!?])\s/)[0] ?? input).trim().slice(0, 120);
+  const set = principles[0]?.split('/')[1] ?? 'ps-g8xw';
+  return [
+    '1. Agrees',
+    principles[0] ? `The text supports [[${principles[0]}]] in spirit.` : 'The selected set has no principles to agree with.',
+    '',
+    '2. Challenges',
+    principles[1] ? `It presses against [[${principles[1]}]]: it asks for the opposite emphasis.` : 'It challenges nothing in the set.',
+    '',
+    '3. Echoes and contradicts',
+    passages[0] ? `It echoes [[${passages[0]}]].` : 'No included passage is echoed.',
+    '',
+    '4. Proposal',
+    'Kind: principle',
+    `Target set: ${set}`,
+    `Wording: ${sentence || 'Untitled'}`,
+    'Rationale: The demo model proposes a principle wherever a new text makes a claim. Decide whether you hold it.',
+    '',
+    '(This is the demo model. Connect a provider in Settings for real reasoning.)',
+  ].join('\n');
+}
+
 /** The default script: a filing reply for the Task C prompt, otherwise a cited answer that names precedence. */
 export function demoScript(req: CompletionRequest): string {
   if (req.system.startsWith('You are filing a capture')) return demoFilingScript(req);
@@ -41,6 +65,7 @@ export function demoScript(req: CompletionRequest): string {
   const passages = refsIn(context, 'sources/');
   const sets = [...context.matchAll(/^## (Set \d+.*)$/gm)].map((m) => m[1]!);
   const input = (context.split(/^## (?:Question|New text|Message)\n/m)[1] ?? '').trim();
+  if (/^## New text$/m.test(context)) return demoRelateScript(input, principles, passages);
   const lines: string[] = [];
   if (sets.length > 1) lines.push(`Reasoning from each set separately: ${sets.join(', ')}.`, '');
   if (principles.length) {

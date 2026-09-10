@@ -3,7 +3,7 @@
 // pre-filled with when a principle or amendment proposal is accepted. The
 // app never writes the principle itself; the curator does.
 
-import { type BrainFile, type BrainSnapshot, type ProposalFm, backlinks, decideProposal, nowUtc, renderDualLink, setLabel } from '@gnomon/core';
+import { type BrainFile, type BrainSnapshot, type Citation, type ProposalFm, backlinks, buildProposal, decideProposal, nextProposalId, nowUtc, renderDualLink, setLabel, withIndexWrites } from '@gnomon/core';
 import type { BrainService } from './brain';
 
 export interface ProposalGroup { key: string; label: string; open: BrainFile<ProposalFm>[]; decided: BrainFile<ProposalFm>[]; }
@@ -62,4 +62,73 @@ export function prefillFrom(s: BrainSnapshot, id: string, setSlug: string): Pref
     `Written from ${renderDualLink(fromPath, p.path, 'proposal')}.`,
   ].filter(Boolean).join('\n\n') + '\n';
   return { id, kind: p.fm.kind, title: p.fm.kind === 'principle' ? p.fm.title : '', rationale: p.body, grounds, body };
+}
+
+// ---------------------------------------------------------------- save as proposal (Phase 3 block 5)
+
+/** What a Relate answer's Proposal section yields, pre-filled into the form; every field stays editable. */
+export interface ProposalDraft {
+  kind: 'principle' | 'amendment';
+  title: string;
+  target_set: string;
+  /** `<set-slug>/<principle-slug>`, for an amendment */
+  target?: string;
+  rationale: string;
+  /** source slugs the answer cited */
+  grounds: string[];
+}
+
+const SET_SLUG = /ps-[a-z0-9]{4}\b/;
+const PRINCIPLE_REF = /ps-[a-z0-9]{4}\/[a-z0-9-]+/;
+const HEADING = /^\s*(?:#{1,6}\s*|\*\*)?(?:4[.)]\s*)?Proposal\b.*$/im;
+const NEXT_SECTION = /^\s*(?:#{1,6}\s*)?\d[.)]\s|^\(This is the demo model/m;
+
+function labeled(section: string, label: string): string | undefined {
+  const re = new RegExp(`^\\s*(?:[-*]\\s*)?\\**${label}\\**\\s*[:\u2014-]\\**\\s*(.+)$`, 'im');
+  return re.exec(section)?.[1]?.trim().replace(/^["\u201c]|["\u201d.]+$/g, '').trim() || undefined;
+}
+
+/**
+ * The Proposal section of a relate answer (prompts §relate), read leniently:
+ * labeled lines when the model gave them, otherwise the first line as the
+ * wording and the rest as rationale. Null when there is no section or it
+ * says none. `selectedSets[0]` stands in when no set slug is named.
+ */
+export function extractProposal(text: string, selectedSets: string[], citations: Citation[] = []): ProposalDraft | null {
+  const h = HEADING.exec(text);
+  if (!h) return null;
+  let section = text.slice(h.index + h[0].length);
+  const next = NEXT_SECTION.exec(section);
+  if (next) section = section.slice(0, next.index);
+  section = section.trim();
+  if (!section || /^(?:\*\*)?none\b/i.test(section)) return null;
+
+  const kind: ProposalDraft['kind'] = /amend/i.test(labeled(section, 'Kind') ?? '') ? 'amendment' : 'principle';
+  const targetSet = SET_SLUG.exec(labeled(section, 'Target set') ?? '')?.[0] ?? SET_SLUG.exec(section)?.[0] ?? selectedSets[0] ?? '';
+  const target = PRINCIPLE_REF.exec(labeled(section, 'Target') ?? '')?.[0] ?? PRINCIPLE_REF.exec(section)?.[0];
+  const labels = /^\s*(?:[-*]\s*)?\**(?:Kind|Target set|Target|Wording|Title|Suggested wording|Rationale)\**\s*[:\u2014-]\**/i;
+  const plain = section.split('\n').filter((l) => l.trim() && !labels.test(l));
+  const title = labeled(section, 'Wording') ?? labeled(section, 'Suggested wording') ?? labeled(section, 'Title') ?? (plain[0] ?? '').replace(/^[-*]\s*/, '').trim().slice(0, 160);
+  const rationaleAt = section.search(/^\s*(?:[-*]\s*)?\**Rationale\**\s*[:\u2014-]\**/im);
+  const rationale = (rationaleAt >= 0 ? section.slice(rationaleAt).replace(/^\s*(?:[-*]\s*)?\**Rationale\**\s*[:\u2014-]\**\s*/i, '') : plain.slice(title === plain[0] ? 1 : 0).join('\n')).trim();
+  if (!title) return null;
+  const grounds = [...new Set(citations.filter((c) => c.resolved && c.path.startsWith('sources/')).map((c) => c.path.split('/')[1]!))];
+  const draft: ProposalDraft = { kind, title, target_set: targetSet, rationale, grounds };
+  if (target) draft.target = target;
+  return draft;
+}
+
+/** One `Add proposal:` commit writing a `curated: human` proposal (schema §4.7) plus the index files that change. Returns the id. */
+export async function saveProposal(brain: BrainService, draft: ProposalDraft): Promise<string> {
+  const s = brain.snapshot;
+  if (!s) throw new Error('no brain is connected');
+  const now = nowUtc();
+  const id = nextProposalId(s, now);
+  const write = buildProposal({
+    id, kind: draft.kind, title: draft.title.trim(), target_set: draft.target_set, rationale: draft.rationale.trim(), curated: 'human', now,
+    ...(draft.kind === 'amendment' && draft.target ? { target: draft.target } : {}),
+    ...(draft.grounds.length ? { grounds: draft.grounds } : {}),
+  });
+  await brain.commit(withIndexWrites(s, { message: `Add proposal: ${id}`, expectedHead: s.head, writes: [write], deletes: [] }));
+  return id;
 }

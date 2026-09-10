@@ -6,6 +6,8 @@
   import { renderAnswer } from '../lib/markdown';
   import { brain } from '../lib/services/index';
   import { taskLabel, describeAssemblyError } from '../lib/services/reasoning';
+  import { extractProposal } from '../lib/services/proposals';
+  import ProposalForm from '../lib/components/ProposalForm.svelte';
   import { configureReasoner, reasoner, reasoning } from '../lib/stores/reasoning.svelte';
   import { savePrefs, settings } from '../lib/stores/settings.svelte';
   import ConnectionNotice from '../lib/components/ConnectionNotice.svelte';
@@ -19,6 +21,9 @@
   let modelsFor = $state<string | null>(null);
   let modelError = $state<string | null>(null);
   let seeded = $state(false);
+  // Save as proposal (block 5): which answer's form is open, and what each saved as.
+  let proposalOpen = $state<number | null>(null);
+  let savedProposals = $state<Record<number, string>>({});
 
   // Last selection remembered per device (US-8); default to every set on first use.
   $effect(() => {
@@ -140,6 +145,16 @@
           {#if !reasoning.streaming || i < reasoning.transcript.length - 1}
             {#if turn.citations.length}
               <p class="meta">{turn.citations.filter((c) => c.resolved).length} citation{turn.citations.filter((c) => c.resolved).length === 1 ? '' : 's'}{turn.citations.some((c) => !c.resolved) ? `, ${turn.citations.filter((c) => !c.resolved).length} not in this brain` : ''}</p>
+            {/if}
+            {#if turn.task === 'relate'}
+              {@const draft = extractProposal(turn.text, turn.sets, turn.citations)}
+              {#if savedProposals[i]}
+                <p class="ok" role="status" data-testid="proposal-saved">Saved as <code>{savedProposals[i]}</code>, open and yours. <a href="#/proposals">Open Proposals</a></p>
+              {:else if draft && proposalOpen === i}
+                <ProposalForm {draft} onsaved={(id) => { savedProposals = { ...savedProposals, [i]: id }; proposalOpen = null; }} oncancel={() => (proposalOpen = null)} />
+              {:else if draft}
+                <p class="row"><button onclick={() => (proposalOpen = i)} data-testid="save-proposal">Save as proposal</button> <span class="hint">{draft.kind} for {draft.target_set}: “{draft.title}”</span></p>
+              {/if}
             {/if}
           {/if}
         {/if}

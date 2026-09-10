@@ -53,7 +53,7 @@ GitHub. Block 4 is the design pass, taken up now that every screen exists.
   checked. Done when the maintainer has approved the canvas, every screen
   uses the shared system, the manifest icons are the real ones, and every
   existing Playwright flow still passes unchanged.
-- [ ] **5. Save as proposal** (S) — carried from Phase 2 (not in the spec's
+- [x] **5. Save as proposal** (S) — carried from Phase 2 (not in the spec's
   row; kept by the maintainer 2026-09-08). A Relate answer's proposal
   section can be saved as a `curated: human` proposal file (schema §4.7)
   targeting the selected set, one `Add proposal:` commit, with the kind
@@ -91,7 +91,9 @@ are handled with the deferred items when Phase 3 is finished.
   to publish it as a `@gnomon/storage/testing` subpath. *After Phase 3.*
 - [ ] **G4. `Scaffold:` is not in schema §7's commit vocabulary** but
   connect-existing has used it since Phase 1 and block 1 uses it for the
-  template commit. Add it to the schema (and CLAUDE.md's list) or rename.
+  template commit; block 5 adds `Add proposal: <id>` for a proposal the
+  curator saves from a Relate answer, also unlisted. Add both to the
+  schema (and CLAUDE.md's list) or rename.
   *After Phase 3; schema change, needs the maintainer.*
 - [x] **G5. `describeError`'s auth sentence assumes Settings** ("on this
   repository"); onboarding needs different wording per step. Block 1

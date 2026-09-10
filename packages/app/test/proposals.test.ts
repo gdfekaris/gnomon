@@ -6,7 +6,8 @@ import { type BrainFile, type ProposalFm, validateSnapshot } from '@gnomon/core'
 import { MemoryDriver } from '@gnomon/storage';
 import { BrainService, type SnapshotState } from '../src/lib/services/brain';
 import { createPrincipleIn } from '../src/lib/services/edit';
-import { acceptanceRoute, decide, groupProposals, prefillFrom, proposalId, writtenAs } from '../src/lib/services/proposals';
+import { MockProvider, demoScript } from '@gnomon/providers';
+import { acceptanceRoute, decide, extractProposal, groupProposals, prefillFrom, proposalId, saveProposal, writtenAs } from '../src/lib/services/proposals';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const FIXTURE = join(here, '..', '..', 'core', 'fixtures', 'brain');
@@ -68,5 +69,52 @@ describe('proposals service (US-3, schema §4.7, §7.10)', () => {
     const path = await createPrincipleIn(brain, 'ps-7k2m', { title: pre.title, body: 'Get up; the work is what you are for.\n\n' + pre.body.split('**Grounding passages:**')[1]!.replace(/^\n+/, '**Grounding passages:**\n'), grounds: pre.grounds, related: [], tags: [] });
     expect(writtenAs(brain.snapshot!, 'maps/proposals/P-20260905-001.md').map((f) => f.path)).toEqual([path]);
     expect(validateSnapshot(brain.snapshot!)).toEqual([]);
+  });
+});
+
+describe('save as proposal (Phase 3 block 5, schema §4.7)', () => {
+  const relateContext = [
+    '## Set 1', '<!-- ref: principles/ps-g8xw/courage-before-comfort -->', 'Courage before comfort.', '<!-- ref: principles/ps-g8xw/attention-is-generosity -->', 'Attention is generosity.',
+    '<!-- ref: sources/weil-attention/raw -->', 'Attention is the rarest and purest form of generosity.',
+    '## New text', 'Attention is a form of prayer. Everything else follows.',
+  ].join('\n');
+  const answer = demoScript({ model: 'mock-reasoner', system: 'You are reasoning', messages: [{ role: 'user', content: relateContext }], maxTokens: 100, signal: new AbortController().signal });
+
+  it('the demo model answers a relate task with the four sections and labeled proposal lines', () => {
+    expect(answer).toMatch(/^1\. Agrees$/m);
+    expect(answer).toMatch(/^4\. Proposal$/m);
+    expect(answer).toContain('Kind: principle');
+    expect(answer).toContain('Target set: ps-g8xw');
+    expect(answer).toContain('Wording: Attention is a form of prayer.');
+    expect(new MockProvider().id).toBe('mock');
+  });
+
+  it('extracts the labeled lines, and falls back to loose text, and reads "None" as nothing', () => {
+    expect(extractProposal(answer, ['ps-7k2m'])).toEqual({ kind: 'principle', title: 'Attention is a form of prayer', target_set: 'ps-g8xw', rationale: 'The demo model proposes a principle wherever a new text makes a claim. Decide whether you hold it.', grounds: [] });
+    const loose = '## 4. Proposal\n\n**Kind:** amendment\n**Target:** ps-7k2m/say-the-hard-thing-first\n**Wording:** "Say the hard thing first, then the rest."\n**Rationale:** The text shows the rest matters too.\nIt should stay short.\n';
+    expect(extractProposal(loose, ['ps-g8xw'])).toEqual({ kind: 'amendment', title: 'Say the hard thing first, then the rest', target_set: 'ps-7k2m', target: 'ps-7k2m/say-the-hard-thing-first', rationale: 'The text shows the rest matters too.\nIt should stay short.', grounds: [] });
+    const bare = '1. Agrees\nyes\n\n4. Proposal\nRead before you write.\nBecause the text says so, and the set is silent on reading.\n';
+    expect(extractProposal(bare, ['ps-g8xw'])).toMatchObject({ kind: 'principle', title: 'Read before you write.', target_set: 'ps-g8xw', rationale: 'Because the text says so, and the set is silent on reading.' });
+    expect(extractProposal('4. Proposal\nNone.\n', ['ps-g8xw'])).toBeNull();
+    expect(extractProposal('No proposal section here.', ['ps-g8xw'])).toBeNull();
+    const cited = extractProposal(answer, ['ps-g8xw'], [{ ref: 'sources/weil-attention/raw', path: 'sources/weil-attention/raw.md', resolved: true, start: 0, end: 1 } as never]);
+    expect(cited!.grounds).toEqual(['weil-attention']);
+  });
+
+  it('saves one Add proposal commit: a human, open proposal in the target set, indexed', async () => {
+    const brain = await connected();
+    const head = brain.head;
+    const id = await saveProposal(brain, { kind: 'principle', title: 'Attention is a form of prayer', target_set: 'ps-g8xw', rationale: 'Because it is.', grounds: ['weil-attention'] });
+    expect(id).toMatch(/^P-\d{8}-001$/);
+    const s = brain.snapshot!;
+    expect(s.head).not.toBe(head);
+    const f = s.files.get(`maps/proposals/${id}.md`) as BrainFile<ProposalFm>;
+    expect(f.fm).toMatchObject({ type: 'proposal', kind: 'principle', title: 'Attention is a form of prayer', target_set: 'ps-g8xw', grounds: ['weil-attention'], status: 'open', curated: 'human' });
+    expect(f.body.trim()).toBe('Because it is.');
+    expect(s.files.get('maps/_index.md')!.body).toContain(id);
+    expect(validateSnapshot(s)).toEqual([]);
+    const group = groupProposals(s).find((g) => g.key === 'ps-g8xw')!;
+    expect(group.open.map((p) => proposalId(p.path))).toEqual([id]);
+    await expect(saveProposal(brain, { kind: 'amendment', title: 'x', target_set: 'ps-g8xw', rationale: 'r', grounds: [] })).rejects.toThrow();
   });
 });

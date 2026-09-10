@@ -57,3 +57,32 @@ test('an empty set is refused before anything is sent', async ({ page }) => {
   await expect(page.getByTestId('budget-note')).toContainText('has no principles');
   await expect(page.getByTestId('send')).toBeDisabled();
 });
+
+test('relate a text with the demo model and save its proposal as yours (block 5)', async ({ page }) => {
+  await page.getByTestId('task').selectOption('relate');
+  await page.getByTestId('input').fill('Attention is a form of prayer. Everything else follows.');
+  await page.getByTestId('send').click();
+  const answer = page.getByTestId('turn-assistant');
+  await expect(answer).toContainText('Proposal');
+  await expect(answer).toContainText('Kind: principle');
+  await expect(answer).toContainText('principle for ps-g8xw');
+  await answer.getByTestId('save-proposal').click();
+  const form = page.getByTestId('proposal-form');
+  await expect(form.getByTestId('proposal-kind')).toHaveValue('principle');
+  await expect(form.getByTestId('proposal-set')).toHaveValue('ps-g8xw');
+  await expect(form.getByTestId('proposal-title')).toHaveValue('Attention is a form of prayer');
+  await expect(form.getByTestId('proposal-grounds')).toHaveValue('aurelius-meditations-4-3');
+  await form.getByTestId('proposal-save').click();
+  const saved = answer.getByTestId('proposal-saved');
+  await expect(saved).toContainText(/Saved as P-\d{8}-\d{3}, open and yours/);
+  const id = (await saved.locator('code').textContent())!;
+
+  await saved.getByRole('link', { name: 'Open Proposals' }).click();
+  const group = page.getByTestId('group-ps-g8xw');
+  await expect(group.getByRole('heading', { level: 3 })).toContainText('Set 1 · 1 open');
+  const card = group.getByTestId(`proposal-${id}`);
+  await expect(card).toContainText('Attention is a form of prayer');
+  await expect(card).toContainText('yours');
+  await expect(card).toContainText('Grounds: aurelius-meditations-4-3');
+  await expect(card.getByTestId('accept')).toHaveText('Accept and write it');
+});

@@ -31,7 +31,7 @@ Task: relate the text under "New text" to the selected principle set(s). Read it
 1. Agrees — where the text supports the stance, with principle citations.
 2. Challenges — where it presses against the stance. Be specific; do not soften it.
 3. Echoes and contradicts — which included passages it repeats or cuts against, with citations.
-4. Proposal — whether it suggests a new principle or an amendment to an existing one, stated as a proposal for the curator (kind: principle or amendment, the target set, the wording you would suggest, and the rationale). Never write it as a principle.
+4. Proposal — whether it suggests a new principle or an amendment to an existing one, stated as a proposal for the curator. Never write it as a principle. Give it as labeled lines so the curator can save it unchanged: "Kind:" principle or amendment; "Target set:" the set slug; "Target:" the principle as set-slug/principle-slug, for an amendment only; "Wording:" the suggested wording in one line; "Rationale:" the rest. If the text suggests nothing, write "None" under the heading.
 Do not file the text as a source; that is the curator's decision.`,
 
   compare: `${SHARED_RULES}
