@@ -30,13 +30,11 @@ jobs:
         run: |
           cd packages/cli
           test "$(node dist/gnomon.js --version)" = "gnomon-cli $(node -p "require('./package.json').version")"
-          npm pack --dry-run --json | node -e '
-            const out = JSON.parse(require("fs").readFileSync(0, "utf8"));
-            const pkg = Array.isArray(out) ? out[0] : out;
-            const files = pkg.files.map((f) => f.path).sort();
-            const want = ["README.md", "dist/gnomon.js", "package.json"];
-            if (JSON.stringify(files) !== JSON.stringify(want)) { console.error("tarball:", files); process.exit(1); }
-            console.log("tarball ok:", files.join(", "));'
+          tgz=$(npm pack --silent 2>/dev/null | tail -1)
+          files=$(tar -tzf "$tgz" | sed 's|^package/||' | LC_ALL=C sort | tr '\n' ' ')
+          rm -f "$tgz"
+          echo "tarball: $files"
+          test "$files" = "README.md dist/gnomon.js package.json "
       - name: Build the app
         run: npm run build
         env:
