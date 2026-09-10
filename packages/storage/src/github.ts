@@ -21,8 +21,13 @@ interface GitTree { sha: string; tree: Array<{ path: string; type: string; sha: 
 interface GitCommit { sha: string; tree: { sha: string }; parents: Array<{ sha: string }>; message: string; committer: { date: string } }
 
 export const GRAPHQL_BATCH = 100;
+/** A dropped connection is retried this many times, with these pauses, before it is a NetworkError. Never for POST /user/repos, which is not idempotent. */
+export const RETRY_DELAYS_MS = [300, 900];
+/** After a ref update, GitHub may serve the previous sha for a moment; the driver rereads until it sees its own write, at most this often. */
+export const REF_SETTLE = { tries: 12, delayMs: 250 };
 const enc = new TextEncoder();
 const dec = new TextDecoder();
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 export class GitHubDriver implements StorageDriver {
   private owner: string;
@@ -56,20 +61,32 @@ export class GitHubDriver implements StorageDriver {
 
   private async requestWithHeaders<T>(method: string, path: string, body?: unknown, okStatuses: number[] = [200, 201]): Promise<{ data: T; headers: Headers }> {
     const url = path.startsWith('/repos/') || path.startsWith('/user') || path === '/graphql' ? `${this.apiBase}${path}` : `${this.apiBase}/repos/${this.repo}${path}`;
-    let res: Response;
-    try {
-      res = await this.fetchFn(url, {
-        method,
-        headers: {
-          Authorization: `Bearer ${this.token}`,
-          Accept: 'application/vnd.github+json',
-          'X-GitHub-Api-Version': '2022-11-28',
-          ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
-        },
-        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-      });
-    } catch (e) {
-      throw new NetworkError(`${method} ${path}: ${(e as Error).message}`);
+    const init: RequestInit = {
+      method,
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+      },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    };
+    // Every call here is safe to repeat: reads, content-addressed object creation, and a ref
+    // update to one sha. Creating a repository is the exception, so a drop there surfaces at once.
+    const retries = method === 'POST' && path === '/user/repos' ? [] : RETRY_DELAYS_MS;
+    let res: Response | undefined;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        res = await this.fetchFn(url, init);
+        break;
+      } catch (e) {
+        const delay = retries[attempt];
+        if (delay === undefined) {
+          const cause = (e as { cause?: { message?: string } }).cause?.message;
+          throw new NetworkError(`${method} ${path}: ${(e as Error).message}${cause ? ` (${cause})` : ''}`);
+        }
+        await sleep(delay);
+      }
     }
     if (okStatuses.includes(res.status)) return { data: (res.status === 204 ? undefined : await res.json()) as T, headers: res.headers };
     const text = await res.text();
@@ -193,11 +210,25 @@ export class GitHubDriver implements StorageDriver {
       }
       throw e;
     }
+    await this.settleRef(commit.sha);
     for (const e of entries) {
       if (e.sha === null) this.treeCache.delete(e.path);
       else this.treeCache.set(e.path, e.sha);
     }
     return { sha: commit.sha };
+  }
+
+  /**
+   * Real GitHub can answer `GET /git/ref` with the previous sha for a moment
+   * after a successful `PATCH` (seen in the nightly run). The update itself is
+   * confirmed by the PATCH; this only waits until reads agree, so a caller's
+   * next head() or refresh() sees the commit it was just handed.
+   */
+  private async settleRef(sha: string): Promise<void> {
+    for (let i = 0; i < REF_SETTLE.tries; i++) {
+      if ((await this.head()) === sha) return;
+      await sleep(REF_SETTLE.delayMs);
+    }
   }
 
   async commit(batch: CommitBatch): Promise<{ sha: string }> {

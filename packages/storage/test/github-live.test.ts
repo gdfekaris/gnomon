@@ -52,8 +52,21 @@ async function must(method: string, path: string, body?: unknown, ok: number[] =
   return r.data;
 }
 
-/** Point main at a commit whose tree is exactly `seed` (no base_tree), on top of whatever is there. */
-async function resetTo(seed: Map<string, Uint8Array>): Promise<string> {
+/** Wait until `GET /git/ref` agrees with a ref update this file made (real GitHub lags for a moment). */
+async function settled(sha: string): Promise<void> {
+  for (let i = 0; i < 40; i++) {
+    if ((await must('GET', `/repos/${scratch}/git/ref/heads/main`)).object.sha === sha) return;
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  throw new Error(`main did not settle on ${sha}`);
+}
+
+/** Commit a tree that is exactly `seed` (no base_tree) on top of the current head; the objects are reused by every later reset. */
+const seeded = new Map<string, string>();
+async function seedCommit(seed: Map<string, Uint8Array>): Promise<string> {
+  const key = [...seed.keys()].sort().join('\n') + ':' + [...seed.values()].reduce((n, b) => n + b.length, 0);
+  const known = seeded.get(key);
+  if (known) return known;
   const parent: string = (await must('GET', `/repos/${scratch}/git/ref/heads/main`)).object.sha;
   const tree: Array<{ path: string; mode: string; type: string; sha: string }> = [];
   for (const [path, bytes] of seed) {
@@ -62,8 +75,16 @@ async function resetTo(seed: Map<string, Uint8Array>): Promise<string> {
   }
   const t = await must('POST', `/repos/${scratch}/git/trees`, { tree });
   const c = await must('POST', `/repos/${scratch}/git/commits`, { message: `Seed: nightly ${runId}`, tree: t.sha, parents: [parent] });
-  await must('PATCH', `/repos/${scratch}/git/refs/heads/main`, { sha: c.sha, force: true });
+  seeded.set(key, c.sha);
   return c.sha;
+}
+
+/** Point main at the seed commit for `seed`, making it once and force-moving the ref back to it on every later call. */
+async function resetTo(seed: Map<string, Uint8Array>): Promise<string> {
+  const sha = await seedCommit(seed);
+  await must('PATCH', `/repos/${scratch}/git/refs/heads/main`, { sha, force: true });
+  await settled(sha);
+  return sha;
 }
 
 function scratchDriver(): GitHubDriver {

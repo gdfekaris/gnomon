@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { isFrontmatterPath, validateSnapshot } from '@gnomon/core';
-import { AuthError, GRAPHQL_BATCH, GitHubDriver, HeadMovedError, NetworkError, NotFoundError, RateLimitError, loadSnapshot } from '../src/index';
+import { AuthError, GRAPHQL_BATCH, GitHubDriver, HeadMovedError, NetworkError, NotFoundError, RETRY_DELAYS_MS, RateLimitError, loadSnapshot } from '../src/index';
 import { driverContract } from './contract';
 import { FakeGitHub } from './fake-github';
 import { readBrainBytes } from './fixture';
@@ -43,7 +43,7 @@ describe('GitHubDriver against the fake API (spec §6.2)', () => {
     expect(validateSnapshot(s)).toEqual([]);
   });
 
-  it('commit is the five-step Git Data sequence and ends with a non-forced ref update', async () => {
+  it('commit is the five-step Git Data sequence, a non-forced ref update, then one read to see it', async () => {
     const { gh, driver } = await pair();
     const head = await driver.head();
     gh.requests.length = 0;
@@ -56,6 +56,7 @@ describe('GitHubDriver against the fake API (spec §6.2)', () => {
       'POST /git/trees',
       'POST /git/commits',
       'PATCH /git/refs/heads/main',
+      'GET /git/ref/heads/main',
     ]);
   });
 
@@ -71,6 +72,33 @@ describe('GitHubDriver against the fake API (spec §6.2)', () => {
     expect(err).toBeInstanceOf(HeadMovedError);
     expect((err as HeadMovedError).actual).toBe(moved);
     expect(await driver.head()).toBe(moved);
+  });
+
+  it('commit rereads the ref until it sees its own update (real GitHub lags for a moment)', async () => {
+    const { gh, driver } = await pair();
+    const head = await driver.head();
+    gh.staleRefReads = 3;
+    gh.requests.length = 0;
+    const { sha } = await driver.commit({ message: 'x', expectedHead: head, writes: [{ path: 'a.md', text: 'a' }], deletes: [] });
+    expect(await driver.head()).toBe(sha);
+    expect(gh.requests.filter((r) => r.path.endsWith('/git/ref/heads/main')).length).toBe(1 + 4 + 1);
+    expect((await driver.list()).some((e) => e.path === 'a.md')).toBe(true);
+  });
+
+  it('a dropped connection is retried before it is a NetworkError; creating a repository never is', async () => {
+    const { gh, driver } = await pair();
+    const head = await driver.head();
+    gh.dropNext = 2;
+    expect(await driver.head()).toBe(head);
+    gh.dropNext = 1;
+    await driver.commit({ message: 'x', expectedHead: head, writes: [{ path: 'a.md', text: 'a' }], deletes: [] });
+    gh.dropNext = RETRY_DELAYS_MS.length + 1;
+    const err = await driver.head().catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(NetworkError);
+    expect((err as Error).message).toBe('GET /git/ref/heads/main: fetch failed (other side closed)');
+    gh.dropNext = 1;
+    await expect(driver.createRepo({ name: 'second-brain', private: true })).rejects.toBeInstanceOf(NetworkError);
+    expect(driver.repo).toBe('octocat/brain');
   });
 
   it('binary blobs reported by GraphQL fall back to the blob endpoint', async () => {

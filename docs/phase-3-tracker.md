@@ -135,7 +135,14 @@ this phase is the natural moment for the first three and P2-live.
   true; `auto_init` exposes the ref within the retries; the template lands
   in one commit on top of `Initial commit`; a name collision is a generic
   422. Temporary repositories are `gnomon-scratch-<run id>` and are deleted
-  at the end (leftovers from a dead run too). *Still unconfirmed, needing
+  at the end (leftovers from a dead run too). The first run (34541866671)
+  found two things the fake never modelled, both fixed in the driver and
+  now modelled by the fake's `staleRefReads` and `dropNext` switches:
+  real GitHub can serve the previous sha from `GET /git/ref` for a moment
+  after a successful `PATCH` (the driver now rereads until it sees its
+  own update, `REF_SETTLE`), and a connection can drop mid-sequence (the
+  driver retries every call except `POST /user/repos`, `RETRY_DELAYS_MS`,
+  and names the cause). *Still unconfirmed, needing
   tokens we do not keep:* a Contents-read-only token reports `push: false`
   and gets 403 on writes; a fine-grained token without Administration gets
   a 403 (not 404 or 422) from `POST /user/repos`. The secret is a

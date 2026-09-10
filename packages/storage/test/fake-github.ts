@@ -41,6 +41,11 @@ export class FakeGitHub {
   scopes: string | undefined;
   /** runs before every PATCH of a ref; lets a test move the head between the driver's check and its update */
   beforePatch: (() => Promise<void>) | undefined;
+  /** real GitHub can serve the previous sha for a moment after a ref update: this many GET ref reads after each PATCH answer with it */
+  staleRefReads = 0;
+  private stale: { key: string; previous: string; remaining: number } | undefined;
+  /** the next N requests fail before any answer, as a dropped connection does (fetch throws) */
+  dropNext = 0;
   private seq = 0;
 
   constructor(public owner = 'octocat', public name = 'brain') {}
@@ -98,6 +103,10 @@ export class FakeGitHub {
     const headers = new Headers(init?.headers);
     const body = init?.body ? (JSON.parse(init.body as string) as Record<string, unknown>) : {};
     this.requests.push({ method, path: url.pathname + url.search });
+    if (this.dropNext > 0) {
+      this.dropNext--;
+      throw new TypeError('fetch failed', { cause: new Error('other side closed') });
+    }
 
     if (headers.get('authorization') !== `Bearer ${this.token}`) return json(401, { message: 'Bad credentials' });
     if (this.rateLimited) return json(403, { message: 'API rate limit exceeded' }, { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': '1800000000' });
@@ -136,7 +145,11 @@ export class FakeGitHub {
 
     let r: RegExpExecArray | null;
     if ((r = /^\/git\/ref\/heads\/(.+)$/.exec(rest)) && method === 'GET') {
-      const sha = this.refs.get(`heads/${r[1]}`);
+      let sha = this.refs.get(`heads/${r[1]}`);
+      if (this.stale && this.stale.key === `heads/${r[1]}` && this.stale.remaining > 0) {
+        this.stale.remaining--;
+        sha = this.stale.previous;
+      }
       return sha ? json(200, { ref: `refs/heads/${r[1]}`, object: { type: 'commit', sha } }) : json(404, { message: 'Not Found' });
     }
     if ((r = /^\/git\/refs\/heads\/(.+)$/.exec(rest)) && method === 'PATCH') {
@@ -146,6 +159,7 @@ export class FakeGitHub {
       if (!next) return json(422, { message: 'Object does not exist' });
       if (body['force'] !== true && next.parents[0] !== current) return json(422, { message: 'Update is not a fast forward' });
       this.refs.set(`heads/${r[1]}`, next.sha);
+      if (this.staleRefReads > 0) this.stale = { key: `heads/${r[1]}`, previous: current, remaining: this.staleRefReads };
       return json(200, { ref: `refs/heads/${r[1]}`, object: { type: 'commit', sha: next.sha } });
     }
     if ((r = /^\/git\/trees\/([0-9a-f]+)$/.exec(rest)) && method === 'GET') {
