@@ -7,7 +7,11 @@ when" you can check without reading code. Tick a block when it is
 committed and CI is green. Delete this file when Phase 3 is complete and
 write `docs/phase-4-tracker.md` from a fresh breakdown.
 
-Started 2026-09-08. Resume a session by finding the first unticked block.
+Started 2026-09-08. All six blocks were ticked by 2026-09-10 (version
+0.1.0, CI green at da6bcf8). **Resume with the end-of-phase pass:** the
+Deferred list and the open gaps (G3, G4) below, handled together per the
+maintainer's decision of 2026-09-09; then delete this file and write
+`docs/phase-4-tracker.md`.
 
 ## Blocks
 

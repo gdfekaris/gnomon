@@ -16,26 +16,28 @@ small desktop CLI. This repo is the monorepo.
 - `docs/phase-<n>-tracker.md` — the current phase's block list and progress
   (Phase 3 as of 2026-09-08).
 
-## Where we are (2026-09-08)
+## Where we are (2026-09-10)
 
-Done: Phase 1 and Phase 2 (spec §19) are built and green. `core` (schema,
-links, index, sets, proposals, filing, capture, crypto, assembly with the
-four system prompts, review), `storage` (Memory, Encrypting, GitHub drivers,
-filings, the contract suite and a fake GitHub), `providers` (Anthropic,
-OpenRouter, a mock with a streaming contract), `gnomon-cli`
-validate/index/status, and the app: Capture, Browse, Sets, editors, Reason,
-Inbox (file, review, ratify, reject), Proposals, Settings with
-connect-existing, PWA polish, all over a demo brain with Playwright flows
-in CI. Six items are deferred and carried in the Phase 3 tracker
-(real-GitHub run, Pages deploy, npm publish, live provider calls,
-token-count refinement, Phase 4 notes).
+Done: Phases 1, 2, and all six blocks of Phase 3 (spec §19), each green in
+CI. Version 0.1.0. On top of the Phase 1 and 2 list: onboarding (token
+walkthrough, create-from-template, connect-existing, privacy, token swap,
+install steps), the what-next nudge and plain-language errors everywhere,
+the design pass (a late-1980s application GUI in three selectable skins,
+Monochrome default; tokens in `packages/app/src/app.css`; the design
+canvas working files in `docs/design/`), save-as-proposal from a Relate
+answer, the CLI README and `--version`, and `docs/smoke-checklist.md`.
 
-**Next: Phase 3 (spec §19).** Progress lives in `docs/phase-3-tracker.md`:
-six blocks in dependency order (the design pass is block 4), each with a "done when". Resume by
-finding the first unticked block. Tick a block in the same commit that
-completes it. When the phase is done, delete the tracker, break down the
-next phase, and write `docs/phase-4-tracker.md`; that is the working
-process for every phase.
+**Next: the end-of-phase pass in `docs/phase-3-tracker.md`.** The six
+blocks are ticked; what remains there is the "Deferred" list (real-GitHub
+contract run, Pages deploy, npm publish, live provider calls, token-count
+refinement, Phase 4 notes) and the open gaps G3 and G4. The maintainer
+decided (2026-09-09) that these are handled together after the blocks,
+not in between. Several need the maintainer: a disposable token and
+scratch repo, a Pages hosting decision, an npm account, provider keys. G3
+and G4 can be done alone; G4 edits the schema's commit vocabulary, so
+confirm the wording first. When that pass is done: delete the tracker,
+break down Phase 4 (encryption, spec §6.4), and write
+`docs/phase-4-tracker.md`; that is the working process for every phase.
 
 ## Conventions
 
