@@ -92,9 +92,6 @@
 <style>
   .issues { padding-left: 1rem; }
   .issues li { margin: 0.35rem 0; }
-  .warnings { opacity: 0.85; }
-  .ok { color: #14532d; }
-  .error { color: #b91c1c; }
-  small { opacity: 0.6; }
+  .warnings { color: var(--muted); }
   button { margin-left: 0.5rem; }
 </style>

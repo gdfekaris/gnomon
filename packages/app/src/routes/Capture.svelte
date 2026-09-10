@@ -86,7 +86,7 @@
       <input type="file" bind:files bind:this={fileInput} data-testid="capture-file" />
     </label>
     {#if file}<p class="hint">{file.name} · {mb(file.size)} MB</p>{/if}
-    <button type="submit" disabled={saving || text.trim() === ''} data-testid="capture-save">{saving ? 'Saving…' : network.online ? 'Save to inbox' : 'Keep until online'}</button>
+    <button type="submit" class="primary" disabled={saving || text.trim() === ''} data-testid="capture-save">{saving ? 'Saving…' : network.online ? 'Save to inbox' : 'Keep until online'}</button>
   </form>
   {#if error}<p class="error" role="alert">{error}</p>{/if}
 {/if}
@@ -94,13 +94,7 @@
 <style>
   form { display: grid; gap: 1rem; }
   label { display: grid; gap: 0.35rem; }
-  textarea, input:not([type='file']) { width: 100%; box-sizing: border-box; font: inherit; padding: 0.5rem; }
   textarea { min-height: 10rem; }
-  button { padding: 0.75rem 1rem; font-size: 1rem; }
-  .ok { background: #dcfce7; color: #14532d; padding: 0.75rem 1rem; border-radius: 0.5rem; }
-  .queued, .offline { background: #fef3c7; color: #78350f; padding: 0.75rem 1rem; border-radius: 0.5rem; }
-  .error { color: #b91c1c; }
-  .hint { opacity: 0.7; font-size: 0.9rem; margin: 0; }
-  small { opacity: 0.7; font-weight: normal; }
-  @media (prefers-color-scheme: dark) { .ok { background: #14532d; color: #dcfce7; } .queued, .offline { background: #78350f; color: #fef3c7; } }
+  form button.primary { justify-self: center; }
+  .hint { margin: 0; }
 </style>

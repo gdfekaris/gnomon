@@ -107,9 +107,9 @@
           {#each models as m (m.id)}<option value={m}>{m.label}</option>{/each}
         </select>
       </label>
-      <button onclick={process} disabled={busy !== null || !captures.length || !model} data-testid="process">Process inbox with AI</button>
+      <button class="primary" onclick={process} disabled={busy !== null || !captures.length || !model} data-testid="process">Process inbox with AI</button>
     </div>
-    {#if inbox.processing}<p class="hint" role="status">Filing {inbox.processing.done + 1} of {inbox.processing.total}…</p>{/if}
+    {#if inbox.processing}<p class="queued" role="status">Filing {inbox.processing.done + 1} of {inbox.processing.total}…</p>{/if}
     {#if inbox.results.length}
       <ul data-testid="process-results">
         {#each inbox.results as r (r.path)}
@@ -151,7 +151,7 @@
               {/if}
               {#if f.state === 'pending'}
                 <div class="row">
-                  <button onclick={() => doRatify(f)} disabled={busy !== null} data-testid="ratify">Ratify</button>
+                  <button class="primary" onclick={() => doRatify(f)} disabled={busy !== null} data-testid="ratify">Ratify</button>
                   <button onclick={() => doReject(f)} disabled={busy !== null} data-testid="reject">Reject</button>
                 </div>
               {:else if f.state === 'ratified'}
@@ -181,18 +181,11 @@
   section { margin-bottom: 1.5rem; }
   .row { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: end; margin-top: 0.5rem; }
   .row label { display: grid; gap: 0.25rem; }
-  select { font: inherit; padding: 0.4rem; }
-  button { padding: 0.5rem 0.9rem; }
   .filings { list-style: none; padding: 0; }
-  .filings > li { border: 1px solid rgba(127, 127, 127, 0.3); border-radius: 0.5rem; padding: 0.6rem 0.75rem; margin-bottom: 0.5rem; }
+  .filings > li { border: var(--bw) solid var(--edge); box-shadow: var(--raise); padding: 0.6rem 0.75rem; margin-bottom: 0.5rem; }
   .head { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
-  .review { margin-top: 0.75rem; display: grid; gap: 0.75rem; }
-  .added { border-left: 3px solid #15803d; padding-left: 0.75rem; }
+  .review { margin-top: 0.75rem; display: grid; gap: 0.75rem; border-top: var(--bw, 1px) solid var(--edge); padding-top: 0.75rem; }
   .added h4, article h4 { margin: 0 0 0.25rem; }
-  .plus { background: rgba(21, 128, 61, 0.12); padding: 0.5rem; border-radius: 0.4rem; white-space: pre-wrap; }
-  .state.pending { color: #b45309; } .state.ratified { color: #15803d; } .state.rejected { opacity: 0.7; } .state.changed { color: #6d28d9; }
-  .empty { opacity: 0.6; list-style: none; }
-  .hint { opacity: 0.7; }
-  .error { color: #b91c1c; }
-  small { opacity: 0.75; }
+  .attachment { margin: 0; }
+  ul[data-testid='unfiled'] { padding-left: 0.25rem; list-style: none; }
 </style>

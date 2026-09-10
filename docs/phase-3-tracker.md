@@ -43,7 +43,7 @@ GitHub. Block 4 is the design pass, taken up now that every screen exists.
   states reviewed on a slow connection. Done when a flow over a fresh
   template brain sees the nudges and empty states and a flow over the
   fixture sees the right nudge at each step of the loop.
-- [ ] **4. The design pass** (L) — spec §1 ("a separate design pass"),
+- [x] **4. The design pass** (L) — spec §1 ("a separate design pass"),
   proposal §8 Phase 3 polish. A mobile-first visual system across every
   screen: Capture, Browse and the file view, Sets, the editors, Reason,
   Inbox, Proposals, Settings, and the onboarding screens from block 2.
@@ -220,6 +220,21 @@ this phase is the natural moment for the first three and P2-live.
   or a load error with a retry) whenever there is no snapshot; Capture
   keeps its form without a snapshot only while offline, so the queued
   capture of spec §14 still works.
+- The visual system (block 4) lives in `packages/app/src/app.css`: three
+  token sets under `:root[data-skin=mono|bevel|workbench]`, each with a
+  dark redefinition under `data-theme=dark` and `prefers-color-scheme`,
+  and shared element styles (window, title bar, `nav.tabs`, headings,
+  buttons with `.primary` `.quiet` `.small`, fields, `.chip`, `[role=tab]`,
+  `.state`/`.kind` badges, notices, `.panel`, `.bar`). Screens keep only
+  layout rules in their own `<style>` and never a raw color; new UI uses
+  the tokens. `applyTheme(theme, skin)` stamps both attributes; the skin
+  is `prefs.skin`. Fonts are self-hosted latin subsets in
+  `src/assets/fonts/` (OFL, see LICENSE.md there) so the PWA stays
+  offline-capable inside its CSP. Icons: `components/Icon.svelte` for the
+  16 px pixel set; `tools/make-icons.mjs` draws the manifest icons and
+  `public/icons/icon.svg`. The design canvas working files stay in
+  `docs/design/` (regenerate the seeded page from them if the canvas
+  needs changing).
 - `e2e/github-fake.ts` serves `storage/test/fake-github.ts` to the
   browser through `page.route`, so a flow can drive the real
   `GitHubDriver` end to end (create-from-template, commits, snapshot

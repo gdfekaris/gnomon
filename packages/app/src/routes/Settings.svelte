@@ -79,7 +79,7 @@
   <label>Owner <input bind:value={owner} autocapitalize="off" autocomplete="off" data-testid="git-owner" /></label>
   <label>Repository <input bind:value={name} autocapitalize="off" autocomplete="off" data-testid="git-name" /></label>
   <label>Fine-grained token <input bind:value={token} type="password" autocomplete="off" data-testid="git-token" /></label>
-  <button onclick={useGitHub} disabled={busy || !owner || !name || !token}>Connect</button>
+  <button class="primary" onclick={useGitHub} disabled={busy || !owner || !name || !token}>Connect</button>
   <p class="hint">A fine-grained token with Contents read and write on the one repository. Stored only on this device.</p>
 </section>
 
@@ -109,6 +109,14 @@
 
 <section>
   <h3>Appearance</h3>
+  <label>
+    Skin
+    <select value={settings.prefs.skin} onchange={(e) => savePrefs({ skin: (e.currentTarget as HTMLSelectElement).value as 'mono' | 'bevel' | 'workbench' })} data-testid="skin">
+      <option value="mono">Monochrome (default)</option>
+      <option value="bevel">Gray bevel</option>
+      <option value="workbench">Four-color workbench</option>
+    </select>
+  </label>
   <label>
     Theme
     <select value={settings.prefs.theme} onchange={(e) => savePrefs({ theme: (e.currentTarget as HTMLSelectElement).value as 'system' | 'light' | 'dark' })} data-testid="theme">
@@ -145,10 +153,8 @@
 
 <style>
   section { margin-bottom: 1.75rem; }
-  label { display: block; margin: 0.5rem 0; }
-  input:not([type='range']), select { width: 100%; max-width: 24rem; padding: 0.4rem; font-size: 1rem; display: block; margin-top: 0.25rem; }
-  input[type='range'] { width: 100%; max-width: 24rem; display: block; }
-  .hint { opacity: 0.7; font-size: 0.9rem; }
-  .error { color: #b91c1c; }
-  .about { border-top: 1px solid rgba(127, 127, 127, 0.3); padding-top: 0.75rem; }
+  label { margin: 0.5rem 0; }
+  input:not([type='range']), select { max-width: 24rem; margin-top: 0.25rem; }
+  input[type='range'] { max-width: 24rem; display: block; }
+  .about { border-top: var(--bw, 1px) solid var(--edge); padding-top: 0.75rem; }
 </style>

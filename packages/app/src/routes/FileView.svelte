@@ -39,7 +39,7 @@
     {/each}
     {#if Array.isArray(fm['tags']) && fm['tags'].length}
       <dt>tags</dt>
-      <dd>{#each fm['tags'] as t}<a class="tag" href="#/browse?tag={t}">{t}</a> {/each}</dd>
+      <dd>{#each fm['tags'] as t}<a class="chip" href="#/browse?tag={t}">{t}</a> {/each}</dd>
     {/if}
   </dl>
   {#if attachmentPath}
@@ -66,12 +66,8 @@
 {/if}
 
 <style>
-  dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 1rem; font-size: 0.9rem; }
-  dt { opacity: 0.7; }
-  dd { margin: 0; overflow-wrap: anywhere; }
-  .meta { opacity: 0.7; }
-  .empty { opacity: 0.6; list-style: none; }
-  .error { color: #b91c1c; }
-  .tag { margin-right: 0.25rem; }
-  small { opacity: 0.6; }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 1rem; font-size: var(--fs-small); margin: 0 0 12px; }
+  dt { color: var(--muted); }
+  dd { margin: 0; }
+  ul { padding-left: 0.25rem; list-style: none; }
 </style>

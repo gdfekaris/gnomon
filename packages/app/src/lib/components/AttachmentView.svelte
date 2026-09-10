@@ -40,9 +40,7 @@
 {/if}
 
 <style>
-  img { max-width: 100%; height: auto; }
-  pre { white-space: pre-wrap; word-break: break-word; background: rgba(127, 127, 127, 0.1); padding: 0.75rem; border-radius: 0.5rem; }
-  .meta, .hint { opacity: 0.7; }
-  .error { color: #b91c1c; }
-  button { padding: 0.6rem 1rem; font-size: 1rem; }
+  img { max-width: 100%; display: block; border: var(--bw) solid var(--edge); }
+  pre { white-space: pre-wrap; word-break: break-word; border: var(--bw) solid var(--edge); box-shadow: var(--sink); background: var(--field-bg); color: var(--field-ink); padding: 0.75rem; }
+  .meta { margin: 0 0 0.5rem; }
 </style>

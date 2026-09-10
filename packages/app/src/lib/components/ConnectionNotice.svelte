@@ -30,6 +30,5 @@
 {/if}
 
 <style>
-  .error { color: #b91c1c; }
   button { margin-left: 0.5rem; }
 </style>

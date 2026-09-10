@@ -68,3 +68,32 @@ test('a bad GitHub connection explains itself', async ({ page }) => {
   await page.getByRole('button', { name: 'Connect', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('GitHub rejected the token');
 });
+
+test('the skin is a setting: three late-1980s GUIs, Monochrome by default, kept on the device, with a dark variant each', async ({ page }) => {
+  await page.goto('/#/settings');
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'mono');
+  const bg = () => page.evaluate(() => getComputedStyle(document.querySelector('main.window')!).backgroundColor);
+  const font = () => page.evaluate(() => getComputedStyle(document.body).fontFamily);
+  expect(await bg()).toBe('rgb(255, 255, 255)');
+  expect(await font()).toContain('Pixelify Sans');
+
+  await page.getByTestId('skin').selectOption('workbench');
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'workbench');
+  expect(await bg()).toBe('rgb(0, 85, 170)');
+  expect(await font()).toContain('VT323');
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'workbench');
+
+  await page.getByTestId('skin').selectOption('bevel');
+  expect(await bg()).toBe('rgb(192, 192, 192)');
+  expect(await font()).toContain('DotGothic16');
+
+  // dark mode: Monochrome inverts, the others carry their own dark paper
+  await page.getByTestId('skin').selectOption('mono');
+  await page.getByTestId('theme').selectOption('dark');
+  expect(await bg()).toBe('rgb(0, 0, 0)');
+  await page.getByTestId('skin').selectOption('bevel');
+  expect(await bg()).toBe('rgb(60, 60, 60)');
+  await page.getByTestId('theme').selectOption('system');
+  await page.getByTestId('skin').selectOption('mono');
+});

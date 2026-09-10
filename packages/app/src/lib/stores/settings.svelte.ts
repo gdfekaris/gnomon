@@ -6,6 +6,8 @@ import { get, set, del } from 'idb-keyval';
 export interface GitSettings { token: string; owner: string; name: string; }
 export interface Prefs {
   theme: 'system' | 'light' | 'dark';
+  /** the visual skin (block 4): three late-1980s GUIs, Monochrome by default */
+  skin: 'mono' | 'bevel' | 'workbench';
   budgetPercent: number;
   setDescriptionPlacement: 'context' | 'system';
   lastSelectedSets: string[];
@@ -13,7 +15,7 @@ export interface Prefs {
   mode: 'github' | 'demo' | null;
 }
 
-const DEFAULT_PREFS: Prefs = { theme: 'system', budgetPercent: 60, setDescriptionPlacement: 'context', lastSelectedSets: [], mode: null };
+const DEFAULT_PREFS: Prefs = { theme: 'system', skin: 'mono', budgetPercent: 60, setDescriptionPlacement: 'context', lastSelectedSets: [], mode: null };
 
 export const settings = $state({
   loaded: false,
@@ -36,7 +38,7 @@ export async function loadSettings(): Promise<void> {
       settings.anthropicKey = anthropic ?? '';
       settings.openrouterKey = openrouter ?? '';
       settings.prefs = { ...DEFAULT_PREFS, ...(prefs ?? {}) };
-      applyTheme(settings.prefs.theme);
+      applyTheme(settings.prefs.theme, settings.prefs.skin);
     } catch {
       // a blocked or evicted store means "signed out" (spec §10.3)
     }
@@ -66,16 +68,17 @@ export async function saveProviderKeys(keys: { anthropic?: string; openrouter?: 
 
 export async function savePrefs(patch: Partial<Prefs>): Promise<void> {
   settings.prefs = { ...settings.prefs, ...patch };
-  applyTheme(settings.prefs.theme);
+  applyTheme(settings.prefs.theme, settings.prefs.skin);
   // $state proxies cannot be structured-cloned into IndexedDB; store a plain copy.
   if (hasIdb()) await set('prefs', $state.snapshot(settings.prefs));
 }
 
-/** Theme: `system` follows the OS; light and dark are forced through `data-theme` and `color-scheme`. */
-export function applyTheme(theme: Prefs['theme']): void {
+/** Theme: `system` follows the OS; light and dark are forced through `data-theme` and `color-scheme`. The skin rides on `data-skin`. */
+export function applyTheme(theme: Prefs['theme'], skin: Prefs['skin'] = 'mono'): void {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
   if (theme === 'system') delete root.dataset['theme'];
   else root.dataset['theme'] = theme;
   root.style.colorScheme = theme === 'system' ? 'light dark' : theme;
+  root.dataset['skin'] = skin;
 }

@@ -171,7 +171,7 @@
   {/if}
   <p>You need a free GitHub account. If you do not have one yet, create it at github.com first, then come back.</p>
   <div class="actions">
-    <button onclick={() => start('create')} data-testid="onboard-create">Create a new brain</button>
+    <button class="primary" onclick={() => start('create')} data-testid="onboard-create">Create a new brain</button>
     <button onclick={() => start('connect')} data-testid="onboard-connect">Connect an existing brain</button>
   </div>
   <p class="hint">
@@ -220,7 +220,7 @@
     </label>
     <p class="hint">Stored only in this browser on this device. It is sent to GitHub and nowhere else.</p>
     <div class="actions">
-      <button type="submit" disabled={busy || !token.trim() || !name.trim() || (intent === 'connect' && !owner.trim())} data-testid="onboard-go">
+      <button type="submit" class="primary" disabled={busy || !token.trim() || !name.trim() || (intent === 'connect' && !owner.trim())} data-testid="onboard-go">
         {busy ? 'Working…' : intent === 'create' ? 'Create my brain' : 'Connect'}
       </button>
       <button type="button" class="link" onclick={() => (step = 'welcome')} disabled={busy}>Back</button>
@@ -299,24 +299,19 @@
       <li><strong>Desktop</strong>, in Chrome or Edge: click the install icon at the right end of the address bar.</li>
     </ul>
   {/if}
-  <div class="actions"><button onclick={finish} data-testid="onboard-finish">Start capturing</button></div>
+  <div class="actions"><button class="primary" onclick={finish} data-testid="onboard-finish">Start capturing</button></div>
 {/if}
 
 {#if error}<p class="error" role="alert">{error}</p>{/if}
 
 <style>
-  .progress { opacity: 0.6; font-size: 0.85rem; margin: 0 0 0.5rem; }
+  .progress { margin: 0 0 0.5rem; }
   .tabs { display: flex; gap: 0.5rem; margin: 1rem 0 0.5rem; }
-  .tabs [role='tab'] { flex: 1; }
-  .tabs [aria-selected='true'] { font-weight: 600; text-decoration: underline; }
   .steps li, .privacy li, .install li { margin: 0.5rem 0; }
-  .install .primary { font-weight: 500; }
-  label { display: block; margin: 0.75rem 0; }
-  input { width: 100%; max-width: 24rem; padding: 0.4rem; font-size: 1rem; display: block; margin-top: 0.25rem; }
+  .install .primary { font-weight: 600; }
+  label { margin: 0.75rem 0; }
+  input { max-width: 24rem; margin-top: 0.25rem; }
   .actions { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin: 1rem 0; }
-  .link { background: none; border: none; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font: inherit; }
-  .hint { opacity: 0.7; font-size: 0.9rem; }
-  .warning { color: #92400e; }
-  .ok { color: #14532d; }
-  .error { color: #b91c1c; }
+  .actions .primary { width: 100%; }
+  @media (min-width: 30rem) { .actions .primary { width: auto; } }
 </style>

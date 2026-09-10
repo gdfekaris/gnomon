@@ -132,14 +132,14 @@
       {/if}
       <label>Related principles <small>(set/slug, comma-separated)</small> <input bind:value={related} data-testid="edit-related" /></label>
       <label>Tags <small>(comma-separated)</small> <input bind:value={tags} data-testid="edit-tags" /></label>
-      <button type="submit" disabled={busy || !title.trim()} data-testid="edit-save">{newIn ? 'Add principle' : 'Save'}</button>
+      <button type="submit" class="primary" disabled={busy || !title.trim()} data-testid="edit-save">{newIn ? 'Add principle' : 'Save'}</button>
     </form>
   {:else if kind === 'notes'}
     <h2>Notes on {slugOfSource(path)}</h2>
     <p class="hint">Marginalia, corrections, and context. Saving makes this file yours ({(file!.fm as NotesFm).curated === 'human' ? 'it already is' : `it is ${(file!.fm as NotesFm).curated} now`}).</p>
     <form onsubmit={(e) => { e.preventDefault(); void save(); }}>
       <label>Notes <textarea bind:value={body} rows="12" data-testid="edit-body"></textarea></label>
-      <button type="submit" disabled={busy} data-testid="edit-save">Save</button>
+      <button type="submit" class="primary" disabled={busy} data-testid="edit-save">Save</button>
     </form>
   {:else}
     <h2>Edit source metadata</h2>
@@ -152,7 +152,7 @@
       <label>Locator <input bind:value={locator} /></label>
       <label>Origin <input bind:value={origin} /></label>
       <label>Tags <small>(comma-separated)</small> <input bind:value={tags} data-testid="edit-tags" /></label>
-      <button type="submit" disabled={busy || !title.trim()} data-testid="edit-save">Save</button>
+      <button type="submit" class="primary" disabled={busy || !title.trim()} data-testid="edit-save">Save</button>
     </form>
     <h3>Passage (read-only)</h3>
     <pre class="passage" data-testid="passage-readonly">{(file as BrainFile<SourceFm>).body}</pre>
@@ -163,17 +163,12 @@
 <style>
   form { display: grid; gap: 0.75rem; }
   label { display: grid; gap: 0.3rem; }
-  input, textarea, select { font: inherit; padding: 0.4rem; width: 100%; box-sizing: border-box; }
-  .row { display: flex; gap: 0.5rem; }
+  .row { display: flex; gap: 0.5rem; align-items: stretch; }
   .grounds { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
-  .chip { background: rgba(127, 127, 127, 0.15); border-radius: 1rem; padding: 0.15rem 0.6rem; }
-  .chip button { border: none; background: none; cursor: pointer; }
-  .drift { border: 1px solid #b45309; border-radius: 0.5rem; padding: 0.5rem 0.75rem; }
-  .passage { white-space: pre-wrap; background: rgba(127, 127, 127, 0.1); padding: 0.75rem; border-radius: 0.5rem; }
-  .hint { opacity: 0.7; }
-  .error { color: #b91c1c; }
-  small { opacity: 0.7; font-weight: normal; }
-  .from { border-left: 3px solid #b45309; padding: 0.25rem 0.75rem; margin-bottom: 1rem; }
-  .from p { margin: 0.25rem 0; }
+  .chip { display: inline-flex; align-items: center; gap: 4px; cursor: default; }
+  .chip button { min-height: 0; padding: 0 2px; border: 0; box-shadow: none; background: none; color: inherit; font-size: var(--fs); line-height: 1; }
+  .drift, .from { flex-direction: column; align-items: stretch; }
+  .from p, .drift p { margin: 0.25rem 0; }
   .rationale { white-space: pre-wrap; }
+  form button.primary { justify-self: center; }
 </style>

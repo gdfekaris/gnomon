@@ -122,7 +122,7 @@
       {/if}
     </div>
     <div class="row">
-      <button onclick={send} disabled={!canSend} data-testid="send">Send</button>
+      <button class="primary" onclick={send} disabled={!canSend} data-testid="send">Send</button>
       {#if reasoning.streaming}<button onclick={() => reasoner.stop()} data-testid="stop">Stop</button>{/if}
       {#if reasoning.transcript.length}<button class="quiet" onclick={() => reasoner.clear()} disabled={reasoning.streaming}>Clear</button>{/if}
     </div>
@@ -149,26 +149,18 @@
 {/if}
 
 <style>
-  .empty { opacity: 0.8; }
+  .empty { font-size: var(--fs); }
   .picker { display: grid; gap: 0.75rem; margin-bottom: 1rem; }
   .chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-  .chip { border: 1px solid rgba(127, 127, 127, 0.5); border-radius: 1rem; padding: 0.3rem 0.8rem; background: transparent; color: inherit; cursor: pointer; }
-  .chip.on { background: #1c1917; color: #fafaf9; border-color: #1c1917; }
-  @media (prefers-color-scheme: dark) { .chip.on { background: #fafaf9; color: #1c1917; border-color: #fafaf9; } }
   .row { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: end; }
   .row label { display: grid; gap: 0.25rem; flex: 1 1 8rem; }
-  select, textarea { font: inherit; padding: 0.4rem; width: 100%; box-sizing: border-box; }
-  .bar { height: 0.5rem; background: rgba(127, 127, 127, 0.25); border-radius: 0.25rem; overflow: hidden; }
-  .fill { height: 100%; background: #15803d; transition: width 0.2s; }
-  .fill.over { background: #b91c1c; }
-  .transcript article { padding: 0.75rem 1rem; border-radius: 0.75rem; margin-bottom: 0.75rem; }
-  .transcript .user { background: rgba(127, 127, 127, 0.12); }
-  .transcript .assistant { border: 1px solid rgba(127, 127, 127, 0.3); }
-  .meta { opacity: 0.6; font-size: 0.85rem; margin: 0 0 0.25rem; }
+  .transcript article { padding: 0.5rem 0.75rem; margin-bottom: 0.75rem; }
+  .transcript .user { background: var(--pattern); padding: 2px; }
+  .transcript .user > * { background: var(--paper); padding: 6px 10px; }
+  .transcript .assistant { border: var(--bw) solid var(--edge); box-shadow: var(--raise); }
+  .meta { margin: 0 0 0.25rem; }
   .text { white-space: pre-wrap; margin: 0; }
-  .hint { opacity: 0.7; margin: 0.25rem 0 0; font-size: 0.9rem; }
-  .error { color: #b91c1c; margin: 0.25rem 0 0; }
-  .quiet { opacity: 0.7; }
-  button { padding: 0.5rem 1rem; }
-  .answer :global(code) { background: rgba(127, 127, 127, 0.15); padding: 0 0.25rem; border-radius: 0.25rem; }
+  .hint { margin: 0.25rem 0 0; }
+  .error { margin: 0.25rem 0 0; }
+  .answer :global(code) { padding: 0 0.15rem; }
 </style>

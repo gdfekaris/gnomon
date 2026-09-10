@@ -87,15 +87,9 @@
 {/if}
 
 <style>
-  section { margin-bottom: 1.5rem; }
-  .proposal { border: 1px solid rgba(127, 127, 127, 0.3); border-radius: 0.5rem; padding: 0.6rem 0.75rem; margin-bottom: 0.6rem; }
-  .proposal h4 { margin: 0 0 0.25rem; }
-  .kind { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.7; border: 1px solid rgba(127, 127, 127, 0.5); border-radius: 0.25rem; padding: 0 0.3rem; margin-right: 0.3rem; }
-  .links { display: flex; flex-wrap: wrap; gap: 0.75rem; font-size: 0.9rem; opacity: 0.85; margin: 0.25rem 0; }
-  .row { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
-  .decided li { margin: 0.25rem 0; }
-  .quiet { opacity: 0.7; }
-  .empty, .hint { opacity: 0.7; }
-  .error { color: #b91c1c; }
-  small { opacity: 0.75; }
+  .proposal { border: var(--bw) solid var(--edge); box-shadow: var(--raise); padding: 0.6rem 0.75rem; margin-bottom: 0.75rem; }
+  .proposal h4 { margin: 0 0 0.25rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+  .links { display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; font-size: var(--fs-small); color: var(--muted); margin: 0 0 0.5rem; }
+  .row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
+  .decided { padding-left: 0.25rem; list-style: none; }
 </style>

@@ -48,6 +48,11 @@ process for every phase.
   files except the two clerical inbox fields in a filing commit.
 - Commit messages in a brain are fixed vocabulary (schema §7): `Capture:`,
   `File:`, `Ratify:`, `Reject:`, `Decide:`, `Add principle:`, `Index`.
+- Styling: the app is a late-1980s GUI in three skins (`data-skin` on
+  `<html>`, Monochrome default), all tokens and shared element styles in
+  `packages/app/src/app.css`. Screens carry layout only, never a raw
+  color; use the tokens (`--ink`, `--paper`, `--edge`, `--raise`, ...) and
+  the shared classes (`.primary`, `.chip`, `.panel`, `.state`, notices).
 
 ## Commands
 

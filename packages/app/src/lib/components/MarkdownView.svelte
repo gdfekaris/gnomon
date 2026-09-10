@@ -16,5 +16,5 @@
 <style>
   .markdown :global(pre) { overflow-x: auto; }
   .markdown :global(img) { max-width: 100%; }
-  .markdown :global(blockquote) { border-left: 3px solid #d6d3d1; margin-left: 0; padding-left: 1rem; opacity: 0.9; }
+  .markdown :global(blockquote) { border-left: 3px solid var(--edge, currentColor); margin-left: 0; padding-left: 1rem; color: var(--muted); }
 </style>

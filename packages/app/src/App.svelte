@@ -18,6 +18,7 @@
   import Inbox from './routes/Inbox.svelte';
   import Proposals from './routes/Proposals.svelte';
   import Onboarding from './routes/Onboarding.svelte';
+  import Icon from './lib/components/Icon.svelte';
 
   // Launch: rebuild the session from on-device settings (spec §10.2), off the
   // critical path so Capture renders first (spec §10.4).
@@ -48,55 +49,48 @@
   const onboarding = $derived(route.name === 'onboarding');
 </script>
 
-<StaleBanner />
-<UpdateToast />
-<main>
-  <header>
-    <h1>Gnomon</h1>
-    {#if !onboarding}
-      <nav>
-        <a href="#/capture" class:active={route.name === 'capture'}>Capture</a>
-        <a href="#/browse" class:active={route.name === 'browse'}>Browse</a>
-        <a href="#/inbox" class:active={route.name === 'inbox'}>Inbox</a>
-        <a href="#/proposals" class:active={route.name === 'proposals'}>Proposals</a>
-        <a href="#/sets" class:active={route.name === 'sets'}>Sets</a>
-        <a href="#/reason" class:active={route.name === 'reason'}>Reason</a>
-        <a href="#/settings" class:active={route.name === 'settings'}>Settings</a>
-      </nav>
-    {/if}
+<main class="window">
+  <header class="titlebar">
+    <span class="box"></span>
+    <h1><span>Gnomon</span></h1>
+    <span class="box"></span>
   </header>
-  {#if onboarding}
-    <Onboarding />
-  {:else if route.name === 'browse' && route.path}
-    <FileView path={route.path} anchor={route.anchor} />
-  {:else if route.name === 'browse'}
-    <Browse />
-  {:else if route.name === 'sets' && route.rest.length === 2 && route.rest[1] === 'new-principle'}
-    <Editor path="" newIn={route.rest[0]} from={route.query.get('from') ?? undefined} />
-  {:else if route.name === 'sets'}
-    <Sets />
-  {:else if route.name === 'edit'}
-    <Editor path={route.path} from={route.query.get('from') ?? undefined} />
-  {:else if route.name === 'proposals'}
-    <Proposals />
-  {:else if route.name === 'reason'}
-    <Reason />
-  {:else if route.name === 'inbox'}
-    <Inbox />
-  {:else if route.name === 'settings'}
-    <Settings />
-  {:else if route.name === 'capture'}
-    <Capture />
-  {:else}
-    <h2>{route.name}</h2>
-    <p>This screen arrives in a later block.</p>
+  <StaleBanner />
+  <UpdateToast />
+  <div class="content">
+    {#if onboarding}
+      <Onboarding />
+    {:else if route.name === 'browse' && route.path}
+      <FileView path={route.path} anchor={route.anchor} />
+    {:else if route.name === 'browse'}
+      <Browse />
+    {:else if route.name === 'sets' && route.rest.length === 2 && route.rest[1] === 'new-principle'}
+      <Editor path="" newIn={route.rest[0]} from={route.query.get('from') ?? undefined} />
+    {:else if route.name === 'sets'}
+      <Sets />
+    {:else if route.name === 'edit'}
+      <Editor path={route.path} from={route.query.get('from') ?? undefined} />
+    {:else if route.name === 'proposals'}
+      <Proposals />
+    {:else if route.name === 'reason'}
+      <Reason />
+    {:else if route.name === 'inbox'}
+      <Inbox />
+    {:else if route.name === 'settings'}
+      <Settings />
+    {:else}
+      <Capture />
+    {/if}
+  </div>
+  {#if !onboarding}
+    <nav class="tabs">
+      <a href="#/capture" class:active={route.name === 'capture'}><Icon name="capture" />Capture</a>
+      <a href="#/browse" class:active={route.name === 'browse'}><Icon name="browse" />Browse</a>
+      <a href="#/inbox" class:active={route.name === 'inbox'}><Icon name="inbox" />Inbox</a>
+      <a href="#/proposals" class:active={route.name === 'proposals'}><Icon name="proposals" />Proposals</a>
+      <a href="#/sets" class:active={route.name === 'sets' || route.name === 'edit'}><Icon name="sets" />Sets</a>
+      <a href="#/reason" class:active={route.name === 'reason'}><Icon name="reason" />Reason</a>
+      <a href="#/settings" class:active={route.name === 'settings'}><Icon name="settings" />Settings</a>
+    </nav>
   {/if}
 </main>
-
-<style>
-  header { display: flex; align-items: baseline; gap: 1.5rem; flex-wrap: wrap; }
-  h1 { font-size: 1.25rem; margin: 0; }
-  nav { display: flex; gap: 1rem; }
-  nav a { text-decoration: none; }
-  nav a.active { font-weight: 600; text-decoration: underline; }
-</style>

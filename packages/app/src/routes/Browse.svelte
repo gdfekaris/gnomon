@@ -31,8 +31,8 @@
   <p class="meta">{session.label} at <code>{s.head.slice(0, 7)}</code> · {s.files.size} files</p>
   {#if tags.length}
     <p class="tags" data-testid="tag-filter">
-      <a href="#/browse" class:active={!tag}>all</a>
-      {#each tags as t (t)}<a href="#/browse?tag={t}" class:active={tag === t}>{t}</a>{/each}
+      <a href="#/browse" class="chip" class:active={!tag}>all</a>
+      {#each tags as t (t)}<a href="#/browse?tag={t}" class="chip" class:active={tag === t}>{t}</a>{/each}
     </p>
   {/if}
   {#each s.sets as set (set.path)}
@@ -81,9 +81,7 @@
 {/if}
 
 <style>
-  .meta { opacity: 0.7; }
-  .empty { opacity: 0.6; list-style: none; }
-  small { opacity: 0.7; }
-  .tags a { margin-right: 0.5rem; }
-  .tags a.active { font-weight: 600; text-decoration: underline; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  ul, ol { padding-left: 0.25rem; list-style: none; }
+  li { margin: 0.35rem 0; }
 </style>

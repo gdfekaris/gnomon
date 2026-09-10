@@ -151,19 +151,16 @@
 
 <style>
   .sets { list-style: none; padding: 0; }
-  .set { border: 1px solid rgba(127, 127, 127, 0.3); border-radius: 0.5rem; padding: 0.75rem; margin-bottom: 0.75rem; }
+  .set { border: var(--bw) solid var(--edge); box-shadow: var(--raise); padding: 0.75rem; margin-bottom: 0.75rem; }
   .head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
   .head h3 { margin: 0; }
-  .controls { display: inline-flex; gap: 0.25rem; flex-wrap: wrap; }
-  .controls button { padding: 0.25rem 0.5rem; }
+  .controls { display: inline-flex; gap: 0.25rem; flex-wrap: nowrap; }
+  .controls button { min-height: 0; padding: 0.25rem 0.5rem; font-size: var(--fs-small); border-radius: calc(var(--radius) - 2px); }
   .principles { padding-left: 1.25rem; }
   .principles li { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin: 0.25rem 0; }
-  .framing { opacity: 0.85; white-space: pre-wrap; margin: 0.5rem 0; }
-  .empty { opacity: 0.6; list-style: none; }
-  .confirm { border: 1px solid #b91c1c; border-radius: 0.5rem; padding: 0.75rem; margin-bottom: 1rem; }
-  .hint { opacity: 0.7; }
-  .error { color: #b91c1c; }
-  input, textarea { font: inherit; padding: 0.4rem; width: 100%; max-width: 24rem; box-sizing: border-box; }
-  textarea { max-width: 100%; }
-  .new { margin-top: 1rem; }
+  .framing { color: var(--muted); font-size: var(--fs-small); white-space: pre-wrap; margin: 0.5rem 0; }
+  .confirm { flex-direction: column; align-items: stretch; }
+  .confirm p { margin: 0 0 6px; }
+  .new { display: flex; gap: 0.5rem; align-items: end; flex-wrap: wrap; }
+  .new label { flex: 1 1 12rem; }
 </style>
