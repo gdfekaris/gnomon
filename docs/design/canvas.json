@@ -1,0 +1,14 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "title": "Direction A · Monochrome desk accessory", "x": 0, "y": 0, "w": 390, "h": 844 },
+    { "file": "DirectionB.dc.html", "title": "Direction B · Gray bevel", "x": 480, "y": 0, "w": 390, "h": 844 },
+    { "file": "DirectionC.dc.html", "title": "Direction C · Four-color workbench", "x": 960, "y": 0, "w": 390, "h": 844 }
+  ],
+  "annotations": [
+    { "id": "brief", "x": -460, "y": 0, "w": 380, "text": "Gnomon, block 4: the design pass.\n\nThree flavors of a late-1980s application GUI, each drawn as the real Capture screen at phone size (390 × 844), with the real copy and controls: the what-next line, Passage, Note, Attach a file, Save to inbox, and the seven-screen bar.\n\nPick one and the other nine screens (Browse and the file view, Sets, the editors, Reason, Inbox, Proposals, Settings, onboarding) get drawn in it. Anything here can be nudged in place first.\n\nThe top 52 px is left empty on purpose: the phone's own status bar sits there." },
+    { "id": "note-a", "x": 0, "y": -250, "w": 390, "text": "A · Monochrome desk accessory\n\nOne bit: black on white, a dithered desktop, striped title bar, square windows, a rounded default button with the heavy ring, a scroll bar with arrows. Type: Pixelify Sans (a bitmap-style sans).\n\nWhy: the most legible of the three on a small screen, and it inverts cleanly for dark mode (white on black) with nothing else to decide. Leaves the most room for small charismatic details later, because everything is quiet.\n\nTradeoff: no color to lean on for state. Warnings and errors need pattern, weight, or an icon instead of red and amber." },
+    { "id": "note-b", "x": 480, "y": -250, "w": 390, "text": "B · Gray bevel\n\nChiseled gray panels on a teal desktop: raised buttons, sunken fields, a navy title bar, underlined access keys. Type: DotGothic16 (a 16 px bitmap gothic).\n\nWhy: reads as \"an application\" at a glance; the raised/sunken language gives every control an obvious affordance, which helps the non-technical audience of Phase 3.\n\nTradeoff: the busiest chrome of the three; on a phone the bevels eat width, and dark mode needs its own palette (dark gray bevels), not a simple inversion." },
+    { "id": "note-c", "x": 960, "y": -250, "w": 390, "text": "C · Four-color workbench\n\nBlue, white, black, orange: a four-color palette, chunky 2 px bevels, striped drag bar, orange for the one action that matters. Type: VT323 (a 20 px terminal face).\n\nWhy: the most charismatic and the most personal; it looks like nothing else on a phone.\n\nTradeoff: long passages read on blue with a monospace face, which tires faster than A or B, and the palette leaves little room for state colors beyond orange." }
+  ],
+  "launch": { "view": "canvas" }
+}
