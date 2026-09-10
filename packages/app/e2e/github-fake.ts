@@ -4,10 +4,9 @@
 // contract suite trusts. CORS headers are needed because the page really
 // does a cross-origin fetch with custom headers.
 import type { Page } from '@playwright/test';
-import { FakeGitHub } from '../../storage/test/fake-github';
+import { FakeGitHub, readBrainBytes } from '@gnomon/storage/testing';
 
-export { FakeGitHub };
-export { readBrainBytes } from '../../storage/test/fixture';
+export { FakeGitHub, readBrainBytes };
 
 const cors = {
   'access-control-allow-origin': '*',

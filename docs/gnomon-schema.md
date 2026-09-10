@@ -275,7 +275,7 @@ Every procedure is one commit on `main`. Neither the app nor any agent creates a
 4. Regenerate both index files.
 5. One commit: `Create principle set: Set {order}{ — name}`.
 
-A new brain is scaffolded with Set 1 at `ps-g8xw`, `order: 1`, no `name`, and no principles.
+A new brain is scaffolded with Set 1 at `ps-g8xw`, `order: 1`, no `name`, and no principles. When the app creates the brain, the whole template lands in one commit, `Scaffold: template`, on top of the host's initial commit.
 
 ### 7.2 Rename a set
 
@@ -319,7 +319,7 @@ See §5. Both are single commits: `Ratify: <slug>` and `Reject: <slug>`.
 
 ### 7.8 Connect an existing brain (US-15)
 
-1. Validate layout (§2). Offer to add missing folders, `AGENTS.md`, and templates, each as one commit.
+1. Validate layout (§2). Offer to add missing folders, `AGENTS.md`, and templates, each as one commit `Scaffold: <path>` (a folder arrives as its `.gitkeep`; a missing Set 1 is a §7.1 commit).
 2. Run the §9 validator and show refusals and warnings. The app fixes nothing else; in particular it never moves or rewrites existing files. A brain in an older format is migrated by hand.
 3. Regenerate indexes.
 
@@ -333,7 +333,11 @@ See §5. Both are single commits: `Ratify: <slug>` and `Reject: <slug>`.
 
 Rewrite `status` to `accepted` or `declined`; one commit `Decide: P-<date>-<nnn>`. On desktop, the curator states the decision and the agent records it (§4.7); the agent writes nothing else in that commit.
 
-### 7.11 Desktop session discipline
+### 7.11 Save a proposal
+
+The curator may write a proposal (§4.7) directly, for instance keeping the proposal section of a Relate answer: write `maps/proposals/P-<date>-<nnn>.md` with `curated: human` and `status: open`; regenerate indexes; one commit `Add proposal: P-<date>-<nnn>`. Agents never use this message; their proposals are written inside a `File:` commit.
+
+### 7.12 Desktop session discipline
 
 Encoded in `AGENTS.md`: `git pull` at session start; one commit per action as above; before the final push, run `npx gnomon-cli validate` and fix or report refusals, then `npx gnomon-cli index`; `git push` at session end. Agents never leave the session with unpushed commits they made.
 

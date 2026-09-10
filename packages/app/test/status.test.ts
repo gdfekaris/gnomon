@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MemoryDriver, loadSnapshot } from '@gnomon/storage';
-import { readBrainBytes } from '../../storage/test/fixture';
+import { readBrainBytes } from '@gnomon/storage/testing';
 import { brainStatus, nudge } from '../src/lib/services/status';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';

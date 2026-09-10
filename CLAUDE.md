@@ -49,7 +49,8 @@ break down Phase 4 (encryption, spec §6.4), and write
   `expectedHead`. The app never moves a file. Agents never write `human`
   files except the two clerical inbox fields in a filing commit.
 - Commit messages in a brain are fixed vocabulary (schema §7): `Capture:`,
-  `File:`, `Ratify:`, `Reject:`, `Decide:`, `Add principle:`, `Index`.
+  `File:`, `Ratify:`, `Reject:`, `Decide:`, `Add principle:`, `Add
+  proposal:`, `Scaffold:`, `Index`, plus the set procedures' own messages.
 - Styling: the app is a late-1980s GUI in three skins (`data-skin` on
   `<html>`, Monochrome default), all tokens and shared element styles in
   `packages/app/src/app.css`. Screens carry layout only, never a raw

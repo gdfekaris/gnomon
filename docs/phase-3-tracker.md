@@ -89,16 +89,21 @@ are handled with the deferred items when Phase 3 is finished.
   keepers and offers only markdown. *Done in block 1:* the glob is
   `**/*` with `exhaustive: true`, and a test holds it equal to the tree
   on disk.
-- [ ] **G3. Cross-package test import.** App unit tests reach only
+- [x] **G3. Cross-package test import.** App unit tests reach only
   `@gnomon/storage`'s public entry; block 1's test imports
-  `storage/test/fake-github.ts` by relative path. Decide later whether
-  to publish it as a `@gnomon/storage/testing` subpath. *After Phase 3.*
-- [ ] **G4. `Scaffold:` is not in schema §7's commit vocabulary** but
+  `storage/test/fake-github.ts` by relative path. *Done 2026-09-10:*
+  `@gnomon/storage/testing` (`storage/test/testing.ts`) exports
+  `FakeGitHub`, `FIXTURE`, and `readBrainBytes`; the app's tests and the
+  Playwright bridge import it by name and no relative cross-package
+  import remains.
+- [x] **G4. `Scaffold:` is not in schema §7's commit vocabulary** but
   connect-existing has used it since Phase 1 and block 1 uses it for the
   template commit; block 5 adds `Add proposal: <id>` for a proposal the
-  curator saves from a Relate answer, also unlisted. Add both to the
-  schema (and CLAUDE.md's list) or rename.
-  *After Phase 3; schema change, needs the maintainer.*
+  curator saves from a Relate answer, also unlisted. *Done 2026-09-10,
+  both names kept (maintainer's call):* `Scaffold: template` in §7.1,
+  `Scaffold: <path>` in §7.8, and a new §7.11 "Save a proposal" with
+  `Add proposal: P-<date>-<nnn>`; CLAUDE.md's list updated. `AGENTS.md`
+  is unchanged because agents use neither.
 - [x] **G5. `describeError`'s auth sentence assumes Settings** ("on this
   repository"); onboarding needs different wording per step. Block 1
   gave `validateToken` its own sentences. *Done in block 3:*
