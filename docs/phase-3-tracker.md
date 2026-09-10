@@ -141,14 +141,14 @@ this phase is the natural moment for the first three and P2-live.
   from `POST /user/repos` (not a 404 or 422); a name collision is a 422
   whose top-level `message` is generic, which is why the service says
   the name "may already exist".
-- [ ] **P1-18b. Pages deploy** (S) — deferred until the live human test.
-  Pages does not publish from a private repository on a Free plan: make
-  `gdfekaris/gnomon` public, deploy to a separate public repository, use
-  another static host, or confirm a paid plan; then enable Pages with
-  Source = GitHub Actions and add the `actions/deploy-pages` job. The base
-  path is settled: the site is `gdfekaris.github.io/gnomon/` and CI already
-  builds with `VITE_BASE=/gnomon/`. Then check the iPhone install and the
-  update toast on a real device.
+- [x] **P1-18b. Pages deploy** (S) — *done 2026-09-10:* the maintainer
+  made `gdfekaris/gnomon` public; Pages is enabled with Source = GitHub
+  Actions; `ci.yml` uploads `packages/app/dist` on every run and a
+  `deploy` job (`actions/deploy-pages`) publishes it on pushes to main.
+  The base path is `/gnomon/`; because the maintainer's user site has a
+  custom domain, GitHub serves the app at `gdfekaris.com/gnomon/` and
+  `gdfekaris.github.io/gnomon/` redirects there. Still to do on a real
+  device, in the smoke checklist: the iPhone install and the update toast.
 - [ ] **P1-19. Publish `gnomon-cli`** (S) — on hold with 18b. `gnomon-cli`
   was free on npm on 2026-09-07. Needs an npm account with 2FA, then a
   local `npm login` for the first release or a granular publish token as a

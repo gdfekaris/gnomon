@@ -43,6 +43,24 @@ jobs:
         run: |
           npx playwright install --with-deps chromium
           npm run e2e -w packages/app
+      # Spec §18: the built app is the Pages site at gdfekaris.github.io/gnomon/
+      # (Vite base /gnomon/ above). Uploaded on every run; deployed only from main.
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: packages/app/dist
 
-  # TODO(spec §18): deploy job with actions/deploy-pages once GitHub Pages is
-  # enabled for this repository; publish gnomon-cli to npm on release tags.
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  # TODO(spec §18): publish gnomon-cli to npm on release tags.

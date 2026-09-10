@@ -73,8 +73,11 @@ npm run dev -w packages/app
 npx playwright install chromium && npm run e2e -w packages/app   # app flows over the demo brain
 ```
 
-Commit as you go and push to `origin main` (private repo
-`gdfekaris/gnomon`, renamed from `gnomon-dev` on 2026-09-07; never create a
-new repo under the old name or the redirect breaks). CI runs typecheck, unit tests, CLI validation of the
-template and fixture, the app build, and the Playwright flows on every push; the Pages deploy and npm publish jobs are
-still TODO in `.github/workflows/ci.yml`.
+Commit as you go and push to `origin main` (public repo
+`gdfekaris/gnomon`, renamed from `gnomon-dev` on 2026-09-07 and made public
+on 2026-09-10; never create a new repo under the old name or the redirect
+breaks). CI runs typecheck, unit tests, CLI validation of the template and
+fixture, the app build, and the Playwright flows on every push, then
+deploys the app to GitHub Pages from main (served at
+`gdfekaris.com/gnomon/`); the npm publish job is still TODO in
+`.github/workflows/ci.yml`.
