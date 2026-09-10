@@ -1,14 +1,206 @@
 {
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "Screens · Monochrome (default)"
+    },
+    {
+      "id": "page-2",
+      "name": "Skins"
+    }
+  ],
   "artboards": [
-    { "file": "Main.dc.html", "title": "Direction A · Monochrome desk accessory", "x": 0, "y": 0, "w": 390, "h": 844 },
-    { "file": "DirectionB.dc.html", "title": "Direction B · Gray bevel", "x": 480, "y": 0, "w": 390, "h": 844 },
-    { "file": "DirectionC.dc.html", "title": "Direction C · Four-color workbench", "x": 960, "y": 0, "w": 390, "h": 844 }
+    {
+      "file": "Main.dc.html",
+      "title": "Capture",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "page": "page-1"
+    },
+    {
+      "file": "Browse.dc.html",
+      "title": "Browse",
+      "x": 480,
+      "y": 0,
+      "w": 390,
+      "h": 1330,
+      "page": "page-1"
+    },
+    {
+      "file": "FileView.dc.html",
+      "title": "File view",
+      "x": 960,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "page": "page-1"
+    },
+    {
+      "file": "Sets.dc.html",
+      "title": "Sets",
+      "x": 1440,
+      "y": 0,
+      "w": 390,
+      "h": 885,
+      "page": "page-1"
+    },
+    {
+      "file": "Editor.dc.html",
+      "title": "Editor",
+      "x": 0,
+      "y": 1490,
+      "w": 390,
+      "h": 943,
+      "page": "page-1"
+    },
+    {
+      "file": "Reason.dc.html",
+      "title": "Reason",
+      "x": 480,
+      "y": 1490,
+      "w": 390,
+      "h": 870,
+      "page": "page-1"
+    },
+    {
+      "file": "Inbox.dc.html",
+      "title": "Inbox",
+      "x": 960,
+      "y": 1490,
+      "w": 390,
+      "h": 982,
+      "page": "page-1"
+    },
+    {
+      "file": "Proposals.dc.html",
+      "title": "Proposals",
+      "x": 1440,
+      "y": 1490,
+      "w": 390,
+      "h": 1021,
+      "page": "page-1"
+    },
+    {
+      "file": "Settings.dc.html",
+      "title": "Settings",
+      "x": 0,
+      "y": 2671,
+      "w": 390,
+      "h": 1790,
+      "page": "page-1"
+    },
+    {
+      "file": "OnboardingWelcome.dc.html",
+      "title": "Onboarding · welcome",
+      "x": 480,
+      "y": 2671,
+      "w": 390,
+      "h": 844,
+      "page": "page-1"
+    },
+    {
+      "file": "OnboardingToken.dc.html",
+      "title": "Onboarding · token",
+      "x": 960,
+      "y": 2671,
+      "w": 390,
+      "h": 941,
+      "page": "page-1"
+    },
+    {
+      "file": "SkinA.dc.html",
+      "title": "Skin A · Monochrome (default)",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 1593,
+      "page": "page-2"
+    },
+    {
+      "file": "SkinB.dc.html",
+      "title": "Skin B · Gray bevel",
+      "x": 480,
+      "y": 0,
+      "w": 390,
+      "h": 1627,
+      "page": "page-2"
+    },
+    {
+      "file": "SkinC.dc.html",
+      "title": "Skin C · Four-color workbench",
+      "x": 960,
+      "y": 0,
+      "w": 390,
+      "h": 1606,
+      "page": "page-2"
+    },
+    {
+      "file": "DirectionB.dc.html",
+      "title": "Capture · Gray bevel",
+      "x": 0,
+      "y": 1787,
+      "w": 390,
+      "h": 844,
+      "page": "page-2"
+    },
+    {
+      "file": "InboxB.dc.html",
+      "title": "Inbox · Gray bevel",
+      "x": 480,
+      "y": 1787,
+      "w": 390,
+      "h": 1025,
+      "page": "page-2"
+    },
+    {
+      "file": "DirectionC.dc.html",
+      "title": "Capture · Four-color workbench",
+      "x": 960,
+      "y": 1787,
+      "w": 390,
+      "h": 844,
+      "page": "page-2"
+    },
+    {
+      "file": "InboxC.dc.html",
+      "title": "Inbox · Four-color workbench",
+      "x": 1440,
+      "y": 1787,
+      "w": 390,
+      "h": 922,
+      "page": "page-2"
+    }
   ],
   "annotations": [
-    { "id": "brief", "x": -460, "y": 0, "w": 380, "text": "Gnomon, block 4: the design pass.\n\nThree flavors of a late-1980s application GUI, each drawn as the real Capture screen at phone size (390 × 844), with the real copy and controls: the what-next line, Passage, Note, Attach a file, Save to inbox, and the seven-screen bar.\n\nPick one and the other nine screens (Browse and the file view, Sets, the editors, Reason, Inbox, Proposals, Settings, onboarding) get drawn in it. Anything here can be nudged in place first.\n\nThe top 52 px is left empty on purpose: the phone's own status bar sits there." },
-    { "id": "note-a", "x": 0, "y": -250, "w": 390, "text": "A · Monochrome desk accessory\n\nOne bit: black on white, a dithered desktop, striped title bar, square windows, a rounded default button with the heavy ring, a scroll bar with arrows. Type: Pixelify Sans (a bitmap-style sans).\n\nWhy: the most legible of the three on a small screen, and it inverts cleanly for dark mode (white on black) with nothing else to decide. Leaves the most room for small charismatic details later, because everything is quiet.\n\nTradeoff: no color to lean on for state. Warnings and errors need pattern, weight, or an icon instead of red and amber." },
-    { "id": "note-b", "x": 480, "y": -250, "w": 390, "text": "B · Gray bevel\n\nChiseled gray panels on a teal desktop: raised buttons, sunken fields, a navy title bar, underlined access keys. Type: DotGothic16 (a 16 px bitmap gothic).\n\nWhy: reads as \"an application\" at a glance; the raised/sunken language gives every control an obvious affordance, which helps the non-technical audience of Phase 3.\n\nTradeoff: the busiest chrome of the three; on a phone the bevels eat width, and dark mode needs its own palette (dark gray bevels), not a simple inversion." },
-    { "id": "note-c", "x": 960, "y": -250, "w": 390, "text": "C · Four-color workbench\n\nBlue, white, black, orange: a four-color palette, chunky 2 px bevels, striped drag bar, orange for the one action that matters. Type: VT323 (a 20 px terminal face).\n\nWhy: the most charismatic and the most personal; it looks like nothing else on a phone.\n\nTradeoff: long passages read on blue with a monospace face, which tires faster than A or B, and the palette leaves little room for state colors beyond orange." }
+    {
+      "id": "brief",
+      "page": "page-1",
+      "x": -470,
+      "y": 0,
+      "w": 390,
+      "text": "Gnomon, block 4: the design pass.\n\nDecided 2026-09-09: all three late-1980s skins ship and the user picks one in Settings (Appearance → Skin). Monochrome is the default. The Skins page holds the other two.\n\nEvery screen here is the real screen with the demo brain's real content, at phone width (390). Frames taller than a phone (Browse, Inbox, Settings, the token step) show everything at once; on a device the window scrolls.\n\nThe top 52 px stays empty on purpose: the phone's own status bar sits there."
+    },
+    {
+      "id": "note-nav",
+      "page": "page-1",
+      "x": -470,
+      "y": 340,
+      "w": 390,
+      "text": "Navigation: the seven screens live in a bottom bar of 16-px pixel icons; the current one is inverted. Onboarding hides the bar until a brain is connected.\n\nDark mode for Monochrome is a straight inversion (white ink on black paper, same dither); the other two skins carry their own dark palettes, drawn on the Skins page once this is approved."
+    },
+    {
+      "id": "note-skins",
+      "page": "page-2",
+      "x": -470,
+      "y": 0,
+      "w": 390,
+      "text": "The Skins page.\n\nTop row: one component sheet per skin. Every screen is composed from exactly these pieces, so a skin in code is one set of tokens (type, ink, paper, field, bevel or border, pattern, accent, state) plus these components.\n\nBottom row: Capture and Inbox, the lightest and the densest screens, in Gray bevel and Four-color workbench, to check that the two non-default skins hold up where it is crowded."
+    }
   ],
-  "launch": { "view": "canvas" }
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  }
 }

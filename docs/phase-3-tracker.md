@@ -168,6 +168,14 @@ this phase is the natural moment for the first three and P2-live.
   lets the demo brain file and reason without a key.
 - **Editing a pending filing's metadata makes it yours** (Phase 2, block
   6): the source becomes `human`, so ratify then refuses it as changed.
+- **Three skins, one switch** (Phase 3, block 4, 2026-09-09): the visual
+  system is a late-1980s application GUI in three selectable skins,
+  Monochrome (default), Gray bevel, and Four-color workbench, chosen in
+  Settings → Appearance and persisted in prefs beside the theme. Every
+  screen is composed from one component set; a skin is one token set
+  (type, ink, paper, field, bevel or border, pattern, accent, state)
+  plus those components. The canvas is `docs/design/` (working files;
+  `canvas.json` lays them out) and the artifact linked from the session.
 - **Create-from-template is not pre-probed** (Phase 3, block 1): GitHub
   has no endpoint that lists a fine-grained token's permissions, so a
   token that cannot create a repository is explained when `POST

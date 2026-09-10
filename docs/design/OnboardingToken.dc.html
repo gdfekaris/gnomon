@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap">
+  <style>
+    body { margin: 0; background: #fff; color: #000; font-family: 'Pixelify Sans', 'Chicago', 'Geneva', system-ui, sans-serif; } a { color: #000; } a:hover { color: #000; }
+    x-dc { display: block; }
+    svg { display: block; }
+  </style>
+</helmet>
+<div data-root style="width: 390px; height: 941px; box-sizing: border-box; display: flex; flex-direction: column; background: repeating-conic-gradient(#000 0 25%, #fff 0 50%) 0 0 / 4px 4px; padding: 52px 6px 6px 6px; overflow: hidden;"><div style="display: flex; flex-direction: column; flex-grow: 1; min-height: 0; background: #fff; border: 1px solid #000; box-shadow: 1px 1px 0 #000;"><div style="display: flex; align-items: center; gap: 8px; height: 19px; padding: 0 5px; border-bottom: 1px solid #000; background: repeating-linear-gradient(#000 0 1px, #fff 1px 2px) 0 3px / 100% calc(100% - 6px) no-repeat, #fff;"><div style="width: 11px; height: 11px; box-sizing: border-box; border: 1px solid #000; background: #fff; box-shadow: 0 0 0 1px #fff;"></div><div style="flex-grow: 1; display: flex; justify-content: center;"><span style="background: #fff; padding: 0 7px; font-size: 14px; font-weight: 600; line-height: 19px;">Gnomon</span></div><div style="width: 11px; height: 11px; box-sizing: border-box; border: 1px solid #000; background: #fff; box-shadow: 0 0 0 1px #fff;"></div></div><div style="display: flex; flex-direction: column; gap: 14px; padding: 14px 14px 12px 14px; flex-grow: 1; min-height: 0;">
+<p style="margin: 0; font-size: 13px; line-height: 16px; color: #7a7a7a;">Step 1 of 5</p>
+<h2 style="margin: 0; font-size: 22px; font-weight: 600; line-height: 24px;">Create a new brain</h2>
+<p style="margin: 0; font-size: 13px; line-height: 16px;">Gnomon needs a <b>personal access token</b>: a password that only works for GitHub's API, which you can revoke any time. GitHub offers two kinds. Pick one and follow its steps; both work.</p>
+<div style="display: flex; gap: 6px;"><div style="flex: 1; text-align: center; padding: 6px 4px; border: 1px solid #000; font-size: 14px; line-height: 16px; background: #000; color: #fff;">Fine-grained token</div><div style="flex: 1; text-align: center; padding: 6px 4px; border: 1px solid #000; font-size: 14px; line-height: 16px; background: #fff; color: #000;">Classic token (simplest)</div></div>
+<ol style="margin: 0; padding: 0 0 0 20px;"><li style="margin: 0 0 8px 0;"><p style="margin: 0; font-size: 13px; line-height: 16px;">On github.com, open your profile picture (top right), then Settings, then Developer settings (at the bottom of the left column), then Personal access tokens, then Fine-grained tokens.</p></li><li style="margin: 0 0 8px 0;"><p style="margin: 0; font-size: 13px; line-height: 16px;">Tap "Generate new token". Name it "Gnomon phone" and set an expiry; a year is fine.</p></li><li style="margin: 0 0 8px 0;"><p style="margin: 0; font-size: 13px; line-height: 16px;">Under "Repository access" choose "All repositories": the brain does not exist yet, so the token cannot be limited to it. You can swap to a single-repository token at the end of setup.</p></li><li style="margin: 0 0 8px 0;"><p style="margin: 0; font-size: 13px; line-height: 16px;">Under "Permissions", then "Repository permissions", set "Administration" to "Read and write" (this lets the token create the repository) and "Contents" to "Read and write".</p></li><li style="margin: 0 0 8px 0;"><p style="margin: 0; font-size: 13px; line-height: 16px;">Tap "Generate token", copy it, and paste it below. GitHub shows it only once.</p></li></ol>
+<div style="display: flex; flex-direction: column; gap: 6px;"><p style="margin: 0; font-size: 15px; line-height: 19px;">Name for the new repository</p><div style="border: 1px solid #000; background: #fff; box-sizing: border-box; padding: 7px 9px; font-size: 16px; line-height: 20px; color: #000;">brain</div></div>
+<p style="margin: 0; font-size: 13px; line-height: 16px; color: #7a7a7a;">Private, under your own account. Letters, digits, and hyphens.</p>
+<div style="display: flex; flex-direction: column; gap: 6px;"><p style="margin: 0; font-size: 15px; line-height: 19px;">Token</p><div style="border: 1px solid #000; background: #fff; box-sizing: border-box; padding: 7px 9px; font-size: 16px; line-height: 20px; color: #000;">github_pat_••••••••••••••••</div></div>
+<p style="margin: 0; font-size: 13px; line-height: 16px; color: #7a7a7a;">Stored only in this browser on this device. It is sent to GitHub and nowhere else.</p>
+<div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;"><div style="border: 1px solid #000; border-radius: 9px; padding: 10px 24px; font-size: 16px; font-weight: 600; line-height: 20px; background: #fff; box-shadow: 0 0 0 2px #fff, 0 0 0 4px #000; text-align: center;">Create my brain</div><div style="padding: 7px 4px; font-size: 15px; line-height: 18px; text-decoration: underline;">Back</div></div>
+</div></div></div>
+</x-dc>
+</body>
+</html>
