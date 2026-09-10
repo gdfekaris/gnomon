@@ -15,6 +15,8 @@ export interface GitHubDriverOptions {
   branch?: string;
   apiBase?: string;
   fetch?: typeof fetch;
+  /** pacing of content-generating requests; defaults to CONTENT_RATE, which matches real GitHub */
+  contentRate?: { perWindow: number; windowMs: number };
 }
 
 interface GitTree { sha: string; tree: Array<{ path: string; type: string; sha: string; size?: number }>; truncated?: boolean }
@@ -25,6 +27,13 @@ export const GRAPHQL_BATCH = 100;
 export const RETRY_DELAYS_MS = [300, 900];
 /** After a ref update, GitHub may serve the previous sha for a moment; the driver rereads until it sees its own write, at most this often. */
 export const REF_SETTLE = { tries: 12, delayMs: 250 };
+/**
+ * GitHub's secondary limit allows 80 content-generating requests (POST, PATCH,
+ * PUT, DELETE) a minute per token, then answers 403 for a while. The driver
+ * never sends more than this many in a window; a normal commit is far below
+ * it, and a large one is paced rather than refused.
+ */
+export const CONTENT_RATE = { perWindow: 72, windowMs: 60_000 };
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -38,6 +47,9 @@ export class GitHubDriver implements StorageDriver {
   private readonly fetchFn: typeof fetch;
   /** path → blob sha from the last list(), for readBytes */
   private treeCache = new Map<string, string>();
+  private readonly rate: { perWindow: number; windowMs: number };
+  /** send times of recent content-generating requests, for `rate` */
+  private readonly sent: number[] = [];
 
   constructor(opts: GitHubDriverOptions) {
     this.owner = opts.owner;
@@ -45,6 +57,7 @@ export class GitHubDriver implements StorageDriver {
     this.branch = opts.branch ?? 'main';
     this.apiBase = (opts.apiBase ?? 'https://api.github.com').replace(/\/$/, '');
     this.token = opts.token;
+    this.rate = opts.contentRate ?? CONTENT_RATE;
     // Called unbound: browsers throw "Illegal invocation" when window.fetch runs with another `this`.
     this.fetchFn = opts.fetch ?? ((input, init) => fetch(input, init));
   }
@@ -77,6 +90,7 @@ export class GitHubDriver implements StorageDriver {
     let res: Response | undefined;
     for (let attempt = 0; ; attempt++) {
       try {
+        if (method !== 'GET' && path !== '/graphql') await this.pace();
         res = await this.fetchFn(url, init);
         break;
       } catch (e) {
@@ -100,9 +114,24 @@ export class GitHubDriver implements StorageDriver {
     if (res.status === 429 || (res.status === 403 && res.headers.get('x-ratelimit-remaining') === '0')) {
       throw new RateLimitError(`GitHub rate limit reached; resets at ${res.headers.get('x-ratelimit-reset') ?? 'unknown'}`);
     }
+    // The secondary limit is a 403 with a Retry-After header (and a message saying so), not a 429.
+    if (res.status === 403 && (res.headers.has('retry-after') || /secondary rate limit/i.test(message))) {
+      throw new RateLimitError(`GitHub secondary rate limit reached; retry after ${res.headers.get('retry-after') ?? '60'} seconds`);
+    }
     if (res.status === 403) throw new AuthError(`GitHub refused ${method} ${path}: ${message}`);
     if (res.status === 404) throw new NotFoundError(path);
     throw new StorageError(`GitHub ${res.status} on ${method} ${path}: ${message}`);
+  }
+
+  /** Hold a content-generating request until sending it keeps the last window under `rate`. */
+  private async pace(): Promise<void> {
+    for (;;) {
+      const now = Date.now();
+      while (this.sent.length && now - this.sent[0]! >= this.rate.windowMs) this.sent.shift();
+      if (this.sent.length < this.rate.perWindow) break;
+      await sleep(this.sent[0]! + this.rate.windowMs - now + 1);
+    }
+    this.sent.push(Date.now());
   }
 
   // ---------------------------------------------------------------- token probes (spec §12 step 2)

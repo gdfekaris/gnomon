@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { isFrontmatterPath, validateSnapshot } from '@gnomon/core';
-import { AuthError, GRAPHQL_BATCH, GitHubDriver, HeadMovedError, NetworkError, NotFoundError, RETRY_DELAYS_MS, RateLimitError, loadSnapshot } from '../src/index';
+import { AuthError, CONTENT_RATE, GRAPHQL_BATCH, GitHubDriver, HeadMovedError, NetworkError, NotFoundError, RETRY_DELAYS_MS, RateLimitError, loadSnapshot } from '../src/index';
 import { driverContract } from './contract';
 import { FakeGitHub } from './fake-github';
 import { readBrainBytes } from './fixture';
 
+// The fake has no secondary limit, so the driver's pacing is off here; one test below turns it on.
+const UNPACED = { perWindow: Infinity, windowMs: 0 };
+
 async function pair(seed = readBrainBytes()) {
   const gh = await FakeGitHub.create(seed);
-  const driver = new GitHubDriver({ owner: 'octocat', name: 'brain', token: 'test-token', fetch: gh.fetch });
+  const driver = new GitHubDriver({ owner: 'octocat', name: 'brain', token: 'test-token', fetch: gh.fetch, contentRate: UNPACED });
   return { gh, driver };
 }
 
@@ -99,6 +102,31 @@ describe('GitHubDriver against the fake API (spec §6.2)', () => {
     gh.dropNext = 1;
     await expect(driver.createRepo({ name: 'second-brain', private: true })).rejects.toBeInstanceOf(NetworkError);
     expect(driver.repo).toBe('octocat/brain');
+  });
+
+  it('content-generating requests are paced under GitHub\'s secondary limit; reads are not', async () => {
+    const gh = await FakeGitHub.create(readBrainBytes());
+    const driver = new GitHubDriver({ owner: 'octocat', name: 'brain', token: 'test-token', fetch: gh.fetch, contentRate: { perWindow: 4, windowMs: 400 } });
+    const head = await driver.head();
+    const writes = Array.from({ length: 10 }, (_, i) => ({ path: `w${i}.md`, text: `${i}` }));
+    const t0 = Date.now();
+    await driver.commit({ message: 'many', expectedHead: head, writes, deletes: [] });
+    // 10 blobs + tree + commit + ref = 13 sends in windows of 4: at least three window waits.
+    expect(Date.now() - t0).toBeGreaterThanOrEqual(3 * 400 - 50);
+    expect(gh.requests.filter((r) => r.method === 'POST' && r.path.endsWith('/git/blobs')).length).toBe(10);
+    const t1 = Date.now();
+    for (let i = 0; i < 20; i++) await driver.head();
+    expect(Date.now() - t1).toBeLessThan(300);
+  });
+
+  it('the secondary rate limit (a 403 with Retry-After) is a RateLimitError, not an AuthError', async () => {
+    const { gh, driver } = await pair();
+    const head = await driver.head();
+    gh.secondaryLimited = true;
+    const err = await driver.commit({ message: 'x', expectedHead: head, writes: [{ path: 'a.md', text: 'a' }], deletes: [] }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(RateLimitError);
+    expect((err as Error).message).toContain('retry after 60 seconds');
+    expect(await driver.head()).toBe(head);
   });
 
   it('binary blobs reported by GraphQL fall back to the blob endpoint', async () => {

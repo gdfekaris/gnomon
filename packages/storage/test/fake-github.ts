@@ -46,6 +46,8 @@ export class FakeGitHub {
   private stale: { key: string; previous: string; remaining: number } | undefined;
   /** the next N requests fail before any answer, as a dropped connection does (fetch throws) */
   dropNext = 0;
+  /** GitHub's secondary limit: a 403 with Retry-After and a message naming it, on every content-generating request */
+  secondaryLimited = false;
   private seq = 0;
 
   constructor(public owner = 'octocat', public name = 'brain') {}
@@ -110,6 +112,9 @@ export class FakeGitHub {
 
     if (headers.get('authorization') !== `Bearer ${this.token}`) return json(401, { message: 'Bad credentials' });
     if (this.rateLimited) return json(403, { message: 'API rate limit exceeded' }, { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': '1800000000' });
+    if (this.secondaryLimited && method !== 'GET' && url.pathname !== '/graphql') {
+      return json(403, { message: 'You have exceeded a secondary rate limit. Please wait a few minutes before you try again.' }, { 'retry-after': '60', 'x-ratelimit-remaining': '4900' });
+    }
 
     if (url.pathname === '/graphql' && method === 'POST') return this.graphql(body as { query: string; variables: { owner: string; name: string } });
     if (url.pathname === '/user' && method === 'GET') {

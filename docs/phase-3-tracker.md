@@ -142,7 +142,14 @@ this phase is the natural moment for the first three and P2-live.
   after a successful `PATCH` (the driver now rereads until it sees its
   own update, `REF_SETTLE`), and a connection can drop mid-sequence (the
   driver retries every call except `POST /user/repos`, `RETRY_DELAYS_MS`,
-  and names the cause). *Still unconfirmed, needing
+  and names the cause). The second run (34542662832) hit the secondary
+  rate limit: GitHub allows 80 content-generating requests a minute and
+  500 an hour per token, and answers a 403 with `Retry-After`, which the
+  driver had read as an AuthError. The driver now paces those requests
+  under the per-minute cap (`CONTENT_RATE`, a constructor option so the
+  fake-backed tests run unpaced) and maps that 403 to RateLimitError. One
+  nightly run costs roughly 260 of the hourly 500, so never dispatch it
+  twice within an hour. *Still unconfirmed, needing
   tokens we do not keep:* a Contents-read-only token reports `push: false`
   and gets 403 on writes; a fine-grained token without Administration gets
   a 403 (not 404 or 422) from `POST /user/repos`. The secret is a
