@@ -16,17 +16,27 @@ export const USAGE = `gnomon <command> [brain-dir]
   validate   check the brain against the schema; nonzero exit on refusals
   index      regenerate principles/_index.md and maps/_index.md if changed
   status     where things stand: unfiled captures, sources, sets, proposals
+  --version  print the version
 
-brain-dir defaults to the current directory. Run inside a brain: npx gnomon-cli validate`;
+brain-dir defaults to the current directory. Run inside a brain: npx gnomon-cli validate
+`;
 
 const COMMANDS = new Set(['validate', 'index', 'status']);
 export type Out = (line: string) => void;
 
 /** Returns the process exit code: 0 ok, 1 refusals, 2 usage or not a brain. */
+// Stamped by esbuild from package.json at build time; unset under vitest.
+declare const __GNOMON_VERSION__: string | undefined;
+export const VERSION: string = typeof __GNOMON_VERSION__ === 'string' ? __GNOMON_VERSION__ : '0.0.0-dev';
+
 export async function run(argv: string[], out: Out = console.log): Promise<number> {
   const cmd = argv[0];
   if (cmd === undefined || cmd === '--help' || cmd === '-h') {
     out(USAGE);
+    return 0;
+  }
+  if (cmd === '--version' || cmd === '-v') {
+    out(`gnomon-cli ${VERSION}`);
     return 0;
   }
   if (!COMMANDS.has(cmd)) {

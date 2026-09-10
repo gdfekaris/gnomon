@@ -1,8 +1,25 @@
 {
   "name": "gnomon-cli",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Gnomon desktop CLI: validate a brain, regenerate its indexes, show status. Run as `npx gnomon-cli <command>` in a brain.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gdfekaris/gnomon.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/gdfekaris/gnomon#readme",
+  "bugs": {
+    "url": "https://github.com/gdfekaris/gnomon/issues"
+  },
+  "keywords": [
+    "second-brain",
+    "markdown",
+    "notes",
+    "principles",
+    "cli",
+    "gnomon"
+  ],
   "type": "module",
   "bin": {
     "gnomon": "./dist/gnomon.js"
@@ -16,13 +33,11 @@
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
-    "build": "esbuild src/main.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/gnomon.js --banner:js=\"import { createRequire as __createRequire } from 'node:module'; const require = __createRequire(import.meta.url);\""
-  },
-  "dependencies": {
-    "@gnomon/core": "0.0.0",
-    "@gnomon/storage": "0.0.0"
+    "build": "esbuild src/main.ts --bundle --platform=node --target=node20 --format=esm --define:__GNOMON_VERSION__=\\\"$npm_package_version\\\" --outfile=dist/gnomon.js --banner:js=\"import { createRequire as __createRequire } from 'node:module'; const require = __createRequire(import.meta.url);\""
   },
   "devDependencies": {
+    "@gnomon/core": "0.0.0",
+    "@gnomon/storage": "0.0.0",
     "esbuild": "^0.28.2"
   }
 }

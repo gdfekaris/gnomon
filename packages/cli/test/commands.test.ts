@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
-import { run, USAGE } from '../src/commands';
+import { VERSION, run, USAGE } from '../src/commands';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const TEMPLATE = join(here, '..', '..', '..', 'template');
@@ -160,5 +160,14 @@ describe('gnomon status', () => {
     writeFileSync(join(dir, 'README.md'), 'changed\n');
     expect((await cli('status', dir)).out).toContain('git:         1 uncommitted change');
     expect((await cli('status', dir)).out.at(-1)).toBe('next:        commit and push');
+  });
+});
+
+describe('gnomon --version', () => {
+  it('prints the package version, stamped at build time (a dev placeholder under vitest)', async () => {
+    const out: string[] = [];
+    expect(await run(['--version'], (l) => out.push(l))).toBe(0);
+    expect(out).toEqual([`gnomon-cli ${VERSION}`]);
+    expect(VERSION).toMatch(/^\d+\.\d+\.\d+(-dev)?$/);
   });
 });

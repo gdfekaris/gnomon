@@ -60,7 +60,7 @@ GitHub. Block 4 is the design pass, taken up now that every screen exists.
   and target chosen in a small form pre-filled from the answer. Done when
   a flow relates a text with the demo model and saves its proposal, and
   the Proposals screen lists it as open and yours.
-- [ ] **6. Release readiness** (S) — spec §18, proposal §10. The CLI
+- [x] **6. Release readiness** (S) — spec §18, proposal §10. The CLI
   package gets `repository`, a README, and version `0.1.0`; the app shows
   its version (already in Settings) and the two match; a smoke checklist
   for the live human test (install on iPhone, capture with a photo,

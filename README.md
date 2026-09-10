@@ -2,8 +2,10 @@
 
 Monorepo for **Gnomon**, a portable, model-agnostic second brain: a folder
 of plain markdown in your own git repo, plus a bring-your-own-AI companion
-PWA and a small desktop CLI. Design documents are aligned and the code is
-scaffolded; no feature is implemented yet.
+PWA and a small desktop CLI. Phases 1 to 3 are built: the brain format and
+library, the storage and provider drivers, the CLI, and the app with
+onboarding, capture, browse, sets, editors, reasoning, filing review,
+proposals, and a late-1980s GUI in three skins. Version 0.1.0.
 
 ## Layout
 
@@ -36,8 +38,8 @@ Node 20 or newer. CI runs the same steps on every push.
 
 ## Where things stand
 
-1. ~~Fill the Decision lines in `alignment-review.md`.~~ Done 2026-09-05.
-2. ~~Rewrite the three documents and `template/` so they agree.~~ Done 2026-09-05.
-3. ~~Migrate geo-brain-2 by hand into the new format.~~ Done 2026-09-05.
-4. ~~Scaffold the monorepo described in the technical spec §3.~~ Done 2026-09-05.
-5. Phase 1 (technical spec §19): `core` schema parse/serialize and validation, index generation matching `template/`, the GitHub and Memory drivers, `gnomon-cli` validate/index/status, the app's Capture, Browse, and Settings screens.
+Phases 1 to 3 of the technical spec (§19) are done; `docs/phase-3-tracker.md`
+carries the remaining deferred items (the real-GitHub contract run, the
+Pages deploy, the npm publish, live provider calls) and the gaps noted
+along the way. `docs/smoke-checklist.md` is the live human test that
+precedes the first release. Phase 4 is client-side encryption.
