@@ -214,7 +214,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-
 .state, .kind { display: inline-block; font-size: var(--fs-small); line-height: 1.2; padding: 1px 5px; border: 1px solid var(--edge); background: var(--field-bg); color: var(--field-ink); }
 .state.ratified { background: var(--accent-bg); color: var(--accent-ink); border-color: var(--accent-bg); }
 .state.rejected { border-style: dashed; }
-.state.changed { border-style: dotted; }
+.state.yours { border-style: dotted; }
 .kind { text-transform: uppercase; letter-spacing: 0.04em; }
 :root[data-skin='bevel'] .state, :root[data-skin='bevel'] .kind { box-shadow: var(--sink); border: 0; padding: 2px 6px; color: var(--link); }
 :root[data-skin='bevel'] .state.ratified { color: var(--ok); background: var(--field-bg); }

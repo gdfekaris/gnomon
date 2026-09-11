@@ -86,7 +86,8 @@
       else open = null;
     } catch (e) { error = describeError(e); failedOn = f.sha; } finally { busy = null; acting = null; }
   }
-  const STATE_LABEL: Record<string, string> = { pending: 'awaiting review', ratified: 'ratified', rejected: 'rejected', changed: 'edited since filing' };
+  // The schema's ladder in four words: the model's, the model's as you approved it, yours, gone.
+  const STATE_LABEL: Record<string, string> = { pending: 'awaiting review', ratified: 'ratified', rejected: 'rejected', yours: 'yours' };
   // A rejected filing is already gone from the brain (the revert removed its files and the capture is unfiled
   // again); only its commit remains in history. The list leaves those out unless asked.
   let showRejected = $state(false);
@@ -196,6 +197,8 @@
                 </div>
               {:else if f.state === 'ratified'}
                 <p class="hint" data-testid="ratified-note">Ratified. Its source is part of the brain now; the notes and details can be edited from Browse.</p>
+              {:else if f.state === 'yours'}
+                <p class="hint" data-testid="yours-note">Yours. You modified it manually, which is a stronger approval than ratifying an agent's modifications.</p>
               {/if}
               {#if error && failedOn === f.sha}
                 <p class="error" role="alert" data-testid="decide-error">{error}</p>

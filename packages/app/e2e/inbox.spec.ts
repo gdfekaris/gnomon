@@ -66,3 +66,45 @@ test('a ratified filing offers no Reject: the revert would be refused, so the re
   await expect(filing.getByTestId('ratify')).toHaveCount(0);
   await expect(filing.getByTestId('ratified-note')).toContainText('part of the brain now');
 });
+
+// Editing one of a filing's files before ratifying makes that file yours and leaves the other for Ratify;
+// editing the source itself is the stronger approval, so once nothing is left the filing reads "yours".
+test('a filing edited before ratification still ratifies the rest, and an edited source makes it yours', async ({ page }) => {
+  await page.getByTestId('process').click();
+  await expect(page.getByTestId('process-results')).toContainText('filed as unknown-the-only-way-to');
+  // notes first
+  await page.goto('/#/edit/sources/unknown-the-only-way-to/notes.md');
+  await page.getByTestId('edit-body').fill('Heard this one in a lecture.');
+  await page.getByTestId('edit-save').click();
+  await expect(page.getByTestId('frontmatter')).toContainText('human');
+  await page.goto('/#/inbox');
+  const filing = page.getByTestId('filing-unknown-the-only-way-to');
+  await expect(filing.getByTestId('state')).toHaveText('awaiting review');
+  await filing.getByTestId('ratify').click();
+  await expect(filing.getByTestId('state')).toHaveText('ratified');
+  await page.goto('/#/browse/sources/unknown-the-only-way-to/raw.md');
+  await expect(page.getByTestId('frontmatter')).toContainText('ratified');
+
+  // source first, on a second capture
+  await page.goto('/#/capture');
+  await page.getByTestId('capture-text').fill('A second passage, to be edited.');
+  await page.getByTestId('capture-save').click();
+  await expect(page.getByTestId('saved')).toBeVisible();
+  await page.goto('/#/inbox');
+  await page.getByTestId('process').click();
+  await expect(page.getByTestId('process-results')).toContainText('filed as unknown-a-second-passage-to');
+  await page.goto('/#/edit/sources/unknown-a-second-passage-to/raw.md');
+  await page.getByTestId('edit-author').fill('Someone');
+  await page.getByTestId('edit-save').click();
+  await expect(page.getByTestId('frontmatter')).toContainText('human');
+  await page.goto('/#/inbox');
+  const second = page.getByTestId('filing-unknown-a-second-passage-to');
+  await expect(second.getByTestId('state')).toHaveText('awaiting review'); // the notes are still the model's
+  await second.getByTestId('ratify').click();
+  await expect(second.getByTestId('state')).toHaveText('yours');
+  await second.getByTestId('show-files').click();
+  await expect(second.getByTestId('yours-note')).toHaveText("Yours. You modified it manually, which is a stronger approval than ratifying an agent's modifications.");
+  await expect(second.getByTestId('ratify')).toHaveCount(0);
+  await page.goto('/#/settings');
+  await expect(page.getByTestId('refusal-count')).toHaveText('0 refusals');
+});

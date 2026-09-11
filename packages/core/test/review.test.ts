@@ -35,8 +35,16 @@ describe('filing recognition (spec §9)', () => {
     const rejected = applyBatch(s1, { message: 'x', expectedHead: 'head1', writes: [], deletes: ['sources/watts-dance/raw.md', 'sources/watts-dance/notes.md'] });
     expect(filingState(rejected, changes)).toBe('rejected');
     const raw = s1.files.get('sources/watts-dance/raw.md')!;
-    const edited = applyBatch(s1, { message: 'x', expectedHead: 'head1', writes: [{ path: raw.path, text: serializeFile({ ...raw, fm: { ...raw.fm, curated: 'human' } as SourceFm }) }], deletes: [] });
-    expect(filingState(edited, changes)).toBe('changed');
+    const notes = s1.files.get('sources/watts-dance/notes.md')!;
+    const human = (f: BrainFile) => ({ path: f.path, text: serializeFile({ ...f, fm: { ...f.fm, curated: 'human' } as SourceFm | NotesFm }) });
+    // Editing the source is a stronger approval than ratifying: once its notes are settled too, the filing is yours.
+    const edited = applyBatch(s1, { message: 'x', expectedHead: 'head1', writes: [human(raw), human(notes)], deletes: [] });
+    expect(filingState(edited, changes)).toBe('yours');
+    // Editing one file leaves the other agent-proposed: still awaiting review for the rest.
+    expect(filingState(applyBatch(s1, { message: 'x', expectedHead: 'head1', writes: [human(notes)], deletes: [] }), changes)).toBe('pending');
+    expect(filingState(applyBatch(s1, { message: 'x', expectedHead: 'head1', writes: [human(raw)], deletes: [] }), changes)).toBe('pending');
+    // A ratified source later annotated stays ratified: the source is what was approved.
+    expect(filingState(applyBatch(ratified, { message: 'x', expectedHead: 'head1', writes: [human(ratified.files.get(notes.path)!)], deletes: [] }), changes)).toBe('ratified');
   });
 });
 
@@ -80,6 +88,31 @@ describe('buildRatify (spec §9, schema §5)', () => {
     // the index no longer marks this source pending (the fixture's other pending source still is)
     expect((b.writes[2] as { text: string }).text).not.toMatch(/Dance.*agent-proposed/);
     expect((b.writes[2] as { text: string }).text).toMatch(/The work of a human being.*agent-proposed/);
+  });
+
+  it('ratifies what is still agent-proposed and leaves an edited file alone, in either order', () => {
+    const { s1, changes } = filed();
+    const human = (f: BrainFile) => ({ path: f.path, text: serializeFile({ ...f, fm: { ...f.fm, curated: 'human' } as SourceFm | NotesFm }) });
+    const raw = s1.files.get('sources/watts-dance/raw.md')!;
+    const notes = s1.files.get('sources/watts-dance/notes.md')!;
+    // notes edited first: ratify flips the source only
+    const notesFirst = applyBatch(s1, { message: 'x', expectedHead: 'head1', writes: [human(notes)], deletes: [] });
+    const b1 = buildRatify(notesFirst, changes, LATER);
+    expect(b1.writes.map((w) => w.path)).toEqual(['sources/watts-dance/raw.md', 'maps/_index.md']);
+    const r1 = applyBatch(notesFirst, b1);
+    expect((r1.files.get(raw.path)!.fm as SourceFm).curated).toBe('ratified');
+    expect((r1.files.get(notes.path)!.fm as NotesFm).curated).toBe('human');
+    expect(filingState(r1, changes)).toBe('ratified');
+    expect(validateSnapshot(r1)).toEqual([]);
+    // source edited first: ratify flips the notes only, and the filing is then yours
+    const rawFirst = applyBatch(s1, { message: 'x', expectedHead: 'head1', writes: [human(raw)], deletes: [] });
+    const b2 = buildRatify(rawFirst, changes, LATER);
+    expect(b2.writes.map((w) => w.path)).toEqual(['sources/watts-dance/notes.md', 'maps/_index.md']); // the index catches up with the earlier edit
+    const r2 = applyBatch(rawFirst, b2);
+    expect((r2.files.get(raw.path)!.fm as SourceFm).curated).toBe('human');
+    expect((r2.files.get(notes.path)!.fm as NotesFm).curated).toBe('ratified');
+    expect(filingState(r2, changes)).toBe('yours');
+    expect(() => buildRatify(r2, changes, LATER)).toThrow(/nothing left to ratify/);
   });
 
   it('refuses a non-filing, a ratified filing, and a rejected one', () => {
