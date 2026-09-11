@@ -89,6 +89,11 @@
     } catch (e) { error = describeError(e); failedOn = f.sha; } finally { busy = null; acting = null; }
   }
   const STATE_LABEL: Record<string, string> = { pending: 'awaiting review', ratified: 'ratified', rejected: 'rejected', changed: 'edited since filing' };
+  // A rejected filing is already gone from the brain (the revert removed its files and the capture is unfiled
+  // again); only its commit remains in history. The list leaves those out unless asked.
+  let showRejected = $state(false);
+  const rejectedCount = $derived(inbox.filings.filter((f) => f.state === 'rejected').length);
+  const shown = $derived(showRejected ? inbox.filings : inbox.filings.filter((f) => f.state !== 'rejected'));
 </script>
 
 <h2>Inbox</h2>
@@ -133,8 +138,15 @@
   <section>
     <h3>Recent filings</h3>
     {#if inbox.loading && !inbox.filings.length}<p>Loading…</p>{/if}
+    {#if rejectedCount}
+      <p class="hint">
+        <button type="button" class="link" onclick={() => (showRejected = !showRejected)} data-testid="toggle-rejected">
+          {showRejected ? 'Hide' : 'Show'} {rejectedCount} rejected
+        </button>
+      </p>
+    {/if}
     <ul class="filings" data-testid="filings">
-      {#each inbox.filings as f (f.sha)}
+      {#each shown as f (f.sha)}
         <li data-testid="filing-{f.slug}">
           <div class="head">
             <span><strong>{f.slug}</strong> <small>· {f.date.slice(0, 10)} · <span class="state {f.state}" data-testid="state">{STATE_LABEL[f.state]}</span></small></span>
@@ -164,10 +176,7 @@
                   {#if busy === f.sha}<span role="status" class="hint" data-testid="deciding">{acting === 'ratify' ? 'Ratifying…' : 'Rejecting…'} one commit, then the list reloads.</span>{/if}
                 </div>
               {:else if f.state === 'ratified'}
-                <div class="row">
-                  <button onclick={() => doReject(f)} disabled={busy !== null} data-testid="reject">Reject</button>
-                  <small class="hint">Ratified; rejecting will be refused because ratification touched its files.</small>
-                </div>
+                <p class="hint" data-testid="ratified-note">Ratified. Its source is part of the brain now; the notes and details can be edited from Browse.</p>
               {/if}
               {#if error && failedOn === f.sha}
                 <p class="error" role="alert" data-testid="decide-error">{error}</p>
@@ -182,7 +191,7 @@
           {/if}
         </li>
       {:else}
-        <li class="empty">No filings yet. Filing a capture with AI makes the first one; it waits here for your review.</li>
+        <li class="empty">{rejectedCount ? 'Nothing awaiting review.' : 'No filings yet. Filing a capture with AI makes the first one; it waits here for your review.'}</li>
       {/each}
     </ul>
   </section>

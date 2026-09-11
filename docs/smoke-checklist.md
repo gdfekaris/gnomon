@@ -73,10 +73,11 @@ Node 20+ and Claude Code, and a photo on the phone to attach.
       size, the proposals, and the two capture lines added.
 - [ ] Ratify: state becomes "ratified"; on github.com the commit is
       `Ratify: <slug>` and the source is `curated: ratified`.
-- [ ] Capture and file a second passage, then Reject it: state "rejected",
-      the files are gone at head, the capture is unfiled again.
-- [ ] Reject the ratified one: refused with the paths later commits
-      touched.
+- [ ] Capture and file a second passage, then Reject it: it leaves the
+      list, "Show 1 rejected" brings it back as "rejected", the files are
+      gone at head, the capture is unfiled again.
+- [ ] Open the ratified one: no Reject button, a line saying its source is
+      part of the brain now.
 - [ ] The nudge on Capture followed along: file → review → decide.
 
 ## 6. Reason from two sets

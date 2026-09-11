@@ -40,6 +40,10 @@ test('file a capture with the demo model, review it, ratify it; file another and
   const second = page.getByTestId('filing-unknown-second-capture-to-be');
   await second.getByTestId('review').click();
   await second.getByTestId('reject').click();
+  // A rejected filing leaves the list (its files are gone, the capture is unfiled again) until asked for.
+  await expect(second).toHaveCount(0);
+  await page.getByTestId('toggle-rejected').click();
+  await expect(page.getByTestId('toggle-rejected')).toHaveText('Hide 1 rejected');
   await expect(second.getByTestId('state')).toHaveText('rejected');
   await expect(page.getByTestId('unfiled').locator('li')).toHaveCount(1);
   await expect(page.getByTestId('unfiled').locator('code')).toHaveText(/^2026\d{4}-\d{6}-/);
@@ -47,7 +51,7 @@ test('file a capture with the demo model, review it, ratify it; file another and
   await expect(page.getByTestId('refusal-count')).toHaveText('0 refusals');
 });
 
-test('rejecting a ratified filing explains the conflict', async ({ page }) => {
+test('a ratified filing offers no Reject: the revert would be refused, so the review says what it is instead', async ({ page }) => {
   await page.getByTestId('process').click();
   await expect(page.getByTestId('process-results')).toContainText('filed as');
   const filing = page.getByTestId('filing-unknown-the-only-way-to');
@@ -55,8 +59,8 @@ test('rejecting a ratified filing explains the conflict', async ({ page }) => {
   await filing.getByTestId('ratify').click();
   await expect(filing.getByTestId('state')).toHaveText('ratified');
   await filing.getByTestId('review').click();
-  await filing.getByTestId('reject').click();
-  await expect(filing.getByTestId('conflict')).toContainText('cannot be reverted');
-  await expect(filing.getByTestId('conflict')).toContainText('sources/unknown-the-only-way-to/raw.md');
-  await expect(filing.getByTestId('state')).toHaveText('ratified');
+  await expect(filing.getByTestId('review-panel')).toBeVisible();
+  await expect(filing.getByTestId('reject')).toHaveCount(0);
+  await expect(filing.getByTestId('ratify')).toHaveCount(0);
+  await expect(filing.getByTestId('ratified-note')).toContainText('part of the brain now');
 });
