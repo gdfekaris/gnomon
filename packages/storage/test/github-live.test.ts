@@ -61,20 +61,24 @@ async function settled(sha: string): Promise<void> {
   throw new Error(`main did not settle on ${sha}`);
 }
 
-/** Commit a tree that is exactly `seed` (no base_tree) on top of the current head; the objects are reused by every later reset. */
+/**
+ * A root commit (no parents) whose tree is exactly `seed`: the contract's
+ * history assertions then see only the commits the test made, as they do
+ * over the in-memory drivers, instead of every past run's. The objects are
+ * reused by every later reset in this run.
+ */
 const seeded = new Map<string, string>();
 async function seedCommit(seed: Map<string, Uint8Array>): Promise<string> {
   const key = [...seed.keys()].sort().join('\n') + ':' + [...seed.values()].reduce((n, b) => n + b.length, 0);
   const known = seeded.get(key);
   if (known) return known;
-  const parent: string = (await must('GET', `/repos/${scratch}/git/ref/heads/main`)).object.sha;
   const tree: Array<{ path: string; mode: string; type: string; sha: string }> = [];
   for (const [path, bytes] of seed) {
     const blob = await must('POST', `/repos/${scratch}/git/blobs`, { content: toBase64(bytes), encoding: 'base64' });
     tree.push({ path, mode: '100644', type: 'blob', sha: blob.sha });
   }
   const t = await must('POST', `/repos/${scratch}/git/trees`, { tree });
-  const c = await must('POST', `/repos/${scratch}/git/commits`, { message: `Seed: nightly ${runId}`, tree: t.sha, parents: [parent] });
+  const c = await must('POST', `/repos/${scratch}/git/commits`, { message: `Seed: nightly ${runId}`, tree: t.sha, parents: [] });
   seeded.set(key, c.sha);
   return c.sha;
 }

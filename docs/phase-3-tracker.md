@@ -134,7 +134,10 @@ this phase is the natural moment for the first three and P2-live.
   /user` has no `X-OAuth-Scopes` for a fine-grained token; `permissions.push`
   true; `auto_init` exposes the ref within the retries; the template lands
   in one commit on top of `Initial commit`; a name collision is a generic
-  422. Temporary repositories are `gnomon-scratch-<run id>` and are deleted
+  422. Each run seeds the scratch repository with a root commit (no
+  parents) and force-moves main to it before every test, so history
+  assertions see only that run's commits. Temporary repositories are
+  `gnomon-scratch-<run id>` and are deleted
   at the end (leftovers from a dead run too). The first run (34541866671)
   found two things the fake never modelled, both fixed in the driver and
   now modelled by the fake's `staleRefReads` and `dropNext` switches:
@@ -273,6 +276,11 @@ this phase is the natural moment for the first three and P2-live.
   `public/icons/icon.svg`. The design canvas working files stay in
   `docs/design/` (regenerate the seeded page from them if the canvas
   needs changing).
+- Vite inlines assets under 4 KB as `data:` URLs in a production build,
+  and the CSP's connect-src has no `data:`, so never `fetch` an imported
+  `?url` asset: decode it when it is inline (the demo loader does). The
+  dev server serves assets as files, so only a flow over the built app
+  (the `pwa` Playwright project) catches this; the maintainer's iPhone did.
 - `e2e/github-fake.ts` serves `storage/test/fake-github.ts` to the
   browser through `page.route`, so a flow can drive the real
   `GitHubDriver` end to end (create-from-template, commits, snapshot
