@@ -9,7 +9,7 @@ test('the shell loads the demo brain and lists its contents', async ({ page }) =
 
   await page.getByRole('link', { name: 'Browse' }).click();
   await expect(page.getByTestId('sources')).toContainText('sources/didion-why-i-write/raw.md');
-  await expect(page.getByTestId('sources')).toContainText('agent-proposed');
+  await expect(page.getByTestId('sources')).toContainText('awaiting review');
   await expect(page.getByText('24 files')).toBeVisible();
   await page.getByRole('link', { name: 'Sets' }).click();
   await expect(page.getByRole('heading', { name: 'Set 1', exact: true })).toBeVisible();

@@ -90,7 +90,7 @@ test('Browse lists sources newest first, oldest or by author on request, and not
   const titles = page.getByTestId('sources').locator('.title');
   await expect(page.getByTestId('sort-newest')).toHaveAttribute('aria-pressed', 'true');
   await expect(titles).toHaveText(['The work of a human being', 'Attention as generosity', "To find out what I'm thinking", 'Retire into thyself']);
-  await expect(page.getByTestId('sources').locator('.detail').first()).toHaveText('Marcus Aurelius, Meditations (180) · agent-proposed');
+  await expect(page.getByTestId('sources').locator('.detail').first()).toHaveText('Marcus Aurelius, Meditations (180) · awaiting review');
   await expect(page.locator('main h3')).toHaveCount(0);
   await page.getByTestId('sort-oldest').click();
   await expect(titles).toHaveText(['Retire into thyself', "To find out what I'm thinking", 'Attention as generosity', 'The work of a human being']);
@@ -103,7 +103,7 @@ test('Browse lists sources newest first, oldest or by author on request, and not
   await expect(page.locator('main h3')).toHaveText(['Joan Didion', 'Marcus Aurelius', 'Simone Weil']);
   const aurelius = page.getByTestId('sources').locator('ul').nth(1).locator('li');
   await expect(aurelius.locator('.title')).toHaveText(['Retire into thyself', 'The work of a human being']);
-  await expect(aurelius.locator('.detail')).toHaveText(['Meditations (180)', 'Meditations (180) · agent-proposed']);
+  await expect(aurelius.locator('.detail')).toHaveText(['Meditations (180)', 'Meditations (180) · awaiting review']);
   await expect(page.getByTestId('sources').locator('.detail').first()).toHaveText('Why I Write (1976) · attachment');
   await expect(page.getByTestId('nudge')).toHaveCount(0);
   await expect(page.getByTestId('inbox')).toHaveCount(0);
@@ -111,4 +111,26 @@ test('Browse lists sources newest first, oldest or by author on request, and not
   await expect(page.getByText('Set 1', { exact: true })).toHaveCount(0);
   await page.getByTestId('tag-filter').getByRole('link', { name: 'stoicism' }).click();
   await expect(page.locator('main h3')).toHaveText(['Marcus Aurelius']);
+});
+
+// The file page speaks the app's words; the files keep the schema's. A capture says not filed or filed as,
+// with the link; a source says filed from, with the link back; curated reads yours, ratified, or awaiting review.
+test('the file page translates curation and filing state, with links both ways', async ({ page }) => {
+  await page.goto('/#/browse/inbox/20260906-070000-2bq.md');
+  await expect(page.getByTestId('fm-status')).toHaveText('not filed');
+  await expect(page.getByTestId('fm-curated')).toHaveText('yours');
+  await page.goto('/#/browse/inbox/20260905-143012-x7q.md');
+  await expect(page.getByTestId('fm-status')).toHaveText('filed as aurelius-meditations-5-1');
+  await expect(page.getByTestId('frontmatter')).not.toContainText('filed_as');
+  await page.getByTestId('fm-status').getByRole('link').click();
+  await expect(page.getByRole('heading', { name: 'The work of a human being' })).toBeVisible();
+  await expect(page.getByTestId('fm-curated')).toHaveText('awaiting review');
+  await expect(page.getByTestId('fm-filed-from')).toHaveText('20260905-143012-x7q');
+  await page.getByTestId('fm-filed-from').getByRole('link').click();
+  await expect(page.getByTestId('fm-status')).toHaveText('filed as aurelius-meditations-5-1');
+  await page.goto('/#/browse/sources/aurelius-meditations-4-3/raw.md');
+  await expect(page.getByTestId('fm-curated')).toHaveText('ratified');
+  await page.goto('/#/browse/maps/proposals/P-20260905-001.md');
+  await expect(page.getByTestId('fm-curated')).toHaveText("the model's");
+  await expect(page.getByTestId('frontmatter')).toContainText('open'); // a proposal's status is its own lifecycle
 });

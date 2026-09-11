@@ -18,7 +18,11 @@
     if (!fm || typeof fm['attachment'] !== 'string') return null;
     return `${path.slice(0, path.lastIndexOf('/'))}/${fm['attachment']}`;
   });
-  const skip = new Set(['type', 'title', 'tags']);
+  // `filed_as` folds into the status line. The files keep the schema's words (schema §4, §5); the page
+  // shows the app's: yours, ratified, awaiting review, not filed, filed as, filed from.
+  const skip = new Set(['type', 'title', 'tags', 'filed_as']);
+  const CURATED: Record<string, string> = { human: 'yours', ratified: 'ratified', 'agent-proposed': 'awaiting review' };
+  const curatedLabel = (v: unknown) => (fm?.['type'] === 'proposal' && v === 'agent-proposed' ? "the model's" : (CURATED[String(v)] ?? String(v)));
 </script>
 
 <p><a href="#/browse">← Browse</a></p>
@@ -34,8 +38,19 @@
   <p class="meta"><code>{path}</code></p>
   <dl data-testid="frontmatter">
     {#each Object.entries(fm).filter(([k]) => !skip.has(k)) as [k, v] (k)}
-      <dt>{k}</dt>
-      <dd>{Array.isArray(v) ? v.join(', ') : String(v)}</dd>
+      {#if k === 'curated'}
+        <dt>curated</dt>
+        <dd data-testid="fm-curated">{curatedLabel(v)}</dd>
+      {:else if k === 'status' && fm['type'] === 'inbox'}
+        <dt>status</dt>
+        <dd data-testid="fm-status">{#if v === 'filed'}filed as <a href={browseHref(`sources/${fm['filed_as']}/raw.md`)}>{fm['filed_as']}</a>{:else}not filed{/if}</dd>
+      {:else if k === 'inbox_ref'}
+        <dt>filed from</dt>
+        <dd data-testid="fm-filed-from"><a href={browseHref(`inbox/${v}.md`)}>{v}</a></dd>
+      {:else}
+        <dt>{k}</dt>
+        <dd>{Array.isArray(v) ? v.join(', ') : String(v)}</dd>
+      {/if}
     {/each}
     {#if Array.isArray(fm['tags']) && fm['tags'].length}
       <dt>tags</dt>

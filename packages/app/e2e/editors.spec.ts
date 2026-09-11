@@ -55,11 +55,11 @@ test('grounds drift is flagged and synced in either direction', async ({ page })
 
 test('editing notes makes them human; source metadata edits keep the passage read-only', async ({ page }) => {
   await page.goto('/#/browse/sources/aurelius-meditations-5-1/notes.md');
-  await expect(page.getByTestId('frontmatter')).toContainText('agent-proposed');
+  await expect(page.getByTestId('fm-curated')).toHaveText('awaiting review');
   await page.getByTestId('edit-link').click();
   await page.getByTestId('edit-body').fill('Compare the morning passage with 4.3.');
   await page.getByTestId('edit-save').click();
-  await expect(page.getByTestId('frontmatter')).toContainText('human');
+  await expect(page.getByTestId('fm-curated')).toHaveText('yours');
   await expect(page.getByTestId('file-body')).toContainText('Compare the morning passage with 4.3.');
 
   await page.goto('/#/browse/sources/didion-why-i-write/raw.md');
@@ -71,7 +71,7 @@ test('editing notes makes them human; source metadata edits keep the passage rea
   await page.getByTestId('edit-year').fill('1976');
   await page.getByTestId('edit-save').click();
   await expect(page.getByRole('heading', { name: 'Why I write' })).toBeVisible();
-  await expect(page.getByTestId('frontmatter')).toContainText('human');
+  await expect(page.getByTestId('fm-curated')).toHaveText('yours');
   await expect(page.getByTestId('file-body')).toContainText("I write entirely to find out what I'm thinking");
 
   await page.goto('/#/edit/sources/didion-why-i-write/original.pdf');

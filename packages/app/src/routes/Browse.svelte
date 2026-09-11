@@ -50,7 +50,7 @@
   const detail = (fm: SourceFm) => [
     sort === 'author' ? work(fm) : [fm.author, work(fm)].filter(Boolean).join(', '),
     fm.attachment ? 'attachment' : '',
-    fm.curated !== 'ratified' && fm.curated !== 'human' ? fm.curated : '',
+    fm.curated === 'agent-proposed' ? 'awaiting review' : '',
   ].filter(Boolean).join(' · ');
 </script>
 

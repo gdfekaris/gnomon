@@ -76,7 +76,7 @@ test('a filing edited before ratification still ratifies the rest, and an edited
   await page.goto('/#/edit/sources/unknown-the-only-way-to/notes.md');
   await page.getByTestId('edit-body').fill('Heard this one in a lecture.');
   await page.getByTestId('edit-save').click();
-  await expect(page.getByTestId('frontmatter')).toContainText('human');
+  await expect(page.getByTestId('fm-curated')).toHaveText('yours');
   await page.goto('/#/inbox');
   const filing = page.getByTestId('filing-unknown-the-only-way-to');
   await expect(filing.getByTestId('state')).toHaveText('awaiting review');
@@ -96,7 +96,7 @@ test('a filing edited before ratification still ratifies the rest, and an edited
   await page.goto('/#/edit/sources/unknown-a-second-passage-to/raw.md');
   await page.getByTestId('edit-author').fill('Someone');
   await page.getByTestId('edit-save').click();
-  await expect(page.getByTestId('frontmatter')).toContainText('human');
+  await expect(page.getByTestId('fm-curated')).toHaveText('yours');
   await page.goto('/#/inbox');
   const second = page.getByTestId('filing-unknown-a-second-passage-to');
   await expect(second.getByTestId('state')).toHaveText('awaiting review'); // the notes are still the model's
