@@ -22,12 +22,8 @@ test('a fresh brain shows empty states and the nudge on every screen; loading an
   await expect(nudge).toHaveText(/All clear\. Capture something\.$/); // no link to the screen we are on
 
   await page.goto('/#/browse');
-  await expect(nudge).toHaveAttribute('data-kind', 'clear');
-  await expect(nudge.getByRole('link', { name: 'Capture' })).toBeVisible();
-  await expect(page.getByTestId('set-ps-g8xw')).toContainText('No principles yet');
-  await expect(page.getByTestId('sources')).toContainText('No sources yet');
-  await expect(page.getByTestId('inbox')).toContainText('Nothing captured yet');
-  await expect(page.getByTestId('proposals')).toContainText('No proposals yet');
+  await expect(nudge).toHaveCount(0); // Browse is for reading sources; the nudge lives on Capture
+  await expect(page.getByTestId('no-sources')).toContainText('No sources yet');
   await page.goto('/#/sets');
   await expect(page.getByTestId('principles-ps-g8xw')).toContainText('No principles yet');
   await page.goto('/#/reason');
@@ -94,7 +90,7 @@ test('over the fixture the nudge follows the loop: file, review, decide, all cle
   await filing.getByTestId('review-panel').getByTestId('ratify').click();
   await expect(filing.getByTestId('state')).toHaveText('ratified');
 
-  await page.goto('/#/browse');
+  await page.goto('/#/capture');
   await expect(nudge).toHaveAttribute('data-kind', 'decide');
   await expect(nudge).toContainText('4 open proposals await a decision.');
   await nudge.getByRole('link', { name: 'Decide in Proposals' }).click();
@@ -114,7 +110,7 @@ test('an index left behind by a desktop session is the last nudge, and Settings 
   await page.getByTestId('use-demo').click();
   await expect(page.getByText('Connected: demo brain')).toBeVisible();
   const nudge = page.getByTestId('nudge');
-  await page.goto('/#/browse');
+  await page.goto('/#/capture');
   // the fixture's pending filing and open proposals come first; the index only once those are quiet
   await expect(nudge).toHaveAttribute('data-kind', 'review');
   await page.goto('/#/settings?demo-omit=maps/_index.md,inbox/20260906-070000-2bq.md,sources/aurelius-meditations-5-1/raw.md,sources/aurelius-meditations-5-1/notes.md,inbox/20260905-143012-x7q.md,maps/proposals/P-20260903-001.md,maps/proposals/P-20260905-001.md,maps/proposals/P-20260905-002.md,maps/proposals/P-20260905-003.md');

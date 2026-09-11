@@ -22,8 +22,8 @@ test('offline, a text capture waits in memory and saves when the connection retu
   await expect(page.getByTestId('saved')).toBeVisible();
   await expect(page.getByTestId('queued')).toHaveCount(0);
   const stem = (await page.getByTestId('saved').locator('code').textContent())!;
-  await page.goto('/#/browse');
-  await expect(page.getByTestId('inbox')).toContainText(`inbox/${stem}.md`);
+  await page.goto('/#/inbox');
+  await expect(page.getByTestId('unfiled')).toContainText(stem);
   await page.goto(`/#/browse/inbox/${stem}.md`);
   await expect(page.getByTestId('file-body')).toContainText('Written on the train.');
 });

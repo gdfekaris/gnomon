@@ -7,12 +7,8 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/#/browse');
 });
 
-test('sets in order, principles in precedence order, then a principle with one anchor per dual link and backlinks', async ({ page }) => {
-  const headings = await page.locator('main h3').allTextContents();
-  expect(headings.indexOf('Set 1')).toBeLessThan(headings.indexOf('Set 2 — Work'));
-  await expect(page.getByTestId('set-ps-7k2m').locator('li')).toHaveText([/Say the hard thing first/, /Write to find out/]);
-
-  await page.getByRole('link', { name: 'Courage before comfort' }).click();
+test('a principle shows one anchor per dual link, and backlinks', async ({ page }) => {
+  await page.goto('/#/browse/principles/ps-g8xw/courage-before-comfort.md');
   await expect(page.getByRole('heading', { name: 'Courage before comfort' })).toBeVisible();
   await expect(page.getByTestId('frontmatter')).toContainText('order');
   const body = page.getByTestId('file-body');
@@ -41,7 +37,6 @@ test('a heading anchor in a link lands on the heading', async ({ page }) => {
 test('the tag filter narrows the lists', async ({ page }) => {
   await page.getByTestId('tag-filter').getByRole('link', { name: 'stoicism' }).click();
   await expect(page.getByTestId('sources').locator('li')).toHaveCount(2);
-  await expect(page.getByTestId('set-ps-g8xw').locator('li')).toHaveText([/Courage before comfort/]);
   await page.getByTestId('tag-filter').getByRole('link', { name: 'all' }).click();
   await expect(page.getByTestId('sources').locator('li')).toHaveCount(4);
 });
@@ -86,4 +81,19 @@ test('an image attachment previews inline and an HTML attachment is shown as sou
   await expect(page.getByTestId('attachment-source')).toContainText('<script>window.pwned = true</script>');
   expect(await page.evaluate(() => (window as unknown as { pwned?: boolean }).pwned)).toBeUndefined();
   await expect(page.locator('h1', { hasText: 'Hi' })).toHaveCount(0);
+});
+
+// Browse is for reading what was collected (maintainer, 2026-09-11): sources by author, work, and title,
+// with the tag filter. Sets, captures, and proposals have their own screens; the nudge lives on Capture.
+test('Browse lists sources by author and nothing else', async ({ page }) => {
+  await expect(page.locator('main h3')).toHaveText(['Joan Didion', 'Marcus Aurelius', 'Simone Weil']);
+  const aurelius = page.getByTestId('sources').locator('ul').nth(1).locator('li');
+  await expect(aurelius).toHaveText([/^Retire into thyself, Meditations/, /^The work of a human being, Meditations.*agent-proposed/]);
+  await expect(page.getByTestId('sources')).toContainText("To find out what I'm thinking, Why I Write (1976) · attachment");
+  await expect(page.getByTestId('nudge')).toHaveCount(0);
+  await expect(page.getByTestId('inbox')).toHaveCount(0);
+  await expect(page.getByTestId('proposals')).toHaveCount(0);
+  await expect(page.getByText('Set 1', { exact: true })).toHaveCount(0);
+  await page.getByTestId('tag-filter').getByRole('link', { name: 'stoicism' }).click();
+  await expect(page.locator('main h3')).toHaveText(['Marcus Aurelius']);
 });

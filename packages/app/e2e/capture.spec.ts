@@ -17,9 +17,10 @@ test('captures text with a note into the demo brain', async ({ page }) => {
   expect(stem).toMatch(/^\d{8}-\d{6}-[23456789abcdefghjkmnpqrstuvwxyz]{3}$/);
   await expect(page.getByTestId('capture-text')).toHaveValue('');
 
+  await page.getByRole('link', { name: 'Inbox', exact: true }).click();
+  await expect(page.getByTestId('unfiled')).toContainText(stem);
+  await expect(page.getByTestId('unfiled')).toContainText('from the phone');
   await page.getByRole('link', { name: 'Browse' }).click();
-  await expect(page.getByTestId('inbox')).toContainText(`inbox/${stem}.md`);
-  await expect(page.getByTestId('inbox')).toContainText('from the phone');
   await expect(page.getByText('25 files')).toBeVisible();
 });
 
@@ -32,8 +33,8 @@ test('captures text with a PDF attachment', async ({ page }) => {
   await expect(saved).toContainText('with its attachment');
   const stem = (await saved.locator('code').textContent())!;
 
-  await page.getByRole('link', { name: 'Browse' }).click();
-  await expect(page.getByTestId('inbox')).toContainText(`inbox/${stem}.md · unfiled · attachment`);
+  await page.getByRole('link', { name: 'Inbox', exact: true }).click();
+  await expect(page.getByTestId('unfiled')).toContainText(`${stem} · attachment`);
 });
 
 test('the save button waits for text', async ({ page }) => {

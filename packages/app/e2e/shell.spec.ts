@@ -8,14 +8,15 @@ test('the shell loads the demo brain and lists its contents', async ({ page }) =
   await expect(page.getByRole('alert')).toHaveCount(0);
 
   await page.getByRole('link', { name: 'Browse' }).click();
+  await expect(page.getByTestId('sources')).toContainText('sources/didion-why-i-write/raw.md');
+  await expect(page.getByTestId('sources')).toContainText('agent-proposed');
+  await expect(page.getByText('24 files')).toBeVisible();
+  await page.getByRole('link', { name: 'Sets' }).click();
   await expect(page.getByRole('heading', { name: 'Set 1', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Set 2 — Work' })).toBeVisible();
   await expect(page.getByTestId('set-ps-7k2m')).toContainText('Say the hard thing first');
-  await expect(page.getByTestId('sources')).toContainText('sources/didion-why-i-write/raw.md');
-  await expect(page.getByTestId('sources')).toContainText('agent-proposed');
-  await expect(page.getByTestId('inbox')).toContainText('unfiled');
-  await expect(page.getByTestId('proposals')).toContainText('P-20260905-003');
-  await expect(page.getByText('24 files')).toBeVisible();
+  await page.getByRole('link', { name: 'Proposals' }).click();
+  await expect(page.getByTestId('proposal-P-20260905-003')).toBeVisible();
 });
 
 test('the demo connection survives a reload through on-device settings', async ({ page }) => {
