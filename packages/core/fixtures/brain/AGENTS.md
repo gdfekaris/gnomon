@@ -142,11 +142,14 @@ unless asked. With several sets selected, give each set its own reading.
 
 For each `inbox/<stem>.md` with `status: unfiled`, one commit each:
 
-1. Read the capture and its attachment, if any. Determine `title`,
-   `author`, and whatever of `work`, `year`, `locator`, `origin`, `tags`
-   the capture itself supports. Leave a field out rather than guess it;
-   a URL you inferred is a passage that cannot be re-found. Delete the
-   line for any optional field you leave blank.
+1. Read the capture and its attachment, if any. If the capture's `note`
+   names the author, work, year, page, or origin, take those from it as
+   written: the note is the curator's word and outranks anything the
+   passage suggests. Then determine `title` and whatever else of `work`,
+   `year`, `locator`, `origin`, `tags` the capture itself supports. Leave
+   a field out rather than guess it; a URL you inferred is a passage that
+   cannot be re-found. Delete the line for any optional field you leave
+   blank.
 2. Choose a slug: author surname plus a short title fragment, lowercase
    letters, digits, hyphens, 3–60 characters, e.g. `didion-why-i-write`.
    If the folder exists, append `-2`, `-3`.

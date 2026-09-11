@@ -27,6 +27,8 @@ describe('buildFilingPrompt (spec §8.5)', () => {
     expect(r.context).toContain('  In any piece of work, the sentence I am avoiding');
     expect(r.context).toContain('- `didion-why-i-write` — To find out what I\'m thinking, Joan Didion');
     expect(r.context).toContain("Curator's note: Heard this quoted; find the source.");
+    // The note is where the phone's capture form asks for the author and work; the model must take them from it.
+    expect(r.system).toContain("The curator's note, when there is one, is authoritative");
     expect(r.context.endsWith('The only way to make sense out of change is to plunge into it, move with\nit, and join the dance.')).toBe(true);
     expect(r.tokensUsed).toBeGreaterThan(0);
   });

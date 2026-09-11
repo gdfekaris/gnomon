@@ -81,9 +81,10 @@
       <textarea bind:value={text} rows="8" placeholder="Paste the passage exactly as you found it." required data-testid="capture-text"></textarea>
     </label>
     <label>
-      Note <small>(optional)</small>
-      <input bind:value={note} placeholder="Where it came from, why it struck you" data-testid="capture-note" />
+      Source note <small>(optional)</small>
+      <input bind:value={note} placeholder="Author, work, page, and why it struck you" data-testid="capture-note" />
     </label>
+    <p class="hint">Filing takes the author and work from this note when it names them.</p>
     <label>
       Attach a file <small>(optional, up to {mb(ATTACHMENT_LIMIT_BYTES)} MB)</small>
       <input type="file" bind:files bind:this={fileInput} data-testid="capture-file" />

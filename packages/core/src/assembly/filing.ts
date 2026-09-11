@@ -34,6 +34,7 @@ Answer with exactly one JSON object and nothing else: no prose, no code fences. 
 }
 
 Rules:
+- The curator's note, when there is one, is authoritative: whatever author, work, year, page, or origin it names goes into "meta" as written, before anything the passage itself suggests. The rest of the note is the curator's reason for keeping the passage; it is not part of the passage.
 - Leave an optional field out rather than guess it. A URL you inferred is a passage that cannot be re-found. "unknown" is a fine author.
 - Only use the set slugs, principle refs, and source slugs listed in the material. Never invent one.
 - Proposals are suggestions. A "principle" proposal is a principle the curator might write; you do not write it. An empty proposals list is fine.
