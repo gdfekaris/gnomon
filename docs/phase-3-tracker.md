@@ -176,9 +176,14 @@ this phase is the natural moment for the first three and P2-live.
   tag equals the package version. *Maintainer step still open:* on
   npmjs.com, gnomon-cli → Settings → Trusted Publisher → GitHub Actions
   with owner `gdfekaris`, repository `gnomon`, workflow `publish.yml`, no
-  environment; then delete the granular token and its line in `~/.npmrc`.
-  Until that is configured, a tag run fails at the publish step. Release
-  flow: bump the version, commit, `git tag v0.1.1`, `git push --tags`.
+  environment, with "Allow npm publish" checked; then delete the
+  granular token and its line in `~/.npmrc`. *Blocked 2026-09-11:* npm
+  demands interactive two-factor (WebAuthn) to save a trusted publisher,
+  and the maintainer has no key yet (one is ordered; an iPhone passkey
+  would also do). Until then a tag run fails at the publish step, and a
+  release is published from the maintainer's machine with the token, as
+  0.1.0 was. Do not put the token in a CI secret. Release flow once
+  configured: bump the version, commit, `git tag v0.1.1`, `git push --tags`.
 - [ ] **P2-live. Live provider calls** — Anthropic and OpenRouter are
   wired and tested against fakes; only the maintainer's real keys can
   exercise them, from the Reason and Inbox screens. Part of the live
