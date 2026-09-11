@@ -39,9 +39,9 @@ jobs:
         run: npm run build
         env:
           VITE_BASE: /gnomon/
-      - name: Playwright flows against the demo brain
+      - name: Playwright flows against the demo brain, in Chromium and in WebKit as an iPhone
         run: |
-          npx playwright install --with-deps chromium
+          npx playwright install --with-deps chromium webkit
           npm run e2e -w packages/app
       # Spec §18: the built app is the Pages site at gdfekaris.github.io/gnomon/
       # (Vite base /gnomon/ above). Uploaded on every run; deployed only from main.

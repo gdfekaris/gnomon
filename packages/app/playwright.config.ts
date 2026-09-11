@@ -1,4 +1,4 @@
-import { defineConfig } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test';
 
 // Flows run against the dev server with the demo brain (MemoryDriver), spec §17.
 export default defineConfig({
@@ -13,5 +13,8 @@ export default defineConfig({
   projects: [
     { name: 'chromium', testIgnore: /pwa\.spec\.ts/, use: { browserName: 'chromium', viewport: { width: 390, height: 844 } } },
     { name: 'pwa', testMatch: /pwa\.spec\.ts/, use: { browserName: 'chromium', baseURL: 'http://localhost:4173', viewport: { width: 390, height: 844 } } },
+    // Safari's engine as an iPhone (touch, mobile viewport): the same flows, the maintainer's device is an iPhone.
+    { name: 'webkit', testIgnore: /pwa\.spec\.ts/, use: { ...devices['iPhone 14'] } },
+    { name: 'pwa-webkit', testMatch: /pwa\.spec\.ts/, use: { ...devices['iPhone 14'], baseURL: 'http://localhost:4173' } },
   ],
 });

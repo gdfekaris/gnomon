@@ -15,6 +15,9 @@ export interface PendingState {
   flushError: string | null;
 }
 
+/** The sentence for an attachment while offline; Capture checks this before it reads the file, since WebKit refuses the read itself when offline. */
+export const ATTACHMENT_OFFLINE = 'You are offline. Attachments are not queued; save this capture when you are back online.';
+
 export class OfflineQueue {
   constructor(private readonly state: PendingState, private readonly online: () => boolean = () => (typeof navigator === 'undefined' ? true : navigator.onLine)) {}
 
@@ -38,7 +41,7 @@ export class OfflineQueue {
   }
 
   private queue(input: CaptureInput): { queued: true } {
-    if (input.attachment) throw new Error('You are offline. Attachments are not queued; save this capture when you are back online.');
+    if (input.attachment) throw new Error(ATTACHMENT_OFFLINE);
     if (this.state.pending) throw new Error('You are offline and one capture is already waiting. It will be saved first when you are back online.');
     if (input.text.trim() === '') throw new Error('a capture needs some text');
     this.state.pending = { text: input.text, ...(input.note ? { note: input.note } : {}) };

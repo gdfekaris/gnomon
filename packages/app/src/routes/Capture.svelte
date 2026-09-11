@@ -9,6 +9,7 @@
   import type { CaptureResult } from '../lib/services/capture';
   import { session } from '../lib/stores/session.svelte';
   import { network, offlineQueue, pending } from '../lib/stores/pending.svelte';
+  import { ATTACHMENT_OFFLINE } from '../lib/services/offline';
 
   let text = $state('');
   let note = $state('');
@@ -40,6 +41,8 @@
     error = null;
     saved = null;
     try {
+      // Refuse an attachment while offline before touching the file: WebKit fails the read itself when offline.
+      if (file && !network.online) throw new Error(ATTACHMENT_OFFLINE);
       const attachment = file ? { filename: file.name, bytes: new Uint8Array(await file.arrayBuffer()) } : undefined;
       const result = await offlineQueue.capture(brain, { text, note, ...(attachment ? { attachment } : {}) });
       if ('saved' in result) saved = result.saved;

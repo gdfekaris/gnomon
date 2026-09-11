@@ -238,6 +238,10 @@ this phase is the natural moment for the first three and P2-live.
   TypeScript constants in `core/assembly/prompts/`.
 - Playwright runs from `packages/app` (`npm run e2e -w packages/app`),
   never from the repo root. The `pwa` project builds into `dist-preview/`.
+  Since 2026-09-11 every flow also runs on WebKit as an iPhone 14
+  (`webkit` and `pwa-webkit` projects; CI installs both browsers). The
+  first WebKit run caught one thing: reading a chosen file fails under
+  WebKit when offline, so Capture refuses an attachment before the read.
 - The demo brain accepts `#/settings?demo-omit=a,b` to drop paths. Its
   git history is one seed commit, so the fixture's own pending filing
   does not appear in the Inbox's filing list.
