@@ -31,3 +31,19 @@ test('the built app serves a manifest with icons and registers a service worker'
   expect(sw.match(/registerRoute\(/g)).toHaveLength(1);
   expect(sw).toMatch(/registerRoute\(new \w+\.NavigationRoute\(/);
 });
+
+// The demo brain must load from the production bundle, where Vite inlines
+// its small PDF as a data: URL that the CSP's connect-src would refuse to
+// fetch; the loader decodes it instead. Only the built app shows this.
+test('the demo brain loads from the built app, its PDF attachment included', async ({ page }) => {
+  const failures: string[] = [];
+  page.on('console', (m) => { if (m.type() === 'error') failures.push(m.text()); });
+  await page.goto('/');
+  await page.getByTestId('onboard-demo').click();
+  await expect(page.getByRole('heading', { name: 'Capture' })).toBeVisible();
+  await page.goto('/#/browse');
+  await page.getByRole('link', { name: "To find out what I'm thinking" }).click();
+  await page.getByTestId('attachment-link').click();
+  await expect(page.getByTestId('attachment-open')).toBeVisible();
+  expect(failures.filter((f) => /Content Security Policy|Load failed|Failed to fetch/.test(f))).toEqual([]);
+});
