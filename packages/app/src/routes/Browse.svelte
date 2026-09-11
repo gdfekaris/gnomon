@@ -52,8 +52,9 @@
       <h3>{group.author}</h3>
       <ul>
         {#each group.sources as f (f.path)}
-          <li>
-            <a href={browseHref(f.path)}>{f.fm.title}</a>{#if work(f.fm)}<span class="work">, {work(f.fm)}</span>{/if}{#if f.fm.attachment}{' · attachment'}{/if}{#if f.fm.curated !== 'ratified' && f.fm.curated !== 'human'}{` · ${f.fm.curated}`}{/if}
+          <li class="source">
+            <a class="title" href={browseHref(f.path)}>{f.fm.title}</a>
+            <small class="detail">{[work(f.fm), f.fm.attachment ? 'attachment' : '', f.fm.curated !== 'ratified' && f.fm.curated !== 'human' ? f.fm.curated : ''].filter(Boolean).join(' · ')}</small>
             <small><code>{f.path}</code></small>
           </li>
         {/each}
@@ -70,7 +71,10 @@
 
 <style>
   .tags { display: flex; flex-wrap: wrap; gap: 6px; }
-  ul { padding-left: 0.25rem; list-style: none; }
-  li { margin: 0.35rem 0; }
-  .work { color: var(--muted); }
+  ul { padding-left: 0; list-style: none; }
+  /* One boxed row per source, as Inbox and Sets do, so entries stay apart while scrolling. */
+  .source { display: grid; gap: 0.15rem; border: var(--bw) solid var(--edge); box-shadow: var(--raise); padding: 0.6rem 0.75rem; margin: 0 0 0.5rem; }
+  .title { font-weight: 600; }
+  .detail { color: var(--muted); }
+  .detail:empty { display: none; }
 </style>

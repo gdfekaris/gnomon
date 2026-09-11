@@ -88,8 +88,9 @@ test('an image attachment previews inline and an HTML attachment is shown as sou
 test('Browse lists sources by author and nothing else', async ({ page }) => {
   await expect(page.locator('main h3')).toHaveText(['Joan Didion', 'Marcus Aurelius', 'Simone Weil']);
   const aurelius = page.getByTestId('sources').locator('ul').nth(1).locator('li');
-  await expect(aurelius).toHaveText([/^Retire into thyself, Meditations/, /^The work of a human being, Meditations.*agent-proposed/]);
-  await expect(page.getByTestId('sources')).toContainText("To find out what I'm thinking, Why I Write (1976) · attachment");
+  await expect(aurelius.locator('.title')).toHaveText(['Retire into thyself', 'The work of a human being']);
+  await expect(aurelius.locator('.detail')).toHaveText(['Meditations (180)', 'Meditations (180) · agent-proposed']);
+  await expect(page.getByTestId('sources').locator('.detail').first()).toHaveText('Why I Write (1976) · attachment');
   await expect(page.getByTestId('nudge')).toHaveCount(0);
   await expect(page.getByTestId('inbox')).toHaveCount(0);
   await expect(page.getByTestId('proposals')).toHaveCount(0);
