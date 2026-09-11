@@ -9,6 +9,7 @@
   import { GitHubDriver } from '@gnomon/storage';
   import ValidationPanel from '../lib/components/ValidationPanel.svelte';
   import { SCAFFOLD } from '../lib/scaffold';
+  import pkg from '../../package.json';
   import { connectDemo, connectGitHub, describeError } from '../lib/services/index';
   import { type TokenKind, createFromTemplate, validateToken } from '../lib/services/onboarding';
   import { session } from '../lib/stores/session.svelte';
@@ -181,6 +182,8 @@
   </div>
   <p class="hint">
     Just looking? <button class="link" onclick={demo} disabled={busy} data-testid="onboard-demo">Try the demo brain</button>: a small brain that lives only in this tab.
+  </p>
+  <p class="hint">Gnomon {pkg.version}, build <span data-testid="build">{__GNOMON_BUILD__}</span>.
   </p>
 {:else if step === 'token'}
   <h2>{intent === 'create' ? 'Create a new brain' : 'Connect your brain'}</h2>

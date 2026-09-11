@@ -9,6 +9,7 @@
   import { session } from '../lib/stores/session.svelte';
   import { settings, saveGit, savePrefs, saveProviderKeys } from '../lib/stores/settings.svelte';
   import { snapshot } from '../lib/stores/snapshot.svelte';
+  import { applyUpdate, checkForUpdate, pwa } from '../lib/stores/pwa.svelte';
 
   // Diagnostics for the live human test: what the device kept and how the app is running.
   const standalone = typeof matchMedia !== 'undefined' && (matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true);
@@ -155,7 +156,15 @@
 </section>
 
 <section class="about">
-  <p class="hint">Gnomon {pkg.version}, build {__GNOMON_BUILD__}</p>
+  <p class="hint">
+    Gnomon {pkg.version}, build <span data-testid="build">{__GNOMON_BUILD__}</span>.
+    {#if pwa.needRefresh}
+      A newer build is ready: <button type="button" class="small primary" onclick={applyUpdate} data-testid="update-now">Update now</button>
+    {:else}
+      <button type="button" class="small" onclick={checkForUpdate} disabled={pwa.checking} data-testid="check-update">{pwa.checking ? 'Checking…' : 'Check for updates'}</button>
+      {#if pwa.lastCheck === 'current'}This is the latest.{:else if pwa.lastCheck === 'failed'}Could not check; you may be offline.{/if}
+    {/if}
+  </p>
   <ul class="hint diagnostics" data-testid="diagnostics">
     <li>Running {standalone ? 'installed, from the Home Screen' : 'in the browser'}.</li>
     <li>
