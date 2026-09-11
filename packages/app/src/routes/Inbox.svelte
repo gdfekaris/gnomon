@@ -22,8 +22,9 @@
   let models = $state<ModelInfo[]>([]);
   let model = $state<ModelInfo | null>(null);
   let modelsFor = $state<string | null>(null);
+  // A filing awaiting review is shown open, Ratify and Reject in view: looking at it is why it is listed.
+  // Decided ones are collapsed; "Show files" opens the same panel for the record.
   let open = $state<string | null>(null);
-  let review = $state<FilingReview | null>(null);
   let busy = $state<string | null>(null);
   let error = $state<string | null>(null);
   let conflict = $state<{ sha: string; paths: string[] } | null>(null);
@@ -58,11 +59,8 @@
       busy = null;
     }
   }
-  function toggleReview(f: FilingEntry) {
-    if (open === f.sha) { open = null; review = null; return; }
-    open = f.sha;
-    review = reviewOf(brain, f.changes);
-  }
+  const isOpen = (f: FilingEntry) => f.state === 'pending' || open === f.sha;
+  const reviewFor = (f: FilingEntry): FilingReview | null => (isOpen(f) && s ? reviewOf(brain, f.changes) : null);
   // Which filing an error belongs to: the message is shown under that filing's buttons, where the tap was,
   // not at the foot of the page where a phone never sees it.
   let acting = $state<'ratify' | 'reject' | null>(null);
@@ -73,7 +71,7 @@
     acting = 'ratify';
     error = null;
     failedOn = null;
-    try { await ratify(inbox, brain, session.driver, f); open = null; review = null; } catch (e) { error = describeError(e); failedOn = f.sha; } finally { busy = null; acting = null; }
+    try { await ratify(inbox, brain, session.driver, f); open = null; } catch (e) { error = describeError(e); failedOn = f.sha; } finally { busy = null; acting = null; }
   }
   async function doReject(f: FilingEntry) {
     if (!session.driver) return;
@@ -85,7 +83,7 @@
     try {
       const r = await reject(inbox, brain, session.driver, f);
       if (r.conflict) conflict = { sha: f.sha, paths: r.conflict };
-      else { open = null; review = null; }
+      else open = null;
     } catch (e) { error = describeError(e); failedOn = f.sha; } finally { busy = null; acting = null; }
   }
   const STATE_LABEL: Record<string, string> = { pending: 'awaiting review', ratified: 'ratified', rejected: 'rejected', changed: 'edited since filing' };
@@ -165,12 +163,15 @@
     {/if}
     <ul class="filings" data-testid="filings">
       {#each shown as f (f.sha)}
+        {@const review = reviewFor(f)}
         <li data-testid="filing-{f.slug}">
           <div class="head">
             <span><strong>{f.slug}</strong> <small>· {f.date.slice(0, 10)} · <span class="state {f.state}" data-testid="state">{STATE_LABEL[f.state]}</span></small></span>
-            <button onclick={() => toggleReview(f)} data-testid="review">{open === f.sha ? 'Hide' : 'Review'}</button>
+            {#if f.state !== 'pending'}
+              <button onclick={() => (open = open === f.sha ? null : f.sha)} data-testid="show-files">{open === f.sha ? 'Hide files' : 'Show files'}</button>
+            {/if}
           </div>
-          {#if open === f.sha && review}
+          {#if review}
             <div class="review" data-testid="review-panel">
               {#each review.added as file (file.path)}
                 <article class="added">

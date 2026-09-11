@@ -18,7 +18,8 @@ test('file a capture with the demo model, review it, ratify it; file another and
 
   const filing = page.getByTestId('filing-unknown-the-only-way-to');
   await expect(filing.getByTestId('state')).toHaveText('awaiting review');
-  await filing.getByTestId('review').click();
+  // Awaiting review, so it is open already, with the decision in view.
+  await expect(filing.getByTestId('show-files')).toHaveCount(0);
   const panel = filing.getByTestId('review-panel');
   await expect(panel).toContainText('The only way to make sense out of change');
   await expect(panel).toContainText('sources/unknown-the-only-way-to/raw.md');
@@ -26,6 +27,7 @@ test('file a capture with the demo model, review it, ratify it; file another and
   await expect(panel.getByTestId('capture-lines')).toHaveText('+ status: filed\n+ filed_as: unknown-the-only-way-to');
   await panel.getByTestId('ratify').click();
   await expect(filing.getByTestId('state')).toHaveText('ratified');
+  await expect(filing.getByTestId('review-panel')).toHaveCount(0); // decided: collapsed
   await page.goto('/#/browse/sources/unknown-the-only-way-to/raw.md');
   await expect(page.getByTestId('frontmatter')).toContainText('ratified');
 
@@ -38,7 +40,6 @@ test('file a capture with the demo model, review it, ratify it; file another and
   await page.getByTestId('process').click();
   await expect(page.getByTestId('process-results')).toContainText('filed as unknown-second-capture-to-be');
   const second = page.getByTestId('filing-unknown-second-capture-to-be');
-  await second.getByTestId('review').click();
   await second.getByTestId('reject').click();
   // A rejected filing leaves the list (its files are gone, the capture is unfiled again) until asked for.
   await expect(second).toHaveCount(0);
@@ -55,10 +56,11 @@ test('a ratified filing offers no Reject: the revert would be refused, so the re
   await page.getByTestId('process').click();
   await expect(page.getByTestId('process-results')).toContainText('filed as');
   const filing = page.getByTestId('filing-unknown-the-only-way-to');
-  await filing.getByTestId('review').click();
   await filing.getByTestId('ratify').click();
   await expect(filing.getByTestId('state')).toHaveText('ratified');
-  await filing.getByTestId('review').click();
+  await expect(filing.getByTestId('show-files')).toHaveText('Show files');
+  await filing.getByTestId('show-files').click();
+  await expect(filing.getByTestId('show-files')).toHaveText('Hide files');
   await expect(filing.getByTestId('review-panel')).toBeVisible();
   await expect(filing.getByTestId('reject')).toHaveCount(0);
   await expect(filing.getByTestId('ratify')).toHaveCount(0);

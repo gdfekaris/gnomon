@@ -58,7 +58,6 @@ test('a filing with an attachment shows it in the review by name and size', asyn
   await page.getByTestId('process').click();
   await expect(page.getByTestId('process-results')).toContainText('unknown-a-photographed-page');
   const filing = page.getByTestId('filing-unknown-a-photographed-page');
-  await filing.getByTestId('review').click();
   await expect(filing.getByTestId('review-panel')).toContainText('original.png · attachment · 0.0 KB · new');
   await filing.getByTestId('review-panel').getByRole('link', { name: 'original.png' }).click();
   await expect(page.getByTestId('attachment-image')).toBeVisible();

@@ -69,7 +69,7 @@ Node 20+ and Claude Code, and a photo on the phone to attach.
 - [ ] Settings → add the provider key. Inbox → pick the provider and a
       model → Process inbox with AI on the photo capture from step 3.
 - [ ] The filing appears under Recent filings as "awaiting review";
-      Review shows raw.md and notes.md as new, the attachment by name and
+      it is open, showing raw.md and notes.md as new, the attachment by name and
       size, the proposals, and the two capture lines added.
 - [ ] Ratify: state becomes "ratified"; on github.com the commit is
       `Ratify: <slug>` and the source is `curated: ratified`.

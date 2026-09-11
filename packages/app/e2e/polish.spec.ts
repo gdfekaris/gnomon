@@ -86,7 +86,6 @@ test('over the fixture the nudge follows the loop: file, review, decide, all cle
   await expect(nudge).toContainText('1 filing awaits your review.');
   await nudge.getByRole('link', { name: 'Review in Inbox' }).click();
   const filing = page.getByTestId('filing-unknown-the-only-way-to');
-  await filing.getByTestId('review').click();
   await filing.getByTestId('review-panel').getByTestId('ratify').click();
   await expect(filing.getByTestId('state')).toHaveText('ratified');
 
