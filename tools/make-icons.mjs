@@ -1,22 +1,17 @@
-// The app icons (Phase 3 block 4): a gnomon, the blade of a sundial, drawn as
-// one-bit pixel art in the Monochrome skin's language: white paper, a black
-// window border, the blade in black, its shadow in a 50% dither. Renders an
-// SVG through Playwright's Chromium at each size. Usage: node tools/make-icons.mjs
+// The app icons: "Noon" (chosen by the maintainer 2026-09-11 from four
+// candidates). The gnomon's blade is the whole tile: solid black below the
+// diagonal, a 50% dither above it where the light falls. One-bit, on a 32×32
+// pixel grid, in the Monochrome skin's language. Renders an SVG through
+// Playwright's Chromium at each size. Usage: node tools/make-icons.mjs
 import { chromium } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 
-// 32×32 pixel grid; every shape sits on whole pixels.
+// 32×32 pixel grid; every shape sits on whole pixels. The dither is a 2×2 checker.
 const art = `
+  <defs><pattern id="dither" width="2" height="2" patternUnits="userSpaceOnUse"><rect width="1" height="1" fill="#000"/><rect x="1" y="1" width="1" height="1" fill="#000"/></pattern></defs>
   <rect width="32" height="32" fill="#fff"/>
-  <path d="M0 0h32v32H0z M2 2v28h28V2z" fill="#000" fill-rule="evenodd"/>
-  <path d="M2 2h28v3H2z" fill="#000"/>
-  <path d="M4 3h24v1H4z" fill="#fff"/>
-  <path d="M8 26V9l14 17z" fill="#000"/>
-  <path d="M8 26h18" stroke="#000" stroke-width="2"/>
-  <rect x="9" y="12" width="1" height="1" fill="#fff"/>
-  <g fill="#000" fill-opacity="1">
-    <path d="M23 26h1v-1h-1zM25 26h1v-1h-1zM24 24h1v-1h-1zM26 24h1v-1h-1zM23 22h1v-1h-1zM25 22h1v-1h-1zM24 20h1v-1h-1zM26 20h1v-1h-1zM25 18h1v-1h-1zM26 16h1v-1h-1z"/>
-  </g>`;
+  <path d="M0 32V0l32 32z" fill="#000"/>
+  <path d="M32 0v24L8 0z" fill="url(#dither)"/>`;
 
 const svg = (size, pad, rounded) => `
 <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 32 32" shape-rendering="crispEdges">
@@ -29,7 +24,7 @@ mkdirSync(out, { recursive: true });
 writeFileSync(new URL('icon.svg', out), svg(32, 0).trim() + '\n');
 const browser = await chromium.launch();
 const page = await browser.newPage();
-for (const [name, size, pad] of [['icon-192.png', 192, 0], ['icon-512.png', 512, 0], ['icon-maskable-512.png', 512, 5], ['apple-touch-icon.png', 180, 0]]) {
+for (const [name, size, pad] of [['icon-192.png', 192, 0], ['icon-512.png', 512, 0], ['icon-maskable-512.png', 512, 0], ['apple-touch-icon.png', 180, 0]]) {
   await page.setViewportSize({ width: size, height: size });
   await page.setContent(`<style>html,body{margin:0;background:#fff}svg{display:block}</style>${svg(size, pad)}`);
   writeFileSync(new URL(name, out), await page.screenshot({ clip: { x: 0, y: 0, width: size, height: size } }));

@@ -1,14 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" shape-rendering="crispEdges">
   <rect width="32" height="32" fill="#fff"/>
   <g transform="translate(0 0) scale(1)">
+  <defs><pattern id="dither" width="2" height="2" patternUnits="userSpaceOnUse"><rect width="1" height="1" fill="#000"/><rect x="1" y="1" width="1" height="1" fill="#000"/></pattern></defs>
   <rect width="32" height="32" fill="#fff"/>
-  <path d="M0 0h32v32H0z M2 2v28h28V2z" fill="#000" fill-rule="evenodd"/>
-  <path d="M2 2h28v3H2z" fill="#000"/>
-  <path d="M4 3h24v1H4z" fill="#fff"/>
-  <path d="M8 26V9l14 17z" fill="#000"/>
-  <path d="M8 26h18" stroke="#000" stroke-width="2"/>
-  <rect x="9" y="12" width="1" height="1" fill="#fff"/>
-  <g fill="#000" fill-opacity="1">
-    <path d="M23 26h1v-1h-1zM25 26h1v-1h-1zM24 24h1v-1h-1zM26 24h1v-1h-1zM23 22h1v-1h-1zM25 22h1v-1h-1zM24 20h1v-1h-1zM26 20h1v-1h-1zM25 18h1v-1h-1zM26 16h1v-1h-1z"/>
-  </g></g>
+  <path d="M0 32V0l32 32z" fill="#000"/>
+  <path d="M32 0v24L8 0z" fill="url(#dither)"/></g>
 </svg>

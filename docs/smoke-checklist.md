@@ -16,7 +16,7 @@ Node 20+ and Claude Code, and a photo on the phone to attach.
       Capture, and the bottom bar is hidden.
 - [ ] Choose "Try the demo brain": Capture appears with the bar; the skin
       is Monochrome; switch skins in Settings and back.
-- [ ] Share → Add to Home Screen → Add. The icon is the one-bit gnomon.
+- [ ] Share → Add to Home Screen → Add. The icon is the Noon mark: black below the diagonal, dithered above.
 - [ ] Launch from the Home Screen: full screen, no browser chrome, lands
       on Capture, the demo connection survived.
 - [ ] Turn on dark mode in iOS: the app inverts; switch to Gray bevel and
