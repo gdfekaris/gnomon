@@ -38,8 +38,10 @@ Node 20 or newer. CI runs the same steps on every push.
 
 ## Where things stand
 
-Phases 1 to 3 of the technical spec (§19) are done; `docs/phase-3-tracker.md`
-carries the remaining deferred items (the real-GitHub contract run, the
-Pages deploy, the npm publish, live provider calls) and the gaps noted
-along the way. `docs/smoke-checklist.md` is the live human test that
-precedes the first release. Phase 4 is client-side encryption.
+Phases 1 to 3 of the technical spec (§19) are done: the app is live at
+`https://gdfekaris.com/gnomon/`, `gnomon-cli` 0.1.0 is on npm, and a
+nightly runs the storage contract against real GitHub. Phase 4 (client-
+side encryption, a second storage driver, local-model documentation) is
+in progress; `docs/phase-4-tracker.md` is its block list and carries the
+items left open from Phase 3. `docs/smoke-checklist.md` is the live human
+test on a real phone.

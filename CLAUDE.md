@@ -14,30 +14,27 @@ small desktop CLI. This repo is the monorepo.
 - `docs/alignment-review.md` — twenty decisions made 2026-09-05 with
   rationale. They are settled; do not reopen them without the user.
 - `docs/phase-<n>-tracker.md` — the current phase's block list and progress
-  (Phase 3 as of 2026-09-08).
+  (Phase 4 as of 2026-09-11).
 
-## Where we are (2026-09-10)
+## Where we are (2026-09-11)
 
-Done: Phases 1, 2, and all six blocks of Phase 3 (spec §19), each green in
-CI. Version 0.1.0. On top of the Phase 1 and 2 list: onboarding (token
-walkthrough, create-from-template, connect-existing, privacy, token swap,
-install steps), the what-next nudge and plain-language errors everywhere,
-the design pass (a late-1980s application GUI in three selectable skins,
-Monochrome default; tokens in `packages/app/src/app.css`; the design
-canvas working files in `docs/design/`), save-as-proposal from a Relate
-answer, the CLI README and `--version`, and `docs/smoke-checklist.md`.
+Done: Phases 1, 2, and 3, each green in CI. Version 0.1.0. The app is
+live at `https://gdfekaris.com/gnomon/` (GitHub Pages from main, HTTPS
+enforced); `gnomon-cli@0.1.0` is on npm; the nightly runs the storage
+contract against real GitHub and is green; every Playwright flow runs on
+Chromium and on WebKit as an iPhone. The maintainer's live iPhone test
+(install, create a brain, capture, file, ratify, editors) is done and its
+findings are fixed; what it left open is carried in the Phase 4 tracker.
 
-**Next: the end-of-phase pass in `docs/phase-3-tracker.md`.** The six
-blocks are ticked; what remains there is the "Deferred" list (real-GitHub
-contract run, Pages deploy, npm publish, live provider calls, token-count
-refinement, Phase 4 notes) and the open gaps G3 and G4. The maintainer
-decided (2026-09-09) that these are handled together after the blocks,
-not in between. Several need the maintainer: a disposable token and
-scratch repo, a Pages hosting decision, an npm account, provider keys. G3
-and G4 can be done alone; G4 edits the schema's commit vocabulary, so
-confirm the wording first. When that pass is done: delete the tracker,
-break down Phase 4 (encryption, spec §6.4), and write
-`docs/phase-4-tracker.md`; that is the working process for every phase.
+**Next: Phase 4, `docs/phase-4-tracker.md`**, block 1 (the passphrase
+keyring). Encryption was designed in spec §6.4 and the body format,
+wrapper driver, and keyring interface already exist; Phase 4 wires a real
+keyring, the flows, the CLI commands, decides attachment encryption, adds
+a second storage driver, and documents local models. The tracker's
+"Carried from Phase 3" list holds the maintainer's items (npm trusted
+publishing once a security key arrives, the rest of the smoke checklist).
+When the pass is done: delete the tracker, break down Phase 5, and write
+`docs/phase-5-tracker.md`; that is the working process for every phase.
 
 ## Conventions
 
@@ -61,6 +58,15 @@ break down Phase 4 (encryption, spec §6.4), and write
   happen only when the maintainer asks for that change in the current
   session. The maintainer's own brain, `~/Desktop/main/geo-brain-2`, has no
   remote; never push it anywhere.
+- Files never move (schema §1 rule 1). A principle changes set by copy
+  then delete, never by a path change; the app offers exactly that.
+- Never `fetch` an imported `?url` asset: a production build inlines small
+  ones as `data:` URLs and the CSP's connect-src has no `data:`. Decode
+  inline ones (see the demo loader). Only the built Playwright projects
+  (`pwa`, `pwa-webkit`) can catch this.
+- Errors render next to the control that failed, never at the foot of a
+  screen. Settings → About carries diagnostics; ask for that line before
+  guessing at a device problem.
 - Styling: the app is a late-1980s GUI in three skins (`data-skin` on
   `<html>`, Monochrome default), all tokens and shared element styles in
   `packages/app/src/app.css`. Screens carry layout only, never a raw
@@ -80,7 +86,7 @@ npm run validate:fixture       # the CLI over packages/core/fixtures/brain
 node packages/cli/dist/gnomon.js validate ~/Desktop/main/geo-brain-2   # or index, status
 npm run validate:reference     # the Python reference checker, tools/gnomon-check.py
 npm run dev -w packages/app
-npx playwright install chromium && npm run e2e -w packages/app   # app flows over the demo brain
+npx playwright install chromium webkit && npm run e2e -w packages/app   # app flows, Chromium and WebKit-as-iPhone
 ```
 
 Commit as you go and push to `origin main` (public repo

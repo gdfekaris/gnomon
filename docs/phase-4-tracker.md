@@ -1,0 +1,242 @@
+# Phase 4 tracker
+
+Working document for Phase 4 (technical spec §19, row 4; proposal §8
+"Privacy options"): the encrypting driver wired to a real keyring, unlock
+and enable/disable/passphrase-change flows, `gnomon encrypt/decrypt`, the
+attachment-encryption decision, a second storage driver, and local-model
+documentation. One block at a time, in this order. Each block ends in a
+green commit with its own tests and a "done when" you can check without
+reading code. Tick a block when it is committed and CI is green. Delete
+this file when Phase 4 is complete and write `docs/phase-5-tracker.md`
+from a fresh breakdown.
+
+Started 2026-09-11, after Phase 3 closed the same day (version 0.1.0 on
+npm, the app live at `gdfekaris.com/gnomon/`, the nightly green against
+real GitHub, the maintainer's iPhone test through capture, file, ratify,
+and the editors).
+
+## What already exists (Phase 1)
+
+Spec §6.4 was designed up front and partly built: `core/crypto` has the
+body format (`<!-- gnomon-enc v1 -->` marker, AES-256-GCM, nonce ‖
+ciphertext ‖ tag, AAD = repo path), `isEncryptablePath`, `encryptBody` /
+`decryptBody`, `importBodyKey` (non-extractable), and the
+`EncryptionConfig` shape for `.gnomon/encryption.json`;
+`storage/encrypting.ts` is the transparent wrapper and passes the driver
+contract around `MemoryDriver`; `storage/keyring.ts` has the `Keyring`
+interface and `StaticKeyring` (in-memory holder, the test stub);
+`LockedError` exists and `describeError` names it. Missing: key derivation
+from a passphrase, the device-wrapped "remember" key, every flow, the CLI
+commands, and any UI.
+
+## Blocks
+
+- [ ] **1. Passphrase keyring** (M) — spec §6.4 "Key derivation", §20.3.
+  Argon2id via libsodium (`libsodium-wrappers-sumo` for `crypto_pwhash`;
+  WASM, runs in the browser and in Node, no DOM or Node types, so it may
+  live in `core/crypto`): derive 32 bytes from passphrase + salt with the
+  stored parameters, verify against `check`, import non-extractable, zero
+  the raw bytes. Write and read `.gnomon/encryption.json` (schema §10
+  reserves the folder; add the file to the layout rules as optional and
+  never encrypted). `PassphraseKeyring` in `storage`: `unlock(passphrase,
+  config)`, `lock()`, and "remember on this device": the raw key wrapped
+  under a non-extractable device `CryptoKey` kept in IndexedDB, through
+  the app's `services/persist.ts` pattern so a flaky IndexedDB never locks
+  the user out silently. Measure Argon2id `MODERATE` on the maintainer's
+  iPhone; if over ~2 s, default to `INTERACTIVE` with the parameters
+  stored (§20.3), decision recorded below. Done when unit tests derive the
+  same key twice from one passphrase and salt, a wrong passphrase fails
+  the check without touching a file, the remembered key round-trips
+  through a fake key store and a cleared store means "locked", and the
+  derivation time on the maintainer's phone is written here.
+- [ ] **2. Enable, disable, change passphrase** (M) — spec §6.4 "Enabling
+  encryption on an existing brain". In `core`: `planEncrypt(snapshot,
+  key, config)` (every eligible body rewritten as ciphertext plus
+  `.gnomon/encryption.json`, one batch), `planDecrypt`, `planRekey`
+  (re-derive, re-encrypt every body, rewrite salt and check), all under
+  `expectedHead`. The §9 validator and the CLI over an encrypted brain
+  without the key: frontmatter rules run, body rules (dual links, §6) are
+  skipped for encrypted bodies with one note, indexes regenerate from
+  frontmatter as before. `gnomon status` names the encrypted state. Done
+  when, over `MemoryDriver`, encrypt then decrypt leaves every body
+  byte-identical, rekey decrypts with the new passphrase and refuses the
+  old, a head that moved mid-operation is refused with nothing written,
+  `gnomon validate` over an encrypted copy of the fixture is clean with
+  the note, and the driver contract still passes wrapped.
+- [ ] **3. The app: unlock, toggle, disclosure** (L) — US-17, US-16, spec
+  §12 step 5, §14 (`LockedError` → unlock sheet), proposal §7. Session
+  composition: when `.gnomon/encryption.json` exists the driver stack is
+  `EncryptingDriver(GitHubDriver, PassphraseKeyring)`; the unlock sheet
+  appears on the first `LockedError`, with "Remember on this device" and
+  its stated limit (an unlocked device unlocks the brain). Settings →
+  Encryption: enable (the user types back "a lost passphrase loses the
+  bodies"), disable, change passphrase, lock now; the disclosure verbatim
+  from spec §6.4 (titles, tags, authors, structure, and attached files
+  stay readable to the host; passage, notes, principle, proposal, and
+  inbox text do not). Onboarding step 5 offers enablement before content
+  exists. The review view on an encrypted brain: Phase 3's P4-notes said
+  patches show ciphertext lines; decide here whether to recompute
+  plaintext patches from blob reads at both commits (the driver has
+  `readBlob` by sha) or to disclose; recommendation: recompute, since
+  review is the whole point of ratification. Done when Playwright flows
+  over the demo brain enable encryption, reload into the unlock sheet
+  with remember off and straight into Capture with it on, refuse a wrong
+  passphrase, capture and file and ratify on the encrypted brain with the
+  review readable, change the passphrase, and disable; and a flow over
+  the fake GitHub shows the stored blob is ciphertext and the app shows
+  plaintext.
+- [ ] **4. `gnomon encrypt` / `gnomon decrypt`** (M) — spec §6.4 "Desktop
+  interop", §13. In `packages/cli`: passphrase from `GNOMON_PASSPHRASE` or
+  a prompt; `decrypt` rewrites eligible bodies in the working tree as
+  plaintext and keeps `.gnomon/encryption.json`; `encrypt` re-encrypts
+  them (fresh nonces). Both refuse to run on a dirty tree unless `--force`,
+  and print what they touched. AGENTS.md for encrypted brains: the session
+  discipline (decrypt after pull, encrypt before push) — a template text
+  change, wording confirmed with the maintainer; git-crypt documented as
+  the alternative. Done when encrypt → decrypt over the fixture round-trips
+  byte-identical plaintext, `validate` passes in both states, the built
+  CLI does it from a scratch clone in a test, and the README documents it.
+- [ ] **5. Attachment encryption decision** (S, maintainer) — spec §20.6,
+  proposal §9.3. Options: keep attachments cleartext with disclosure
+  (today), or encrypt bytes under the same key with the marker as a
+  sidecar (binaries have no comment line) and decrypt on view.
+  Recommendation for this phase: cleartext with disclosure, since the
+  passage text is what the schema promotes and attachments are kept, not
+  parsed; revisit when a real user asks. Done when the decision is in the
+  list below and the disclosure text in Settings and onboarding says it.
+- [ ] **6. Second storage driver** (L) — proposal §8 Phase 4 "pluggable-
+  backend driver #2 (Forgejo or GitLab)", spec §6.1. Maintainer picks the
+  host first. Both offer an atomic multi-file commit: Forgejo/Gitea
+  `POST /repos/{owner}/{repo}/contents` with a `files` list, GitLab
+  `POST /projects/:id/repository/commits` with `actions`; neither has
+  GitHub's Git Data trees, so `commit` maps differently and `compare`,
+  `history`, and `revert` need their own endpoints. A fake per host in
+  `storage/test`, the contract suite over it, onboarding's host choice and
+  token walkthrough, and a nightly against a real instance if the
+  maintainer provides one (a Codeberg account is free for Forgejo). Done
+  when the contract passes over the fake, the app connects an existing
+  brain on the host end to end over the fake, and create-from-template
+  either works or is explicitly "connect an existing repository" for that
+  host.
+- [ ] **7. Local-model documentation** (S) — US-13, US-16. `docs/local-
+  models.md`: a desktop session with OpenCode or Pi against Ollama over
+  the same AGENTS.md, the encrypt/decrypt discipline from block 4, and
+  what stays private; linked from the CLI README and the app's privacy
+  text. Done when the maintainer has run one session that way and the
+  smoke checklist gains the step.
+
+## Carried from Phase 3
+
+Open at the close of Phase 3 (2026-09-11); none blocks a Phase 4 block.
+
+- [ ] **npm trusted publishing** — `publish.yml` is ready; saving the
+  trusted publisher on npmjs.com (owner `gdfekaris`, repository `gnomon`,
+  workflow `publish.yml`, "Allow npm publish") needs interactive WebAuthn
+  two-factor, which the maintainer will have once a security key arrives
+  (an iPhone passkey would also do). Until then releases are published by
+  hand with the granular token in `~/.npmrc`; never put that token in CI.
+  After it is configured: delete the token and its npmrc line.
+- [ ] **Smoke checklist remainder** (`docs/smoke-checklist.md`) — done on
+  the maintainer's iPhone: install, create a brain, capture with a photo,
+  connect, file, ratify, the editors. Left: reason from two sets and
+  relate a text with the real model, decline and accept a proposal, and
+  the desktop round trip through Claude Code with `npx gnomon-cli`.
+- [ ] **Storage diagnostics report** — Settings → About now says where
+  settings came from at launch (IndexedDB or the localStorage mirror) and
+  the last storage failure. The maintainer reports the line after a cold
+  relaunch of the installed app. If the mirror is what answers on iOS,
+  making localStorage the store of record is a spec §10.2 change for the
+  maintainer; the mirror stays a fallback until then.
+- [ ] **P2-tokens** — spec §8.2's optional `count_tokens` call when the
+  estimate is within 10% of the budget. Still out; revisit only if real
+  use shows budgets wrong.
+- [ ] **Declined proposals** — the maintainer floated erasing them; they
+  stay as files because schema §4.7 makes `status` their whole lifecycle
+  and a declined one is the record that stops a re-proposal. The screen
+  hides decided ones, five newest first. Reopen only as a schema question.
+- [ ] **Filings list depth** — `listFilings` reads fifty commits; "Show
+  all n ratified" means within that window. Raise if a brain outgrows it.
+- [ ] **Snapshot persistence across launches** (spec §20.1) — none yet;
+  cold start on the phone loads everything from GitHub. Measure against
+  §16 once the maintainer has a real-sized brain; a tree-only cache
+  (paths and shas, no content) is the candidate.
+- [ ] **Read-only-token assumptions** in the nightly — a Contents-read-only
+  token reports `push: false` and gets 403 on writes; a token without
+  Administration gets a 403 from `POST /user/repos`. Unconfirmed; needs
+  tokens we do not keep.
+
+## Decisions carried and made
+
+- **A mock provider ships** (Phase 2). Spec §17's flows assume one.
+- **Editing a pending filing's metadata makes it yours** (Phase 2): the
+  source becomes `human`, so ratify then refuses it as changed.
+- **Three skins, one switch** (Phase 3): Monochrome (default), Gray
+  bevel, Four-color workbench; tokens in `packages/app/src/app.css`; the
+  canvas working files in `docs/design/`.
+- **Create-from-template is not pre-probed** (Phase 3): a token that
+  cannot create a repository is explained when `POST /user/repos` refuses.
+- **Accepting a principle proposal never writes the principle** (schema
+  §4.7): the editor opens pre-filled; the draft links back.
+- **Both unlisted commit messages kept** (Phase 3, G4): `Scaffold:` and
+  `Add proposal:` are in schema §7.
+- **Agents touch no other repositories** (CLAUDE.md, 2026-09-10): only
+  `gdfekaris/gnomon` and the nightly's `gnomon-scratch*`.
+- **Rejected filings and decided proposals are out of the way, not
+  erased** (2026-09-11): rejected filings behind "Show n rejected";
+  ratified ones five newest with show-all; decided proposals five newest
+  with show-all; no Reject on a ratified filing.
+- **A principle changes set by copy, not move** (2026-09-11): the editor's
+  "Copy to another set" creates it there pre-filled, then offers to delete
+  the original with the dangling-reference report. Two §7.9 commits;
+  schema §1 rule 1 holds. A one-control move was declined.
+- **Settings persistence has a localStorage mirror** (2026-09-11): written
+  first, read when IndexedDB throws, hangs, or is empty; the spec's
+  IndexedDB keys remain the store of record.
+
+## Notes for whoever resumes
+
+- Conventions still hold: every operation is one `CommitBatch` through
+  `BrainService.commit`, which runs `validateBatch` first; index files
+  ride along via `withIndexWrites`; `nowUtc()` for timestamps; `$state`
+  proxies must be `$state.snapshot`-ed before IndexedDB; prompts are
+  TypeScript constants in `core/assembly/prompts/`; an effect that writes
+  what it reads must `untrack` the reads or Svelte aborts it.
+- Playwright runs from `packages/app`, never the repo root, on four
+  projects: `chromium` and `webkit` (iPhone 14 descriptor) over the dev
+  server, `pwa` and `pwa-webkit` over a production build in
+  `dist-preview/`. Only the built projects see what Vite inlines: assets
+  under 4 KB become `data:` URLs, and the CSP's connect-src has no
+  `data:`, so never `fetch` an imported `?url` asset (the demo loader
+  decodes inline ones).
+- `e2e/github-fake.ts` serves `@gnomon/storage/testing`'s `FakeGitHub` to
+  the browser through `page.route`, so a flow can drive the real
+  `GitHubDriver` end to end. The fake's switches: `canCreate`, `readOnly`,
+  `scopes`, `rateLimited`, `secondaryLimited`, `staleRefReads`,
+  `staleHistoryReads`, `dropNext`, `beforePatch`, `externalCommit`.
+- The GitHub driver, after the nightly's lessons: `head()` answers with
+  its own last commit while the ref read still names that commit's parent
+  (`lastWrite`); after a write it waits for the commits listing
+  (`REF_SETTLE`); it retries a dropped connection (`RETRY_DELAYS_MS`)
+  except for `POST /user/repos`; it paces content-generating requests
+  under GitHub's 80/minute secondary limit (`CONTENT_RATE`, a constructor
+  option the fake-backed tests set to unlimited) and maps that 403 to
+  `RateLimitError`. One nightly run costs about 260 of the hourly 500
+  writes: never dispatch it twice within an hour.
+- The nightly (`nightly.yml`, 04:17 UTC and on demand) seeds
+  `gdfekaris/gnomon-scratch` with a root commit and force-moves main to it
+  before each contract test; temporary repositories are
+  `gnomon-scratch-<run id>` and are deleted at the end, leftovers too.
+  The secret `GNOMON_TEST_TOKEN` is a fine-grained token with Contents
+  and Administration on all repositories, short expiry; when it lapses
+  the run fails on `GET /user` and a new token is the whole fix.
+- Settings → About lists the build commit (`__GNOMON_BUILD__` from
+  `GITHUB_SHA`), where settings came from, the last storage failure,
+  storage persistence, the brain's head or load error, and the service
+  worker state. Ask the maintainer for that line before guessing at a
+  device problem.
+- Errors belong next to the control that failed, never at the foot of a
+  screen: a phone never sees the foot.
+- The demo brain accepts `#/settings?demo-omit=a,b` to drop paths. Its
+  git history is one seed commit, so the fixture's own pending filing
+  does not appear in the Inbox's filing list. Proposal ids and timestamps
+  use the real clock; tests that assert ids must be date-agnostic.
