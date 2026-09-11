@@ -224,6 +224,13 @@ this phase is the natural moment for the first three and P2-live.
   /user/repos` is refused, which leaves nothing behind. Classic tokens
   get an early warning from the scopes header. Block 2 returns to the
   token step with the sentence shown and the token kept.
+- **A principle changes set by copy, not move** (2026-09-11, maintainer's
+  call after the live test): the editor's "Copy to another set" creates
+  the principle in the target set pre-filled (`#/sets/<slug>/new-principle
+  ?copy=<path>`), then returns to the original (`?copied=<new path>`) and
+  offers to delete it with the dangling-reference report. Two commits,
+  both existing §7.9 procedures; schema §1 rule 1 (files never move) holds.
+  A one-control move would be a schema change and was declined.
 - **Accepting a principle proposal never writes the principle** (schema
   §4.7): the decision is one commit, the editor opens pre-filled, and the
   draft body links back to the proposal so the screen can show what it

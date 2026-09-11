@@ -74,11 +74,11 @@
     {:else if route.name === 'browse'}
       <Browse />
     {:else if route.name === 'sets' && route.rest.length === 2 && route.rest[1] === 'new-principle'}
-      <Editor path="" newIn={route.rest[0]} from={route.query.get('from') ?? undefined} />
+      <Editor path="" newIn={route.rest[0]} from={route.query.get('from') ?? undefined} copy={route.query.get('copy') ?? undefined} />
     {:else if route.name === 'sets'}
       <Sets />
     {:else if route.name === 'edit'}
-      <Editor path={route.path} from={route.query.get('from') ?? undefined} />
+      <Editor path={route.path} from={route.query.get('from') ?? undefined} copied={route.query.get('copied') ?? undefined} />
     {:else if route.name === 'proposals'}
       <Proposals />
     {:else if route.name === 'reason'}

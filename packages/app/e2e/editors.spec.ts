@@ -76,3 +76,35 @@ test('editing notes makes them human; source metadata edits keep the passage rea
   await page.goto('/#/edit/sources/didion-why-i-write/original.pdf');
   await expect(page.getByText('Nothing editable at')).toBeVisible();
 });
+
+// A principle changes set by being copied there and the original deleted:
+// two commits, no file moved (schema §1 rule 1). The editor offers the copy,
+// pre-fills the new principle, then asks about the original with the
+// dangling-reference report.
+test('copy a principle to another set, then delete the original', async ({ page }) => {
+  await page.goto('/#/edit/principles/ps-g8xw/courage-before-comfort.md');
+  await expect(page.getByTestId('edit-title')).toHaveValue('Courage before comfort');
+  await page.getByTestId('copy-set').selectOption('ps-7k2m');
+  await page.getByTestId('copy-go').click();
+  await expect(page.getByRole('heading', { name: 'New principle in Set 2 — Work' })).toBeVisible();
+  await expect(page.getByTestId('from-copy')).toContainText('Copied from Courage before comfort');
+  await expect(page.getByTestId('edit-title')).toHaveValue('Courage before comfort');
+  await expect(page.getByTestId('edit-body')).not.toHaveValue('');
+  await page.getByTestId('edit-save').click();
+
+  // Back on the original, with the copy named and the question asked.
+  await expect(page).toHaveURL(/#\/edit\/principles\/ps-g8xw\/courage-before-comfort\.md\?copied=principles%2Fps-7k2m%2Fcourage-before-comfort\.md$/);
+  await expect(page.getByTestId('copied')).toContainText('The copy is in place');
+  await page.getByTestId('delete-original').click();
+  await expect(page.getByTestId('copied')).toContainText('Delete the original');
+  await page.getByTestId('delete-original-yes').click();
+  await expect(page).toHaveURL(/#\/browse\/principles\/ps-7k2m\/courage-before-comfort\.md$/);
+
+  await page.goto('/#/sets');
+  await expect(page.getByTestId('set-ps-g8xw')).not.toContainText('Courage before comfort');
+  const work = page.getByTestId('set-ps-7k2m');
+  await expect(work).toContainText('Courage before comfort');
+  await expect(work.locator('li').last()).toContainText('Courage before comfort');
+  await page.goto('/#/settings');
+  await expect(page.getByTestId('refusal-count')).toHaveText('0 refusals');
+});

@@ -8,10 +8,14 @@
   import { appendGroundingLink, createPrincipleIn, driftOf, parseList, saveNotes, savePrinciple, saveSourceMeta, slugOfSource, tagList } from '../lib/services/edit';
   import { browseHref } from '../lib/markdown';
   import { prefillFrom } from '../lib/services/proposals';
+  import { type DeletePlan, planDeletePrinciple } from '../lib/services/sets';
   import { session } from '../lib/stores/session.svelte';
   import { snapshot } from '../lib/stores/snapshot.svelte';
 
-  let { path, newIn = undefined, from = undefined }: { path: string; newIn?: string | undefined; from?: string | undefined } = $props();
+  // `copy`: a new principle pre-filled from an existing one in another set (files never move, schema §1 rule 1:
+  // a principle changes set by being created there and deleted here, two commits). `copied`: the copy has been
+  // made; this editor is on the original and offers to delete it, dangling references listed.
+  let { path, newIn = undefined, from = undefined, copy = undefined, copied = undefined }: { path: string; newIn?: string | undefined; from?: string | undefined; copy?: string | undefined; copied?: string | undefined } = $props();
   const s = $derived(snapshot.current);
   const file = $derived(newIn ? undefined : s?.files.get(path));
   const kind = $derived<'principle' | 'notes' | 'source' | 'none'>(newIn ? 'principle' : file?.fm.type === 'principle' || file?.fm.type === 'notes' || file?.fm.type === 'source' ? file.fm.type : 'none');
@@ -36,15 +40,23 @@
 
   // A proposal being accepted (schema §4.7): pre-fill a new principle, or show the suggestion beside an existing file.
   const prefill = $derived(from && s ? prefillFrom(s, from, newIn ?? path.split('/')[1] ?? '') : null);
+  const source = $derived(newIn && copy && s ? (s.files.get(copy) as BrainFile<PrincipleFm> | undefined) : undefined);
+  const setOf = (p: string) => s?.sets.find((x) => x.path === `principles/${p.split('/')[1]}/_set.md`);
+  const otherSets = $derived(kind === 'principle' && !newIn && s ? s.sets.filter((x) => x.path !== `principles/${path.split('/')[1]}/_set.md`) : []);
+  let copyTo = $state('');
+  const copyFile = $derived(copied && s ? s.files.get(copied) : undefined);
+  let deletePlan = $state<DeletePlan | null>(null);
 
   $effect(() => {
-    const key = `${newIn ?? ''}|${path}|${file?.sha ?? ''}|${from ?? ''}`;
+    const key = `${newIn ?? ''}|${path}|${file?.sha ?? ''}|${from ?? ''}|${copy ?? ''}`;
     if (loadedFor === key) return;
     loadedFor = key;
     error = null;
     if (kind === 'principle' && file) {
       const fm = file.fm as PrincipleFm;
       title = fm.title; body = file.body; grounds = [...fm.grounds]; related = (fm.related ?? []).join(', '); tags = (fm.tags ?? []).join(', ');
+    } else if (kind === 'principle' && source) {
+      title = source.fm.title; body = source.body; grounds = [...source.fm.grounds]; related = (source.fm.related ?? []).join(', '); tags = (source.fm.tags ?? []).join(', ');
     } else if (kind === 'principle') {
       title = prefill?.title ?? ''; body = prefill?.body ?? ''; grounds = prefill ? [...prefill.grounds] : []; related = ''; tags = '';
     } else if (kind === 'notes' && file) {
@@ -72,7 +84,23 @@
     }
   }
   const fields = () => ({ title, body, grounds, related: parseList(related), tags: tagList(tags) });
-  const save = () => run(() => (newIn ? createPrincipleIn(brain, newIn, fields()) : kind === 'principle' ? savePrinciple(brain, path, fields()) : kind === 'notes' ? saveNotes(brain, path, body) : saveSourceMeta(brain, path, { title, author, work, year, locator, origin, tags: tagList(tags) })));
+  const save = () => (newIn && copy ? saveCopy() : run(() => (newIn ? createPrincipleIn(brain, newIn, fields()) : kind === 'principle' ? savePrinciple(brain, path, fields()) : kind === 'notes' ? saveNotes(brain, path, body) : saveSourceMeta(brain, path, { title, author, work, year, locator, origin, tags: tagList(tags) }))));
+  // The copy is one create commit; then the original's editor asks about deleting it.
+  async function saveCopy() {
+    busy = true;
+    error = null;
+    try {
+      const created = await createPrincipleIn(brain, newIn!, fields());
+      location.hash = `#/edit/${copy}?copied=${encodeURIComponent(created)}`;
+    } catch (e) {
+      error = describeError(e);
+    } finally {
+      busy = false;
+    }
+  }
+  const startCopy = () => { if (copyTo) location.hash = `#/sets/${copyTo}/new-principle?copy=${encodeURIComponent(path)}`; };
+  const askDeleteOriginal = () => { deletePlan = planDeletePrinciple(brain, path); };
+  const deleteOriginal = () => run(async () => { await deletePlan!.commit(); deletePlan = null; return copied; });
   function insertLink() {
     if (!picker) return;
     body = appendGroundingLink(body, targetPath, picker);
@@ -99,6 +127,35 @@
   {/if}
   {#if kind === 'principle'}
     <h2>{newIn ? `New principle in ${setLabel(s.sets.find((x) => x.path === `principles/${newIn}/_set.md`)!.fm)}` : 'Edit principle'}</h2>
+    {#if source}
+      <div class="from" role="status" data-testid="from-copy">
+        <p><strong>Copied from {source.fm.title}</strong> in {setLabel(setOf(copy!)?.fm ?? { order: 0 } as never)}.</p>
+        <p class="hint">Files never move: adding it here makes a new file, and you then decide about the original. Links that named the original will not follow it; you will be shown which.</p>
+      </div>
+    {/if}
+    {#if copyFile}
+      <div class="from" role="status" data-testid="copied">
+        <p><strong>The copy is in place:</strong> <a href={browseHref(copied!)}>{(copyFile.fm as PrincipleFm).title}</a> in {setLabel(setOf(copied!)?.fm ?? { order: 0 } as never)}.</p>
+        {#if deletePlan}
+          <p>Delete the original <strong>{deletePlan.label}</strong> from {setLabel(setOf(path)?.fm ?? { order: 0 } as never)}? Git history keeps it.</p>
+          {#if deletePlan.dangling.length}
+            <p>These references name the original and will dangle:</p>
+            <ul data-testid="dangling">{#each deletePlan.dangling as d (d.path + d.ref)}<li><code>{d.path}</code> → {d.ref}</li>{/each}</ul>
+          {:else}
+            <p class="hint">Nothing in the brain references the original.</p>
+          {/if}
+          <div class="row">
+            <button type="button" class="primary" onclick={deleteOriginal} disabled={busy} data-testid="delete-original-yes">Delete the original</button>
+            <button type="button" onclick={() => (deletePlan = null)} disabled={busy}>Not now</button>
+          </div>
+        {:else}
+          <div class="row">
+            <button type="button" onclick={askDeleteOriginal} disabled={busy} data-testid="delete-original">Delete the original</button>
+            <a href={browseHref(copied!)} data-testid="keep-both">Keep both</a>
+          </div>
+        {/if}
+      </div>
+    {/if}
     <p class="hint">In your own words. A principle is not a summary of a source: if the source turned out to be wrong, the principle should survive.</p>
     <form onsubmit={(e) => { e.preventDefault(); void save(); }}>
       <label>Title <input bind:value={title} required data-testid="edit-title" /></label>
@@ -133,6 +190,18 @@
       <label>Related principles <small>(set/slug, comma-separated)</small> <input bind:value={related} data-testid="edit-related" /></label>
       <label>Tags <small>(comma-separated)</small> <input bind:value={tags} data-testid="edit-tags" /></label>
       <button type="submit" class="primary" disabled={busy || !title.trim()} data-testid="edit-save">{newIn ? 'Add principle' : 'Save'}</button>
+      {#if otherSets.length}
+        <div class="row copy" data-testid="copy-to">
+          <label>Copy to another set
+            <select bind:value={copyTo} data-testid="copy-set">
+              <option value="">Choose a set…</option>
+              {#each otherSets as x (x.path)}<option value={x.path.split('/')[1]}>{setLabel(x.fm)}</option>{/each}
+            </select>
+          </label>
+          <button type="button" onclick={startCopy} disabled={busy || !copyTo} data-testid="copy-go">Copy</button>
+        </div>
+        <p class="hint">A principle belongs to one set. Copying makes a new principle there; you then choose whether to delete this one.</p>
+      {/if}
     </form>
   {:else if kind === 'notes'}
     <h2>Notes on {slugOfSource(path)}</h2>
