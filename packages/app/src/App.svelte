@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { route } from './lib/router.svelte';
-  import { loadSettings, settings } from './lib/stores/settings.svelte';
+  import { loadSettings, savePrefs, settings } from './lib/stores/settings.svelte';
+  import { configureReasoner, reasoning } from './lib/stores/reasoning.svelte';
   import { session } from './lib/stores/session.svelte';
   import { connectDemo, connectGitHub } from './lib/services/index';
   import StaleBanner from './lib/components/StaleBanner.svelte';
@@ -28,6 +29,7 @@
     watchNetwork();
     try {
       await loadSettings();
+      configureReasoner();
       if (session.driver) return;
       if (settings.prefs.mode === 'github' && settings.git) await connectGitHub(settings.git);
       else if (settings.prefs.mode === 'demo') await connectDemo();
@@ -47,6 +49,13 @@
     if (route.name === 'capture' && !booting && !session.driver && !(settings.prefs.mode === 'github' && settings.git)) location.hash = '#/onboarding';
   });
   const onboarding = $derived(route.name === 'onboarding');
+  // The provider picked on Reason or Inbox is remembered across launches.
+  $effect(() => {
+    const provider = reasoning.provider;
+    untrack(() => {
+      if (settings.loaded && settings.prefs.provider !== provider) void savePrefs({ provider });
+    });
+  });
 </script>
 
 <main class="window">

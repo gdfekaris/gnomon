@@ -63,22 +63,30 @@
     open = f.sha;
     review = reviewOf(brain, f.changes);
   }
+  // Which filing an error belongs to: the message is shown under that filing's buttons, where the tap was,
+  // not at the foot of the page where a phone never sees it.
+  let acting = $state<'ratify' | 'reject' | null>(null);
+  let failedOn = $state<string | null>(null);
   async function doRatify(f: FilingEntry) {
     if (!session.driver) return;
     busy = f.sha;
+    acting = 'ratify';
     error = null;
-    try { await ratify(inbox, brain, session.driver, f); open = null; review = null; } catch (e) { error = describeError(e); } finally { busy = null; }
+    failedOn = null;
+    try { await ratify(inbox, brain, session.driver, f); open = null; review = null; } catch (e) { error = describeError(e); failedOn = f.sha; } finally { busy = null; acting = null; }
   }
   async function doReject(f: FilingEntry) {
     if (!session.driver) return;
     busy = f.sha;
+    acting = 'reject';
     error = null;
+    failedOn = null;
     conflict = null;
     try {
       const r = await reject(inbox, brain, session.driver, f);
       if (r.conflict) conflict = { sha: f.sha, paths: r.conflict };
       else { open = null; review = null; }
-    } catch (e) { error = describeError(e); } finally { busy = null; }
+    } catch (e) { error = describeError(e); failedOn = f.sha; } finally { busy = null; acting = null; }
   }
   const STATE_LABEL: Record<string, string> = { pending: 'awaiting review', ratified: 'ratified', rejected: 'rejected', changed: 'edited since filing' };
 </script>
@@ -99,7 +107,7 @@
     <div class="row">
       <label>Provider
         <select bind:value={reasoning.provider} data-testid="inbox-provider">
-          {#each reasoner.providerIds as id (id)}<option value={id}>{PROVIDER_LABELS[id]}</option>{/each}
+          {#each reasoning.providers as id (id)}<option value={id}>{PROVIDER_LABELS[id]}</option>{/each}
         </select>
       </label>
       <label>Model
@@ -153,12 +161,16 @@
                 <div class="row">
                   <button class="primary" onclick={() => doRatify(f)} disabled={busy !== null} data-testid="ratify">Ratify</button>
                   <button onclick={() => doReject(f)} disabled={busy !== null} data-testid="reject">Reject</button>
+                  {#if busy === f.sha}<span role="status" class="hint" data-testid="deciding">{acting === 'ratify' ? 'Ratifying…' : 'Rejecting…'} one commit, then the list reloads.</span>{/if}
                 </div>
               {:else if f.state === 'ratified'}
                 <div class="row">
                   <button onclick={() => doReject(f)} disabled={busy !== null} data-testid="reject">Reject</button>
                   <small class="hint">Ratified; rejecting will be refused because ratification touched its files.</small>
                 </div>
+              {/if}
+              {#if error && failedOn === f.sha}
+                <p class="error" role="alert" data-testid="decide-error">{error}</p>
               {/if}
               {#if conflict?.sha === f.sha}
                 <p class="error" role="alert" data-testid="conflict">
@@ -174,7 +186,7 @@
       {/each}
     </ul>
   </section>
-  {#if error || inbox.error}<p class="error" role="alert">{error ?? inbox.error}</p>{/if}
+  {#if (error && !failedOn) || inbox.error}<p class="error" role="alert">{(failedOn ? null : error) ?? inbox.error}</p>{/if}
 {/if}
 
 <style>

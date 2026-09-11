@@ -97,3 +97,27 @@ test('the skin is a setting: three late-1980s GUIs, Monochrome by default, kept 
   await page.getByTestId('theme').selectOption('system');
   await page.getByTestId('skin').selectOption('mono');
 });
+
+// The maintainer's phone showed only the demo provider after every launch
+// until Save was pressed again: the screens listed a non-reactive copy of
+// the provider list. Saving a key must reach Inbox and Reason at once, and
+// the chosen provider must survive a relaunch.
+test('a saved provider key appears on Inbox without a reload, and the chosen provider survives a relaunch', async ({ page }) => {
+  await page.goto('/#/settings');
+  await page.getByTestId('use-demo').click();
+  await page.getByTestId('key-anthropic').fill('sk-ant-test');
+  await page.getByTestId('save-keys').click();
+  await page.goto('/#/inbox');
+  const provider = page.getByTestId('inbox-provider');
+  await expect(provider.locator('option')).toHaveText(['Demo model (no key)', 'Anthropic']);
+  await provider.selectOption('anthropic');
+  await page.reload();
+  await page.goto('/#/reason');
+  await expect(page.getByTestId('provider')).toHaveValue('anthropic');
+  await page.goto('/#/settings');
+  await page.getByTestId('key-anthropic').fill('');
+  await page.getByTestId('save-keys').click();
+  await page.goto('/#/inbox');
+  await expect(provider.locator('option')).toHaveText(['Demo model (no key)']);
+  await expect(provider).toHaveValue('mock');
+});

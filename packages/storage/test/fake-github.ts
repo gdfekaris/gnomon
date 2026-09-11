@@ -44,6 +44,9 @@ export class FakeGitHub {
   /** real GitHub can serve the previous sha for a moment after a ref update: this many GET ref reads after each PATCH answer with it */
   staleRefReads = 0;
   private stale: { key: string; previous: string; remaining: number } | undefined;
+  /** likewise the commits listing: this many GET /commits after each PATCH list from the previous head */
+  staleHistoryReads = 0;
+  private staleHistory: { key: string; previous: string; remaining: number } | undefined;
   /** the next N requests fail before any answer, as a dropped connection does (fetch throws) */
   dropNext = 0;
   /** GitHub's secondary limit: a 403 with Retry-After and a message naming it, on every content-generating request */
@@ -165,6 +168,7 @@ export class FakeGitHub {
       if (body['force'] !== true && next.parents[0] !== current) return json(422, { message: 'Update is not a fast forward' });
       this.refs.set(`heads/${r[1]}`, next.sha);
       if (this.staleRefReads > 0) this.stale = { key: `heads/${r[1]}`, previous: current, remaining: this.staleRefReads };
+      if (this.staleHistoryReads > 0) this.staleHistory = { key: `heads/${r[1]}`, previous: current, remaining: this.staleHistoryReads };
       return json(200, { ref: `refs/heads/${r[1]}`, object: { type: 'commit', sha: next.sha } });
     }
     if ((r = /^\/git\/trees\/([0-9a-f]+)$/.exec(rest)) && method === 'GET') {
@@ -210,7 +214,11 @@ export class FakeGitHub {
     }
     if (rest === '/commits' && method === 'GET') {
       const q = url.searchParams;
-      const head = this.refs.get(`heads/${q.get('sha') ?? 'main'}`)!;
+      let head = this.refs.get(`heads/${q.get('sha') ?? 'main'}`)!;
+      if (this.staleHistory && this.staleHistory.key === `heads/${q.get('sha') ?? 'main'}` && this.staleHistory.remaining > 0) {
+        this.staleHistory.remaining--;
+        head = this.staleHistory.previous;
+      }
       const path = q.get('path');
       const limit = Number(q.get('per_page') ?? 30);
       const out = [];

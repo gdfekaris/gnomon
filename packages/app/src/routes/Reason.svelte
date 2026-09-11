@@ -101,7 +101,7 @@
       </label>
       <label>Provider
         <select bind:value={reasoning.provider} data-testid="provider">
-          {#each reasoner.providerIds as id (id)}<option value={id}>{PROVIDER_LABELS[id]}</option>{/each}
+          {#each reasoning.providers as id (id)}<option value={id}>{PROVIDER_LABELS[id]}</option>{/each}
         </select>
       </label>
       <label>Model

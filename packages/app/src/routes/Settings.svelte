@@ -155,7 +155,7 @@
 </section>
 
 <section class="about">
-  <p class="hint">Gnomon {pkg.version}</p>
+  <p class="hint">Gnomon {pkg.version}, build {__GNOMON_BUILD__}</p>
   <ul class="hint diagnostics" data-testid="diagnostics">
     <li>Running {standalone ? 'installed, from the Home Screen' : 'in the browser'}.</li>
     <li>

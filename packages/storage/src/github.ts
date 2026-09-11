@@ -249,13 +249,19 @@ export class GitHubDriver implements StorageDriver {
 
   /**
    * Real GitHub can answer `GET /git/ref` with the previous sha for a moment
-   * after a successful `PATCH` (seen in the nightly run). The update itself is
-   * confirmed by the PATCH; this only waits until reads agree, so a caller's
-   * next head() or refresh() sees the commit it was just handed.
+   * after a successful `PATCH` (seen in the nightly run), and the commits
+   * listing can lag too. The update itself is confirmed by the PATCH; this
+   * only waits until reads agree, so a caller's next head(), refresh(), or
+   * history() sees the commit it was just handed.
    */
   private async settleRef(sha: string): Promise<void> {
     for (let i = 0; i < REF_SETTLE.tries; i++) {
-      if ((await this.head()) === sha) return;
+      if ((await this.head()) === sha) break;
+      await sleep(REF_SETTLE.delayMs);
+    }
+    // The commits listing (history, hence the filings list) is served separately and can lag the ref.
+    for (let i = 0; i < REF_SETTLE.tries; i++) {
+      if ((await this.history({ limit: 1 }))[0]?.sha === sha) return;
       await sleep(REF_SETTLE.delayMs);
     }
   }

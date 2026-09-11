@@ -46,7 +46,7 @@ describe('GitHubDriver against the fake API (spec §6.2)', () => {
     expect(validateSnapshot(s)).toEqual([]);
   });
 
-  it('commit is the five-step Git Data sequence, a non-forced ref update, then one read to see it', async () => {
+  it('commit is the five-step Git Data sequence, a non-forced ref update, then a ref read and a history read to see it', async () => {
     const { gh, driver } = await pair();
     const head = await driver.head();
     gh.requests.length = 0;
@@ -60,6 +60,7 @@ describe('GitHubDriver against the fake API (spec §6.2)', () => {
       'POST /git/commits',
       'PATCH /git/refs/heads/main',
       'GET /git/ref/heads/main',
+      'GET /commits?sha=main&per_page=1',
     ]);
   });
 
@@ -77,14 +78,17 @@ describe('GitHubDriver against the fake API (spec §6.2)', () => {
     expect(await driver.head()).toBe(moved);
   });
 
-  it('commit rereads the ref until it sees its own update (real GitHub lags for a moment)', async () => {
+  it('commit rereads the ref and the commits listing until both show its update (real GitHub lags for a moment)', async () => {
     const { gh, driver } = await pair();
     const head = await driver.head();
     gh.staleRefReads = 3;
+    gh.staleHistoryReads = 2;
     gh.requests.length = 0;
     const { sha } = await driver.commit({ message: 'x', expectedHead: head, writes: [{ path: 'a.md', text: 'a' }], deletes: [] });
     expect(await driver.head()).toBe(sha);
+    expect((await driver.history({ limit: 1 }))[0]!.sha).toBe(sha);
     expect(gh.requests.filter((r) => r.path.endsWith('/git/ref/heads/main')).length).toBe(1 + 4 + 1);
+    expect(gh.requests.filter((r) => r.path.startsWith('/repos/octocat/brain/commits?')).length).toBe(3 + 1);
     expect((await driver.list()).some((e) => e.path === 'a.md')).toBe(true);
   });
 

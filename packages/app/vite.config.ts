@@ -5,8 +5,12 @@ import { VitePWA } from 'vite-plugin-pwa';
 // `base` is the GitHub Pages subpath in CI (VITE_BASE=/gnomon/) and "/" in dev (spec §2, §18).
 const base = process.env['VITE_BASE'] ?? '/';
 
+// Which build a device is running, for Settings → About: CI's commit, or "dev".
+const commit = (process.env['GITHUB_SHA'] ?? 'dev').slice(0, 7);
+
 export default defineConfig({
   base,
+  define: { __GNOMON_BUILD__: JSON.stringify(commit) },
   plugins: [
     svelte(),
     VitePWA({

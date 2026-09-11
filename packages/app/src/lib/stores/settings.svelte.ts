@@ -16,9 +16,11 @@ export interface Prefs {
   lastSelectedSets: string[];
   /** the last driver mode; 'demo' reconnects the demo brain at launch */
   mode: 'github' | 'demo' | null;
+  /** the AI provider picked last, restored at launch while its key is saved */
+  provider: 'mock' | 'anthropic' | 'openrouter';
 }
 
-const DEFAULT_PREFS: Prefs = { theme: 'system', skin: 'mono', budgetPercent: 60, setDescriptionPlacement: 'context', lastSelectedSets: [], mode: null };
+const DEFAULT_PREFS: Prefs = { theme: 'system', skin: 'mono', budgetPercent: 60, setDescriptionPlacement: 'context', lastSelectedSets: [], mode: null, provider: 'mock' };
 
 export const settings = $state({
   loaded: false,
