@@ -47,3 +47,12 @@ test('the demo brain loads from the built app, its PDF attachment included', asy
   await expect(page.getByTestId('attachment-open')).toBeVisible();
   expect(failures.filter((f) => /Content Security Policy|Load failed|Failed to fetch/.test(f))).toEqual([]);
 });
+
+// The maintainer pressed "Check for updates" on a current build and nothing answered. Every check ends
+// in a sentence; on the built app with its worker registered and unchanged, that sentence is "no update".
+test('checking for updates on a current build says so', async ({ page }) => {
+  await page.goto('/#/settings');
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.getByTestId('check-update').click();
+  await expect(page.getByTestId('update-status')).toHaveText('No update: this is the latest build.');
+});

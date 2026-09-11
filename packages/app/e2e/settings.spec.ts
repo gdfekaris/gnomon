@@ -121,3 +121,10 @@ test('a saved provider key appears on Inbox without a reload, and the chosen pro
   await expect(provider.locator('option')).toHaveText(['Demo model (no key)']);
   await expect(provider).toHaveValue('mock');
 });
+
+// The dev server registers no worker; the check still answers, saying how this build gets updates.
+test('checking for updates without a service worker still answers', async ({ page }) => {
+  await page.goto('/#/settings');
+  await page.getByTestId('check-update').click();
+  await expect(page.getByTestId('update-status')).toContainText('picks up new builds on reload');
+});
