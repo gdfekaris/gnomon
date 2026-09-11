@@ -78,6 +78,11 @@ export class GitHubDriver implements StorageDriver {
     const url = path.startsWith('/repos/') || path.startsWith('/user') || path === '/graphql' ? `${this.apiBase}${path}` : `${this.apiBase}/repos/${this.repo}${path}`;
     const init: RequestInit = {
       method,
+      // GitHub answers every REST read with `max-age=60`, so a browser would serve the ref, the
+      // commits listing, and the rest from its own cache for a minute after any read: a snapshot
+      // refreshed inside that minute could land on a head from before the app's own last commits.
+      // Reads must always reach GitHub; the responses are small and the CLI and Node never cache anyway.
+      cache: 'no-store',
       headers: {
         Authorization: `Bearer ${this.token}`,
         Accept: 'application/vnd.github+json',

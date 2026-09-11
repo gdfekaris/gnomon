@@ -2,6 +2,7 @@
   // Editor — US-4, US-6, US-7. One route, dispatched by file type:
   // principle (create or edit), notes, or source metadata. Sets are edited
   // on the Sets screen; raw.md bodies and attachments have no editor.
+  import { untrack } from 'svelte';
   import { type BrainFile, type NotesFm, type PrincipleFm, type SourceFm, setLabel } from '@gnomon/core';
   import ConnectionNotice from '../lib/components/ConnectionNotice.svelte';
   import { brain, describeError } from '../lib/services/index';
@@ -47,11 +48,28 @@
   const copyFile = $derived(copied && s ? s.files.get(copied) : undefined);
   let deletePlan = $state<DeletePlan | null>(null);
 
+  // What the fields held when they were loaded, so Back can tell an edited form from an untouched one.
+  const signature = () => JSON.stringify({ title, body, grounds, related, tags, author, work, year, locator, origin });
+  let baseline = $state('');
+  const dirty = $derived(signature() !== baseline);
+  const backHref = $derived(newIn ? '#/sets' : browseHref(path));
+  let leaving = $state(false);
+  function back(e: Event) {
+    if (!dirty) return;
+    e.preventDefault();
+    leaving = true;
+  }
+
   $effect(() => {
+    // The fields load once per file, and only once the brain is here: on a cold start into this
+    // route (the phone relaunching the app, say) the snapshot arrives after the editor mounted,
+    // and locking the key before then would leave a proposal's draft empty for good.
+    if (!s) return;
     const key = `${newIn ?? ''}|${path}|${file?.sha ?? ''}|${from ?? ''}|${copy ?? ''}`;
     if (loadedFor === key) return;
     loadedFor = key;
     error = null;
+    leaving = false;
     if (kind === 'principle' && file) {
       const fm = file.fm as PrincipleFm;
       title = fm.title; body = file.body; grounds = [...fm.grounds]; related = (fm.related ?? []).join(', '); tags = (fm.tags ?? []).join(', ');
@@ -65,6 +83,8 @@
       const fm = file.fm as SourceFm;
       title = fm.title; author = fm.author; work = fm.work ?? ''; year = fm.year === undefined ? '' : String(fm.year); locator = fm.locator ?? ''; origin = fm.origin ?? ''; tags = (fm.tags ?? []).join(', ');
     }
+    // The effect wrote these; reading them back must not make it its own trigger.
+    untrack(() => { baseline = signature(); });
   });
 
   const drift = $derived(kind === 'principle' ? driftOf(targetPath, body, grounds) : { inBodyOnly: [], inGroundsOnly: [] });
@@ -117,7 +137,16 @@
   <p><a href={browseHref(path)}>← Back</a></p>
   <p class="error">Nothing editable at <code>{path}</code>. Passages and attachments are immutable; corrections go in the notes file.</p>
 {:else}
-  <p><a href={newIn ? '#/sets' : browseHref(path)}>← Back</a></p>
+  <p><a href={backHref} onclick={back} data-testid="edit-back">← Back</a></p>
+  {#if leaving}
+    <div class="confirm" role="alertdialog" data-testid="discard-confirm">
+      <p>This {kind === 'principle' ? 'principle' : kind === 'notes' ? 'note' : 'source'} has changes that are not saved. Leave without saving them?</p>
+      <div class="row">
+        <button type="button" onclick={() => { leaving = false; location.hash = backHref; }} data-testid="discard-yes">Leave without saving</button>
+        <button type="button" class="primary" onclick={() => (leaving = false)} data-testid="discard-no">Keep editing</button>
+      </div>
+    </div>
+  {/if}
   {#if prefill}
     <div class="from" role="status" data-testid="from-proposal">
       <p><strong>From proposal <code>{prefill.id}</code></strong> ({prefill.kind}){#if prefill.kind !== 'principle'}: <em>{s.files.get(`maps/proposals/${prefill.id}.md`) && 'title' in s.files.get(`maps/proposals/${prefill.id}.md`)!.fm ? (s.files.get(`maps/proposals/${prefill.id}.md`)!.fm as { title: string }).title : ''}</em>{/if}</p>
@@ -189,7 +218,8 @@
       {/if}
       <label>Related principles <small>(set/slug, comma-separated)</small> <input bind:value={related} data-testid="edit-related" /></label>
       <label>Tags <small>(comma-separated)</small> <input bind:value={tags} data-testid="edit-tags" /></label>
-      <button type="submit" class="primary" disabled={busy || !title.trim()} data-testid="edit-save">{newIn ? 'Add principle' : 'Save'}</button>
+      <button type="submit" class="primary" disabled={busy || !title.trim()} data-testid="edit-save">{busy ? (newIn ? 'Adding…' : 'Saving…') : newIn ? 'Add principle' : 'Save'}</button>
+      {#if busy}<span role="status" class="hint" data-testid="saving">One commit to your repository; a few seconds.</span>{/if}
       {#if kind === 'principle' && !newIn && !otherSets.length}
         <p class="hint" data-testid="copy-needs-set">To copy this principle to another set, <a href="#/sets">create that set first</a>; a copy control appears here once the brain has more than one set.</p>
       {:else if otherSets.length}
@@ -210,7 +240,7 @@
     <p class="hint">Marginalia, corrections, and context. Saving makes this file yours ({(file!.fm as NotesFm).curated === 'human' ? 'it already is' : `it is ${(file!.fm as NotesFm).curated} now`}).</p>
     <form onsubmit={(e) => { e.preventDefault(); void save(); }}>
       <label>Notes <textarea bind:value={body} rows="12" data-testid="edit-body"></textarea></label>
-      <button type="submit" class="primary" disabled={busy} data-testid="edit-save">Save</button>
+      <button type="submit" class="primary" disabled={busy} data-testid="edit-save">{busy ? 'Saving…' : 'Save'}</button>
     </form>
   {:else}
     <h2>Edit source metadata</h2>
@@ -223,7 +253,7 @@
       <label>Locator <input bind:value={locator} /></label>
       <label>Origin <input bind:value={origin} /></label>
       <label>Tags <small>(comma-separated)</small> <input bind:value={tags} data-testid="edit-tags" /></label>
-      <button type="submit" class="primary" disabled={busy || !title.trim()} data-testid="edit-save">Save</button>
+      <button type="submit" class="primary" disabled={busy || !title.trim()} data-testid="edit-save">{busy ? 'Saving…' : 'Save'}</button>
     </form>
     <h3>Passage (read-only)</h3>
     <pre class="passage" data-testid="passage-readonly">{(file as BrainFile<SourceFm>).body}</pre>
@@ -238,8 +268,8 @@
   .grounds { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
   .chip { display: inline-flex; align-items: center; gap: 4px; cursor: default; }
   .chip button { min-height: 0; padding: 0 2px; border: 0; box-shadow: none; background: none; color: inherit; font-size: var(--fs); line-height: 1; }
-  .drift, .from { flex-direction: column; align-items: stretch; }
-  .from p, .drift p { margin: 0.25rem 0; }
+  .drift, .from, .confirm { flex-direction: column; align-items: stretch; }
+  .from p, .drift p, .confirm p { margin: 0.25rem 0; }
   .rationale { white-space: pre-wrap; }
   form button.primary { justify-self: center; }
 </style>

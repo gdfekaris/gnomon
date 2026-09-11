@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { FakeGitHub, readBrainBytes, serveGitHub } from './github-fake';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/#/settings');
@@ -116,4 +117,58 @@ test('with one set, the editor says how to get a copy control instead of hiding 
   await page.goto('/#/edit/principles/ps-g8xw/courage-before-comfort.md');
   await expect(page.getByTestId('copy-to')).toHaveCount(0);
   await expect(page.getByTestId('copy-needs-set')).toContainText('create that set first');
+});
+
+// The maintainer's phone: the app relaunched into the editor's URL and the proposal's draft was gone. The
+// fields must load once the brain is here, not once at mount, whether the route is reached by a tap or a
+// cold start.
+test('a proposal draft survives a cold start into the editor route', async ({ page }) => {
+  await page.goto('/#/sets/ps-7k2m/new-principle?from=P-20260905-001');
+  await expect(page.getByTestId('edit-title')).toHaveValue('Rise to the work');
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'New principle in Set 2 — Work' })).toBeVisible();
+  await expect(page.getByTestId('edit-title')).toHaveValue('Rise to the work');
+  await expect(page.getByTestId('edit-body')).toHaveValue(/Written from \[\[maps\/proposals\/P-20260905-001\]\]/);
+  await expect(page.getByTestId('ground-aurelius-meditations-5-1')).toBeVisible();
+});
+
+test('Back leaves an untouched editor at once and asks first when there are unsaved changes', async ({ page }) => {
+  await page.goto('/#/edit/principles/ps-g8xw/courage-before-comfort.md');
+  await expect(page.getByTestId('edit-title')).toHaveValue('Courage before comfort');
+  await page.getByTestId('edit-back').click();
+  await expect(page).toHaveURL(/#\/browse\/principles\/ps-g8xw\/courage-before-comfort\.md$/);
+
+  await page.getByTestId('edit-link').click();
+  await page.getByTestId('edit-title').fill('Courage before comfort, always');
+  await page.getByTestId('edit-back').click();
+  await expect(page.getByTestId('discard-confirm')).toContainText('changes that are not saved');
+  await expect(page).toHaveURL(/#\/edit\/principles\/ps-g8xw\/courage-before-comfort\.md$/);
+  await page.getByTestId('discard-no').click();
+  await expect(page.getByTestId('discard-confirm')).toHaveCount(0);
+  await expect(page.getByTestId('edit-title')).toHaveValue('Courage before comfort, always');
+  await page.getByTestId('edit-back').click();
+  await page.getByTestId('discard-yes').click();
+  await expect(page).toHaveURL(/#\/browse\/principles\/ps-g8xw\/courage-before-comfort\.md$/);
+  await expect(page.getByRole('heading', { name: 'Courage before comfort', exact: true })).toBeVisible();
+});
+
+// A commit to GitHub takes seconds; the button says so while it happens (over the fake, slowed down).
+test('the save button reports progress while the commit is in flight', async ({ page }) => {
+  const gh = await FakeGitHub.create(readBrainBytes());
+  const bridge = await serveGitHub(page, gh);
+  await page.goto('/#/settings');
+  await page.getByTestId('git-owner').fill('octocat');
+  await page.getByTestId('git-name').fill('brain');
+  await page.getByTestId('git-token').fill('test-token');
+  await page.getByRole('button', { name: 'Connect', exact: true }).click();
+  await expect(page.getByText('Connected: octocat/brain')).toBeVisible();
+  await page.goto('/#/sets/ps-7k2m/new-principle');
+  await expect(page.getByRole('heading', { name: 'New principle in Set 2 — Work' })).toBeVisible();
+  await page.getByTestId('edit-title').fill('Finish what you start');
+  bridge.latencyMs = 150;
+  await page.getByTestId('edit-save').click();
+  await expect(page.getByTestId('edit-save')).toHaveText('Adding…');
+  await expect(page.getByTestId('saving')).toBeVisible();
+  await expect(page).toHaveURL(/#\/browse\/principles\/ps-7k2m\/finish-what-you-start\.md$/, { timeout: 15_000 });
+  expect([...gh.commits.values()].map((c) => c.message)).toContain('Add principle: Finish what you start');
 });

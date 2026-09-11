@@ -220,8 +220,13 @@ Open at the close of Phase 3 (2026-09-11); none blocks a Phase 4 block.
   except for `POST /user/repos`; it paces content-generating requests
   under GitHub's 80/minute secondary limit (`CONTENT_RATE`, a constructor
   option the fake-backed tests set to unlimited) and maps that 403 to
-  `RateLimitError`. One nightly run costs about 260 of the hourly 500
-  writes: never dispatch it twice within an hour.
+  `RateLimitError`. Every request is sent with `cache: 'no-store'`:
+  GitHub answers REST reads with `max-age=60`, and a browser served the
+  ref and the commits listing from its own cache for a minute, so a
+  refresh after two quick commits landed on a head from before both
+  (2026-09-11, the maintainer's phone: a principle written from an
+  accepted proposal vanished from its set). One nightly run costs about
+  260 of the hourly 500 writes: never dispatch it twice within an hour.
 - The nightly (`nightly.yml`, 04:17 UTC and on demand) seeds
   `gdfekaris/gnomon-scratch` with a root commit and force-moves main to it
   before each contract test; temporary repositories are

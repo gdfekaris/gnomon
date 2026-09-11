@@ -15,6 +15,7 @@
   const s = $derived(snapshot.current);
   const groups = $derived(s ? groupProposals(s) : []);
   let busy = $state<string | null>(null);
+  let acting = $state<'accepted' | 'declined' | null>(null);
   let error = $state<string | null>(null);
   let showDecided = $state<Record<string, boolean>>({});
   // Decided proposals stay in the brain as the record of what was accepted or declined (schema §4.7), but the
@@ -26,6 +27,7 @@
   async function act(p: BrainFile<ProposalFm>, status: 'accepted' | 'declined') {
     const id = proposalId(p.path);
     busy = id;
+    acting = status;
     error = null;
     try {
       await decide(brain, id, status);
@@ -37,8 +39,10 @@
       error = describeError(e);
     } finally {
       busy = null;
+      acting = null;
     }
   }
+  const acceptLabel = (p: ProposalFm) => (p.kind === 'principle' ? 'Accept and write it' : p.kind === 'amendment' || p.kind === 'link' ? 'Accept and edit the principle' : p.kind === 'tag' && p.target ? 'Accept and edit the tags' : 'Accept');
   const targetHref = (p: ProposalFm) => (p.target ? (p.kind === 'tag' ? browseHref(`sources/${p.target}/raw.md`) : browseHref(`principles/${p.target}.md`)) : null);
 </script>
 
@@ -62,8 +66,9 @@
           </p>
           {#if p.body}<MarkdownView body={p.body} path={p.path} />{/if}
           <div class="row">
-            <button onclick={() => act(p, 'accepted')} disabled={busy !== null} data-testid="accept">{p.fm.kind === 'principle' ? 'Accept and write it' : p.fm.kind === 'amendment' || p.fm.kind === 'link' ? 'Accept and edit the principle' : p.fm.kind === 'tag' && p.fm.target ? 'Accept and edit the tags' : 'Accept'}</button>
-            <button onclick={() => act(p, 'declined')} disabled={busy !== null} data-testid="decline">Decline</button>
+            <button onclick={() => act(p, 'accepted')} disabled={busy !== null} data-testid="accept">{busy === id && acting === 'accepted' ? 'Accepting…' : acceptLabel(p.fm)}</button>
+            <button onclick={() => act(p, 'declined')} disabled={busy !== null} data-testid="decline">{busy === id && acting === 'declined' ? 'Declining…' : 'Decline'}</button>
+            {#if busy === id}<span role="status" class="hint" data-testid="deciding">One commit to your repository; a few seconds.</span>{/if}
           </div>
         </article>
       {:else}
@@ -77,7 +82,11 @@
               {@const became = writtenAs(s, p.path)}
               <li data-testid="proposal-{proposalId(p.path)}">
                 <span class="kind">{p.fm.kind}</span> {p.fm.title} <small>· <span data-testid="status">{p.fm.status}</span></small>
-                {#if became.length}<span> → written as {#each became as f (f.path)}<a href={browseHref(f.path)} data-testid="written-as">{linkLabel(f.path, s)}</a> {/each}</span>{/if}
+                {#if became.length}<span> → written as {#each became as f (f.path)}<a href={browseHref(f.path)} data-testid="written-as">{linkLabel(f.path, s)}</a> {/each}</span>
+                {:else if p.fm.status === 'accepted' && p.fm.kind === 'principle'}
+                  <!-- Accepted, but nothing in the brain points back at it: the editor was left before the principle was added. -->
+                  <span> · not written yet: <a href={acceptanceRoute(p) ?? '#/sets'} data-testid="write-it">Write it</a></span>
+                {/if}
                 <a href={browseHref(p.path)}><small>file</small></a>
               </li>
             {/each}

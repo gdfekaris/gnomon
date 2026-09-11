@@ -63,3 +63,36 @@ test('a filing with an attachment shows it in the review by name and size', asyn
   await filing.getByTestId('review-panel').getByRole('link', { name: 'original.png' }).click();
   await expect(page.getByTestId('attachment-image')).toBeVisible();
 });
+
+// Accepting a principle proposal decides it at once; the principle itself is written in the editor
+// afterwards. Leaving that editor without adding it must not strand the proposal: the decided list
+// says it is not written yet and offers the pre-filled editor again.
+test('an accepted principle proposal that was never written offers "Write it" from the decided list', async ({ page }) => {
+  await page.goto('/#/proposals');
+  const work = page.getByTestId('group-ps-7k2m');
+  await work.getByTestId('proposal-P-20260905-001').getByTestId('accept').click();
+  await expect(page.getByTestId('edit-title')).toHaveValue('Rise to the work');
+  // An untouched draft is left without a question.
+  await page.getByTestId('edit-back').click();
+  await expect(page).toHaveURL(/#\/sets$/);
+  await expect(page.getByTestId('set-ps-7k2m')).not.toContainText('Rise to the work');
+
+  await page.goto('/#/proposals');
+  await expect(work.getByRole('heading', { level: 3 })).toContainText('1 open');
+  await work.getByTestId('toggle-decided').click();
+  const decided = work.getByTestId('proposal-P-20260905-001');
+  await expect(decided.getByTestId('status')).toHaveText('accepted');
+  await expect(decided).toContainText('not written yet');
+  await decided.getByTestId('write-it').click();
+  await expect(page).toHaveURL(/#\/sets\/ps-7k2m\/new-principle\?from=P-20260905-001$/);
+  await expect(page.getByTestId('edit-title')).toHaveValue('Rise to the work');
+  await page.getByTestId('edit-save').click();
+  await expect(page).toHaveURL(/rise-to-the-work\.md$/);
+
+  await page.goto('/#/proposals');
+  await work.getByTestId('toggle-decided').click();
+  await expect(decided.getByTestId('written-as')).toHaveText('Rise to the work');
+  await expect(decided.getByTestId('write-it')).toHaveCount(0);
+  await page.goto('/#/sets');
+  await expect(page.getByTestId('set-ps-7k2m')).toContainText('Rise to the work');
+});

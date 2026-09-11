@@ -17,18 +17,27 @@ async function pair(seed = readBrainBytes()) {
 driverContract('GitHubDriver(FakeGitHub)', async (seed) => (await pair(seed)).driver);
 
 describe('GitHubDriver against the fake API (spec §6.2)', () => {
-  it('sends the token, the JSON accept header, and the API version on every request', async () => {
+  it('sends the token, the JSON accept header, and the API version on every request, and never reads from the HTTP cache', async () => {
     const gh = await FakeGitHub.create(readBrainBytes());
     let seen: Headers | undefined;
+    const modes = new Set<string | undefined>();
     const spy: typeof fetch = (input, init) => {
       seen = new Headers(init?.headers);
+      modes.add(init?.cache);
       return gh.fetch(input, init);
     };
-    const driver = new GitHubDriver({ owner: 'octocat', name: 'brain', token: 'test-token', fetch: spy });
+    const driver = new GitHubDriver({ owner: 'octocat', name: 'brain', token: 'test-token', fetch: spy, contentRate: UNPACED });
     await driver.head();
     expect(seen!.get('authorization')).toBe('Bearer test-token');
     expect(seen!.get('accept')).toBe('application/vnd.github+json');
     expect(seen!.get('x-github-api-version')).toBe('2022-11-28');
+    // GitHub's `max-age=60` would otherwise let a browser answer the ref and the commits listing
+    // from its cache for a minute after any read, so a refresh could land on a head from before
+    // the app's own last commits (seen on the maintainer's phone as a principle that vanished).
+    await driver.commit({ message: 'x', expectedHead: await driver.head(), writes: [{ path: 'a.md', text: 'a' }], deletes: [] });
+    await driver.history({ limit: 1 });
+    await loadSnapshot(driver);
+    expect([...modes]).toEqual(['no-store']);
   });
 
   it('loads a 500-file brain in one tree call plus at most six GraphQL batches', async () => {
