@@ -123,7 +123,8 @@ from the maintainer or a later phase. The live human test at the end of
 this phase is the natural moment for the first three and P2-live.
 
 - [x] **P1-13b. `GitHubDriver` against real GitHub** (S) — *done
-  2026-09-10:* `.github/workflows/nightly.yml` (04:17 UTC daily and on
+  2026-09-11, first fully green run 34556068934 (18 of 18, four
+  minutes):* `.github/workflows/nightly.yml` (04:17 UTC daily and on
   demand) runs `storage/test/github-live.test.ts`, which is skipped unless
   `GNOMON_TEST_TOKEN` and `GNOMON_TEST_REPO` are set. It resets
   `gdfekaris/gnomon-scratch` to the reference fixture before each contract
