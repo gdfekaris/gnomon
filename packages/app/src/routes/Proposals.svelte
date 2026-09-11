@@ -17,6 +17,11 @@
   let busy = $state<string | null>(null);
   let error = $state<string | null>(null);
   let showDecided = $state<Record<string, boolean>>({});
+  // Decided proposals stay in the brain as the record of what was accepted or declined (schema §4.7), but the
+  // list shows the latest few first; the rest are a tap away. Newest decision first.
+  const RECENT_DECIDED = 5;
+  let allDecided = $state<Record<string, boolean>>({});
+  const recentFirst = (list: BrainFile<ProposalFm>[]) => [...list].sort((a, b) => (a.fm.updated < b.fm.updated ? 1 : a.fm.updated > b.fm.updated ? -1 : a.path < b.path ? 1 : -1));
 
   async function act(p: BrainFile<ProposalFm>, status: 'accepted' | 'declined') {
     const id = proposalId(p.path);
@@ -68,7 +73,7 @@
         <button class="quiet" onclick={() => (showDecided = { ...showDecided, [g.key]: !showDecided[g.key] })} data-testid="toggle-decided">{showDecided[g.key] ? 'Hide' : 'Show'} {g.decided.length} decided</button>
         {#if showDecided[g.key]}
           <ul class="decided" data-testid="decided-{g.key}">
-            {#each g.decided as p (p.path)}
+            {#each (allDecided[g.key] ? recentFirst(g.decided) : recentFirst(g.decided).slice(0, RECENT_DECIDED)) as p (p.path)}
               {@const became = writtenAs(s, p.path)}
               <li data-testid="proposal-{proposalId(p.path)}">
                 <span class="kind">{p.fm.kind}</span> {p.fm.title} <small>· <span data-testid="status">{p.fm.status}</span></small>
@@ -77,6 +82,9 @@
               </li>
             {/each}
           </ul>
+          {#if g.decided.length > RECENT_DECIDED && !allDecided[g.key]}
+            <button class="quiet" onclick={() => (allDecided = { ...allDecided, [g.key]: true })} data-testid="all-decided">Show all {g.decided.length} decided</button>
+          {/if}
         {/if}
       {/if}
     </section>
