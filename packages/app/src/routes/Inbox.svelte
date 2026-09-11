@@ -93,7 +93,18 @@
   // again); only its commit remains in history. The list leaves those out unless asked.
   let showRejected = $state(false);
   const rejectedCount = $derived(inbox.filings.filter((f) => f.state === 'rejected').length);
-  const shown = $derived(showRejected ? inbox.filings : inbox.filings.filter((f) => f.state !== 'rejected'));
+  // Ratified filings are done; the newest few stay in view and the rest are a tap away. History is newest first.
+  const RECENT_RATIFIED = 5;
+  let allRatified = $state(false);
+  const ratifiedCount = $derived(inbox.filings.filter((f) => f.state === 'ratified').length);
+  const shown = $derived.by(() => {
+    let ratifiedSeen = 0;
+    return inbox.filings.filter((f) => {
+      if (f.state === 'rejected') return showRejected;
+      if (f.state === 'ratified') return allRatified || ratifiedSeen++ < RECENT_RATIFIED;
+      return true;
+    });
+  });
 </script>
 
 <h2>Inbox</h2>
@@ -138,11 +149,18 @@
   <section>
     <h3>Recent filings</h3>
     {#if inbox.loading && !inbox.filings.length}<p>Loading…</p>{/if}
-    {#if rejectedCount}
+    {#if rejectedCount || ratifiedCount > RECENT_RATIFIED}
       <p class="hint">
-        <button type="button" class="link" onclick={() => (showRejected = !showRejected)} data-testid="toggle-rejected">
-          {showRejected ? 'Hide' : 'Show'} {rejectedCount} rejected
-        </button>
+        {#if ratifiedCount > RECENT_RATIFIED}
+          <button type="button" class="link" onclick={() => (allRatified = !allRatified)} data-testid="toggle-ratified">
+            {allRatified ? `Show only the ${RECENT_RATIFIED} newest ratified` : `Show all ${ratifiedCount} ratified`}
+          </button>
+        {/if}
+        {#if rejectedCount}
+          <button type="button" class="link" onclick={() => (showRejected = !showRejected)} data-testid="toggle-rejected">
+            {showRejected ? 'Hide' : 'Show'} {rejectedCount} rejected
+          </button>
+        {/if}
       </p>
     {/if}
     <ul class="filings" data-testid="filings">
