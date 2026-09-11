@@ -190,7 +190,9 @@
       <label>Related principles <small>(set/slug, comma-separated)</small> <input bind:value={related} data-testid="edit-related" /></label>
       <label>Tags <small>(comma-separated)</small> <input bind:value={tags} data-testid="edit-tags" /></label>
       <button type="submit" class="primary" disabled={busy || !title.trim()} data-testid="edit-save">{newIn ? 'Add principle' : 'Save'}</button>
-      {#if otherSets.length}
+      {#if kind === 'principle' && !newIn && !otherSets.length}
+        <p class="hint" data-testid="copy-needs-set">To copy this principle to another set, <a href="#/sets">create that set first</a>; a copy control appears here once the brain has more than one set.</p>
+      {:else if otherSets.length}
         <div class="row copy" data-testid="copy-to">
           <label>Copy to another set
             <select bind:value={copyTo} data-testid="copy-set">

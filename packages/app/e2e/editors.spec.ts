@@ -108,3 +108,12 @@ test('copy a principle to another set, then delete the original', async ({ page 
   await page.goto('/#/settings');
   await expect(page.getByTestId('refusal-count')).toHaveText('0 refusals');
 });
+
+test('with one set, the editor says how to get a copy control instead of hiding it', async ({ page }) => {
+  // Drop Set 2 from the demo brain: only Set 1 remains.
+  await page.goto('/#/settings?demo-omit=principles/ps-7k2m/_set.md,principles/ps-7k2m/say-the-hard-thing-first.md,principles/ps-7k2m/write-to-find-out.md');
+  await page.getByTestId('use-demo').click();
+  await page.goto('/#/edit/principles/ps-g8xw/courage-before-comfort.md');
+  await expect(page.getByTestId('copy-to')).toHaveCount(0);
+  await expect(page.getByTestId('copy-needs-set')).toContainText('create that set first');
+});
