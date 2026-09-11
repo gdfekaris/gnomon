@@ -85,7 +85,21 @@ test('an image attachment previews inline and an HTML attachment is shown as sou
 
 // Browse is for reading what was collected (maintainer, 2026-09-11): sources by author, work, and title,
 // with the tag filter. Sets, captures, and proposals have their own screens; the nudge lives on Capture.
-test('Browse lists sources by author and nothing else', async ({ page }) => {
+test('Browse lists sources newest first, oldest or by author on request, and nothing else', async ({ page }) => {
+  // Newest first by default: `created` is when a source was filed. The author rides in the detail line.
+  const titles = page.getByTestId('sources').locator('.title');
+  await expect(page.getByTestId('sort-newest')).toHaveAttribute('aria-pressed', 'true');
+  await expect(titles).toHaveText(['The work of a human being', 'Attention as generosity', "To find out what I'm thinking", 'Retire into thyself']);
+  await expect(page.getByTestId('sources').locator('.detail').first()).toHaveText('Marcus Aurelius, Meditations (180) · agent-proposed');
+  await expect(page.locator('main h3')).toHaveCount(0);
+  await page.getByTestId('sort-oldest').click();
+  await expect(titles).toHaveText(['Retire into thyself', "To find out what I'm thinking", 'Attention as generosity', 'The work of a human being']);
+  // The choice is kept on the device.
+  await page.reload();
+  await expect(page.getByTestId('sort-oldest')).toHaveAttribute('aria-pressed', 'true');
+  await expect(titles.first()).toHaveText('Retire into thyself');
+
+  await page.getByTestId('sort-author').click();
   await expect(page.locator('main h3')).toHaveText(['Joan Didion', 'Marcus Aurelius', 'Simone Weil']);
   const aurelius = page.getByTestId('sources').locator('ul').nth(1).locator('li');
   await expect(aurelius.locator('.title')).toHaveText(['Retire into thyself', 'The work of a human being']);

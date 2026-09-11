@@ -18,9 +18,11 @@ export interface Prefs {
   mode: 'github' | 'demo' | null;
   /** the AI provider picked last, restored at launch while its key is saved */
   provider: 'mock' | 'anthropic' | 'openrouter';
+  /** how Browse orders the sources: by filing date, newest first by default, or grouped by author */
+  browseSort: 'newest' | 'oldest' | 'author';
 }
 
-const DEFAULT_PREFS: Prefs = { theme: 'system', skin: 'mono', budgetPercent: 60, setDescriptionPlacement: 'context', lastSelectedSets: [], mode: null, provider: 'mock' };
+const DEFAULT_PREFS: Prefs = { theme: 'system', skin: 'mono', budgetPercent: 60, setDescriptionPlacement: 'context', lastSelectedSets: [], mode: null, provider: 'mock', browseSort: 'newest' };
 
 export const settings = $state({
   loaded: false,
