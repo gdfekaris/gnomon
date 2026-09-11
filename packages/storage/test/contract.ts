@@ -127,7 +127,10 @@ export function driverContract(name: string, factory: DriverFactory, options: Co
       const c2 = await d.commit({ message: 'two', expectedHead: c1.sha, writes: [{ path: 'b.md', text: '2' }], deletes: [] });
       const c3 = await d.commit({ message: 'three', expectedHead: c2.sha, writes: [{ path: 'a.md', text: '3' }], deletes: [] });
       const all = await d.history({ limit: 10 });
-      expect(all.map((c) => c.message)).toEqual(['three', 'two', 'one', all[3]!.message]);
+      // The seed's own history is the driver's business (one commit in memory, a real repository's past on GitHub).
+      expect(all.slice(0, 3).map((c) => c.message)).toEqual(['three', 'two', 'one']);
+      expect(all.length).toBeGreaterThanOrEqual(4);
+      expect(all.length).toBeLessThanOrEqual(10);
       expect(all[0]).toMatchObject({ sha: c3.sha, parents: [c2.sha] });
       expect(all[0]!.date).toMatch(/^\d{4}-\d{2}-\d{2}T/);
       expect((await d.history({ limit: 2 })).map((c) => c.sha)).toEqual([c3.sha, c2.sha]);
