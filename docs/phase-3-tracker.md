@@ -161,8 +161,11 @@ this phase is the natural moment for the first three and P2-live.
   `deploy` job (`actions/deploy-pages`) publishes it on pushes to main.
   The base path is `/gnomon/`; because the maintainer's user site has a
   custom domain, GitHub serves the app at `gdfekaris.com/gnomon/` and
-  `gdfekaris.github.io/gnomon/` redirects there. Still to do on a real
-  device, in the smoke checklist: the iPhone install and the update toast.
+  `gdfekaris.github.io/gnomon/` redirects there. "Enforce HTTPS" was off
+  on the repository's Pages settings, so the maintainer's first iPhone
+  visit was plain http (no service worker, no install); turned on
+  2026-09-11 and http now 301s to https. Still to do on a real device, in
+  the smoke checklist: the iPhone install and the update toast.
 - [ ] **P1-19. Publish `gnomon-cli`** (S) — on hold with 18b. `gnomon-cli`
   was free on npm on 2026-09-07. Needs an npm account with 2FA, then a
   local `npm login` for the first release or a granular publish token as a
