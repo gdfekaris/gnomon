@@ -117,7 +117,7 @@
       {#each captures as c (c.path)}
         <li><a href={browseHref(c.path)}><code>{c.path.slice('inbox/'.length, -3)}</code></a>{#if c.fm.attachment}{' · attachment'}{/if}{#if c.fm.note}{` — ${c.fm.note}`}{/if}</li>
       {:else}
-        <li class="empty">Nothing waiting. <a href="#/capture">Capture something.</a></li>
+        <li class="empty">Nothing waiting.</li>
       {/each}
     </ul>
     <div class="row">
