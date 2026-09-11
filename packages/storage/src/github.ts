@@ -50,6 +50,8 @@ export class GitHubDriver implements StorageDriver {
   private readonly rate: { perWindow: number; windowMs: number };
   /** send times of recent content-generating requests, for `rate` */
   private readonly sent: number[] = [];
+  /** the last commit this driver made and what it was made on: a ref read that still says the parent is a lagging read */
+  private lastWrite: { parent: string; sha: string } | null = null;
 
   constructor(opts: GitHubDriverOptions) {
     this.owner = opts.owner;
@@ -158,6 +160,10 @@ export class GitHubDriver implements StorageDriver {
 
   async head(): Promise<string> {
     const ref = await this.request<{ object: { sha: string } }>('GET', `/git/ref/heads/${this.branch}`);
+    // Real GitHub can serve the previous sha for a while after a successful ref update. The update was
+    // confirmed by the PATCH, so a read that still names the parent of this driver's own last commit is
+    // behind, not a moved head; anything else (another device's commit, a revert) is taken as read.
+    if (this.lastWrite && ref.object.sha === this.lastWrite.parent) return this.lastWrite.sha;
     return ref.object.sha;
   }
 
@@ -239,6 +245,7 @@ export class GitHubDriver implements StorageDriver {
       }
       throw e;
     }
+    this.lastWrite = { parent, sha: commit.sha };
     await this.settleRef(commit.sha);
     for (const e of entries) {
       if (e.sha === null) this.treeCache.delete(e.path);
@@ -248,18 +255,13 @@ export class GitHubDriver implements StorageDriver {
   }
 
   /**
-   * Real GitHub can answer `GET /git/ref` with the previous sha for a moment
-   * after a successful `PATCH` (seen in the nightly run), and the commits
-   * listing can lag too. The update itself is confirmed by the PATCH; this
-   * only waits until reads agree, so a caller's next head(), refresh(), or
+   * The commits listing can lag a successful ref update, as the ref itself
+   * does (seen in the nightly run; head() covers the ref through lastWrite).
+   * This waits until the listing shows the commit, so a caller's next
    * history() sees the commit it was just handed.
    */
   private async settleRef(sha: string): Promise<void> {
-    for (let i = 0; i < REF_SETTLE.tries; i++) {
-      if ((await this.head()) === sha) break;
-      await sleep(REF_SETTLE.delayMs);
-    }
-    // The commits listing (history, hence the filings list) is served separately and can lag the ref.
+    // head() already answers with this commit while the ref lags (lastWrite); the listing has no such cover.
     for (let i = 0; i < REF_SETTLE.tries; i++) {
       if ((await this.history({ limit: 1 }))[0]?.sha === sha) return;
       await sleep(REF_SETTLE.delayMs);

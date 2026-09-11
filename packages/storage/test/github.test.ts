@@ -46,7 +46,7 @@ describe('GitHubDriver against the fake API (spec §6.2)', () => {
     expect(validateSnapshot(s)).toEqual([]);
   });
 
-  it('commit is the five-step Git Data sequence, a non-forced ref update, then a ref read and a history read to see it', async () => {
+  it('commit is the five-step Git Data sequence, a non-forced ref update, then a history read to see it', async () => {
     const { gh, driver } = await pair();
     const head = await driver.head();
     gh.requests.length = 0;
@@ -59,7 +59,6 @@ describe('GitHubDriver against the fake API (spec §6.2)', () => {
       'POST /git/trees',
       'POST /git/commits',
       'PATCH /git/refs/heads/main',
-      'GET /git/ref/heads/main',
       'GET /commits?sha=main&per_page=1',
     ]);
   });
@@ -78,18 +77,28 @@ describe('GitHubDriver against the fake API (spec §6.2)', () => {
     expect(await driver.head()).toBe(moved);
   });
 
-  it('commit rereads the ref and the commits listing until both show its update (real GitHub lags for a moment)', async () => {
+  it('after its own commit the driver reports that head however long the ref read lags, and waits for the commits listing', async () => {
     const { gh, driver } = await pair();
     const head = await driver.head();
-    gh.staleRefReads = 3;
+    gh.staleRefReads = 1000;
     gh.staleHistoryReads = 2;
     gh.requests.length = 0;
-    const { sha } = await driver.commit({ message: 'x', expectedHead: head, writes: [{ path: 'a.md', text: 'a' }], deletes: [] });
+    const { sha } = await driver.commit({ message: 'Ratify: x', expectedHead: head, writes: [{ path: 'a.md', text: 'a' }], deletes: [] });
     expect(await driver.head()).toBe(sha);
     expect((await driver.history({ limit: 1 }))[0]!.sha).toBe(sha);
-    expect(gh.requests.filter((r) => r.path.endsWith('/git/ref/heads/main')).length).toBe(1 + 4 + 1);
     expect(gh.requests.filter((r) => r.path.startsWith('/repos/octocat/brain/commits?')).length).toBe(3 + 1);
+    // A refresh right after the commit sees the commit's content, not the parent's.
+    const s = await loadSnapshot(driver);
+    expect(s.head).toBe(sha);
     expect((await driver.list()).some((e) => e.path === 'a.md')).toBe(true);
+    // The next commit builds on the real head, so it lands.
+    const next = await driver.commit({ message: 'y', expectedHead: sha, writes: [{ path: 'b.md', text: 'b' }], deletes: [] });
+    expect(await driver.head()).toBe(next.sha);
+    // A head moved by someone else is reported as such.
+    gh.staleRefReads = 0;
+    gh.stale = undefined;
+    const moved = await gh.externalCommit({ 'race.md': 'other device\n' });
+    expect(await driver.head()).toBe(moved);
   });
 
   it('a dropped connection is retried before it is a NetworkError; creating a repository never is', async () => {

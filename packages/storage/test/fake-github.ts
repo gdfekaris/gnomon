@@ -43,7 +43,7 @@ export class FakeGitHub {
   beforePatch: (() => Promise<void>) | undefined;
   /** real GitHub can serve the previous sha for a moment after a ref update: this many GET ref reads after each PATCH answer with it */
   staleRefReads = 0;
-  private stale: { key: string; previous: string; remaining: number } | undefined;
+  stale: { key: string; previous: string; remaining: number } | undefined;
   /** likewise the commits listing: this many GET /commits after each PATCH list from the previous head */
   staleHistoryReads = 0;
   private staleHistory: { key: string; previous: string; remaining: number } | undefined;
