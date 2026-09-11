@@ -277,6 +277,16 @@ this phase is the natural moment for the first three and P2-live.
   `public/icons/icon.svg`. The design canvas working files stay in
   `docs/design/` (regenerate the seeded page from them if the canvas
   needs changing).
+- Settings persistence is `services/persist.ts`: IndexedDB (idb-keyval,
+  the spec §10.2 keys) with a localStorage mirror written first on every
+  save and read when IndexedDB throws, hangs (four-second cap, three
+  tries), or answers empty. Added 2026-09-11 after the maintainer's
+  installed iPhone app relaunched on the Welcome screen every time; the
+  cause on the device is not yet confirmed, so Settings → About now shows
+  diagnostics (settings source, last storage failure, persistence, brain
+  head or load error, service worker) and the Welcome screen names a
+  storage failure. If the mirror alone proves reliable, dropping IndexedDB
+  is a spec §10.2 change for the maintainer.
 - Vite inlines assets under 4 KB as `data:` URLs in a production build,
   and the CSP's connect-src has no `data:`, so never `fetch` an imported
   `?url` asset: decode it when it is inline (the demo loader does). The

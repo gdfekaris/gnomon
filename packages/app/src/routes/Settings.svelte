@@ -8,6 +8,15 @@
   import { route } from '../lib/router.svelte';
   import { session } from '../lib/stores/session.svelte';
   import { settings, saveGit, savePrefs, saveProviderKeys } from '../lib/stores/settings.svelte';
+  import { snapshot } from '../lib/stores/snapshot.svelte';
+
+  // Diagnostics for the live human test: what the device kept and how the app is running.
+  const standalone = typeof matchMedia !== 'undefined' && (matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true);
+  let swState = $state('unsupported');
+  $effect(() => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+    swState = navigator.serviceWorker.controller ? 'active' : 'not controlling this page';
+  });
 
   let owner = $state(settings.git?.owner ?? '');
   let name = $state(settings.git?.name ?? '');
@@ -147,6 +156,18 @@
 
 <section class="about">
   <p class="hint">Gnomon {pkg.version}</p>
+  <ul class="hint diagnostics" data-testid="diagnostics">
+    <li>Running {standalone ? 'installed, from the Home Screen' : 'in the browser'}.</li>
+    <li>
+      Settings at launch came from {settings.storage.source === 'indexeddb' ? 'IndexedDB' : settings.storage.source === 'mirror' ? 'the localStorage mirror' : 'nowhere (nothing was saved)'};
+      storage {settings.storage.persistent === null ? 'persistence unknown' : settings.storage.persistent ? 'marked persistent' : 'not marked persistent'}.
+      {#if settings.storage.error}Last storage failure: {settings.storage.error}{/if}
+    </li>
+    <li>
+      Brain: {#if session.driver}{session.label}, {snapshot.current ? `at ${snapshot.current.head.slice(0, 7)}` : 'no snapshot'}{#if snapshot.error}, last load failed: {snapshot.error}{/if}{:else}none connected{/if}.
+    </li>
+    <li>Service worker {swState}.</li>
+  </ul>
 </section>
 
 {#if error}<p class="error" role="alert">{error}</p>{/if}
@@ -157,4 +178,6 @@
   input:not([type='range']), select { max-width: 24rem; margin-top: 0.25rem; }
   input[type='range'] { max-width: 24rem; display: block; }
   .about { border-top: var(--bw, 1px) solid var(--edge); padding-top: 0.75rem; }
+  .diagnostics { padding-left: 1.1rem; margin: 0.5rem 0 0; }
+  .diagnostics li { margin: 0.2rem 0; overflow-wrap: anywhere; }
 </style>

@@ -164,6 +164,11 @@
     A second brain that lives in a private GitHub repository you own: plain files you can read anywhere, and that
     whichever AI you choose can reason from. This app captures into it from your phone.
   </p>
+  {#if settings.storage.error && !session.driver}
+    <p class="error" role="alert" data-testid="storage-error">
+      This device could not read what was saved earlier ({settings.storage.error}). Settings → About shows more.
+    </p>
+  {/if}
   {#if session.driver}
     <p class="hint" data-testid="already-connected">
       You are connected to <strong>{session.label}</strong>. Starting over here replaces that connection on this device; the brain itself is untouched.

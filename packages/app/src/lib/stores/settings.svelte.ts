@@ -1,7 +1,10 @@
-// settings — spec §10.2, §10.3. Persisted through idb-keyval under the
-// spec's keys. No brain content ever lands here.
+// settings — spec §10.2, §10.3. Persisted on the device through
+// `services/persist.ts` (IndexedDB under the spec's keys, with a
+// localStorage mirror for launches where IndexedDB fails). No brain
+// content ever lands here.
 
 import { get, set, del } from 'idb-keyval';
+import { SettingsPersistence, type StorageDiagnostics } from '../services/persist';
 
 export interface GitSettings { token: string; owner: string; name: string; }
 export interface Prefs {
@@ -23,54 +26,66 @@ export const settings = $state({
   anthropicKey: '',
   openrouterKey: '',
   prefs: { ...DEFAULT_PREFS } as Prefs,
+  /** where settings came from at launch and the last storage failure (shown in Settings → About) */
+  storage: { source: 'none', error: null, persistent: null as boolean | null } as StorageDiagnostics & { persistent: boolean | null },
 });
 
 const hasIdb = () => typeof indexedDB !== 'undefined';
+const mirror = (): Storage | null => {
+  try {
+    return typeof localStorage === 'undefined' ? null : localStorage;
+  } catch {
+    return null;
+  }
+};
+const store = new SettingsPersistence(hasIdb() ? { get, set, del } : null, mirror());
 
 export async function loadSettings(): Promise<void> {
-  if (hasIdb()) {
-    try {
-      const [token, repo, anthropic, openrouter, prefs] = await Promise.all([
-        get<string>('git.token'), get<{ owner: string; name: string }>('git.repo'),
-        get<string>('provider.anthropic.key'), get<string>('provider.openrouter.key'), get<Partial<Prefs>>('prefs'),
-      ]);
-      settings.git = token && repo ? { token, owner: repo.owner, name: repo.name } : null;
-      settings.anthropicKey = anthropic ?? '';
-      settings.openrouterKey = openrouter ?? '';
-      settings.prefs = { ...DEFAULT_PREFS, ...(prefs ?? {}) };
-      applyTheme(settings.prefs.theme, settings.prefs.skin);
-    } catch {
-      // a blocked or evicted store means "signed out" (spec §10.3)
-    }
-  }
+  const saved = await store.readAll();
+  const token = saved['git.token'] as string | undefined;
+  const repo = saved['git.repo'] as { owner: string; name: string } | undefined;
+  settings.git = token && repo ? { token, owner: repo.owner, name: repo.name } : null;
+  settings.anthropicKey = (saved['provider.anthropic.key'] as string | undefined) ?? '';
+  settings.openrouterKey = (saved['provider.openrouter.key'] as string | undefined) ?? '';
+  settings.prefs = { ...DEFAULT_PREFS, ...((saved['prefs'] as Partial<Prefs> | undefined) ?? {}) };
+  applyTheme(settings.prefs.theme, settings.prefs.skin);
+  settings.storage = { ...store.diagnostics, persistent: null };
   settings.loaded = true;
+  // Ask the browser not to evict this origin's storage under pressure (best effort; iOS decides for itself).
+  try {
+    if (typeof navigator !== 'undefined' && navigator.storage?.persist) settings.storage.persistent = await navigator.storage.persist();
+  } catch {
+    // unsupported: stays null
+  }
+}
+
+async function write(key: Parameters<SettingsPersistence['write']>[0], value: unknown): Promise<void> {
+  await store.write(key, value);
+  settings.storage.error = store.diagnostics.error;
 }
 
 export async function saveGit(git: GitSettings | null): Promise<void> {
   settings.git = git;
-  if (!hasIdb()) return;
-  if (git) {
-    await set('git.token', git.token);
-    await set('git.repo', { owner: git.owner, name: git.name });
-  } else {
-    await del('git.token');
-    await del('git.repo');
-  }
+  await write('git.token', git?.token);
+  await write('git.repo', git ? { owner: git.owner, name: git.name } : undefined);
 }
 
 export async function saveProviderKeys(keys: { anthropic?: string; openrouter?: string }): Promise<void> {
-  if (keys.anthropic !== undefined) settings.anthropicKey = keys.anthropic;
-  if (keys.openrouter !== undefined) settings.openrouterKey = keys.openrouter;
-  if (!hasIdb()) return;
-  if (keys.anthropic !== undefined) await (keys.anthropic ? set('provider.anthropic.key', keys.anthropic) : del('provider.anthropic.key'));
-  if (keys.openrouter !== undefined) await (keys.openrouter ? set('provider.openrouter.key', keys.openrouter) : del('provider.openrouter.key'));
+  if (keys.anthropic !== undefined) {
+    settings.anthropicKey = keys.anthropic;
+    await write('provider.anthropic.key', keys.anthropic || undefined);
+  }
+  if (keys.openrouter !== undefined) {
+    settings.openrouterKey = keys.openrouter;
+    await write('provider.openrouter.key', keys.openrouter || undefined);
+  }
 }
 
 export async function savePrefs(patch: Partial<Prefs>): Promise<void> {
   settings.prefs = { ...settings.prefs, ...patch };
   applyTheme(settings.prefs.theme, settings.prefs.skin);
   // $state proxies cannot be structured-cloned into IndexedDB; store a plain copy.
-  if (hasIdb()) await set('prefs', $state.snapshot(settings.prefs));
+  await write('prefs', $state.snapshot(settings.prefs));
 }
 
 /** Theme: `system` follows the OS; light and dark are forced through `data-theme` and `color-scheme`. The skin rides on `data-skin`. */
