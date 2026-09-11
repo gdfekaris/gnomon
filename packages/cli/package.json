@@ -22,7 +22,7 @@
   ],
   "type": "module",
   "bin": {
-    "gnomon": "./dist/gnomon.js"
+    "gnomon": "dist/gnomon.js"
   },
   "files": [
     "dist"

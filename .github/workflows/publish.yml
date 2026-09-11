@@ -1,0 +1,37 @@
+name: publish
+
+# Spec §18: publish gnomon-cli on a release tag. Trusted publishing (npm's
+# OIDC exchange with GitHub Actions) means no npm token is stored anywhere;
+# npmjs.com trusts this repository and this workflow filename, and attaches
+# provenance to the release. Tag `vX.Y.Z` must equal packages/cli's version.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  npm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      # Trusted publishing needs npm 11.5.1 or later.
+      - run: npm install -g npm@latest
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test -w packages/core -w packages/cli
+      - name: The tag names the CLI's version
+        run: |
+          v=$(node -p "require('./packages/cli/package.json').version")
+          test "${GITHUB_REF_NAME}" = "v${v}" || { echo "tag ${GITHUB_REF_NAME} but packages/cli is ${v}"; exit 1; }
+      - run: npm run build:cli
+      - run: npm run validate:template && npm run validate:fixture
+      - name: Publish
+        run: npm publish --access public --provenance
+        working-directory: packages/cli

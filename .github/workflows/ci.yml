@@ -63,4 +63,3 @@ jobs:
       - id: deployment
         uses: actions/deploy-pages@v4
 
-  # TODO(spec §18): publish gnomon-cli to npm on release tags.

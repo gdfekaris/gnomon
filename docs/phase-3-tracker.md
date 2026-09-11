@@ -166,14 +166,19 @@ this phase is the natural moment for the first three and P2-live.
   visit was plain http (no service worker, no install); turned on
   2026-09-11 and http now 301s to https. Still to do on a real device, in
   the smoke checklist: the iPhone install and the update toast.
-- [ ] **P1-19. Publish `gnomon-cli`** (S) — on hold with 18b. `gnomon-cli`
-  was free on npm on 2026-09-07. Needs an npm account with 2FA, then a
-  local `npm login` for the first release or a granular publish token as a
-  repository secret for a tag-triggered workflow. Before the first
-  publish: add `repository` and a package README, set a real version,
-  dry-run the tarball (block 6 does this part). A published package is
-  public even though this repository is private; it contains only the
-  built CLI.
+- [x] **P1-19. Publish `gnomon-cli`** (S) — *done 2026-09-11:*
+  `gnomon-cli@0.1.0` is on npm, published from the maintainer's machine
+  with a granular token (bypass-2FA; npm's second factor is WebAuthn and
+  the maintainer is ordering a key). Verified cold: `npx gnomon-cli@0.1.0
+  validate` over the fixture is clean. `.github/workflows/publish.yml`
+  publishes on a `v<version>` tag through npm trusted publishing (OIDC,
+  `id-token: write`, provenance; no token anywhere) after checking the
+  tag equals the package version. *Maintainer step still open:* on
+  npmjs.com, gnomon-cli → Settings → Trusted Publisher → GitHub Actions
+  with owner `gdfekaris`, repository `gnomon`, workflow `publish.yml`, no
+  environment; then delete the granular token and its line in `~/.npmrc`.
+  Until that is configured, a tag run fails at the publish step. Release
+  flow: bump the version, commit, `git tag v0.1.1`, `git push --tags`.
 - [ ] **P2-live. Live provider calls** — Anthropic and OpenRouter are
   wired and tested against fakes; only the maintainer's real keys can
   exercise them, from the Reason and Inbox screens. Part of the live

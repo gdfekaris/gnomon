@@ -89,5 +89,7 @@ on 2026-09-10; never create a new repo under the old name or the redirect
 breaks). CI runs typecheck, unit tests, CLI validation of the template and
 fixture, the app build, and the Playwright flows on every push, then
 deploys the app to GitHub Pages from main (served at
-`gdfekaris.com/gnomon/`); the npm publish job is still TODO in
-`.github/workflows/ci.yml`.
+`gdfekaris.com/gnomon/`). A `v<version>` tag runs `publish.yml`, which
+publishes `gnomon-cli` through npm trusted publishing (no token stored);
+bump `packages/cli/package.json` first, the tag must match it. The nightly
+(`nightly.yml`) runs the storage contract against real GitHub.
