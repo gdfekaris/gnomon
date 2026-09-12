@@ -126,6 +126,8 @@ body {
    (maintainer, 2026-09-11). Any token may break, and grid and flex items may shrink. */
 .content { overflow-wrap: anywhere; }
 .content :is(.grid, [class*='row'], form, label, article, section, li, div) > * { min-width: 0; }
+/* ...but a button is never the thing to give way: a long title beside it wraps, the button keeps its width. */
+.content button { flex-shrink: 0; min-width: max-content; }
 .content > :first-child { margin-top: 0; }
 
 nav.tabs {

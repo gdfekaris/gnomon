@@ -162,7 +162,7 @@
   .set { border: var(--bw) solid var(--edge); box-shadow: var(--raise); padding: 0.75rem; margin-bottom: 0.75rem; }
   .head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
   .head h3 { margin: 0; }
-  .controls { display: inline-flex; gap: 0.25rem; flex-wrap: nowrap; }
+  .controls { display: inline-flex; gap: 0.25rem; flex-wrap: nowrap; flex: 0 0 auto; }
   .controls button { min-height: 0; padding: 0.25rem 0.5rem; font-size: var(--fs-small); border-radius: calc(var(--radius) - 2px); }
   /* Order is precedence: each row carries its number from the file's `order`, which the arrows and drags
      rewrite, so the numbers follow a reorder. A flex row draws no list marker, hence the span. */
