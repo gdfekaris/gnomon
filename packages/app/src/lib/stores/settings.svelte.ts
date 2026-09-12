@@ -8,8 +8,9 @@ import { SettingsPersistence, type StorageDiagnostics } from '../services/persis
 
 export interface GitSettings { token: string; owner: string; name: string; }
 export interface Prefs {
-  theme: 'system' | 'light' | 'dark';
-  /** the visual skin (block 4): four late-1980s GUIs, Monochrome by default */
+  /** the theme of the skin; chosen with it in one picker, never taken from the OS (2026-09-12) */
+  theme: 'light' | 'dark';
+  /** the visual skin (block 4): four late-1980s GUIs, Monochrome dark by default */
   skin: 'mono' | 'bevel' | 'workbench' | 'synthwave';
   budgetPercent: number;
   setDescriptionPlacement: 'context' | 'system';
@@ -22,7 +23,7 @@ export interface Prefs {
   browseSort: 'newest' | 'oldest' | 'author';
 }
 
-const DEFAULT_PREFS: Prefs = { theme: 'system', skin: 'mono', budgetPercent: 60, setDescriptionPlacement: 'context', lastSelectedSets: [], mode: null, provider: 'mock', browseSort: 'newest' };
+const DEFAULT_PREFS: Prefs = { theme: 'dark', skin: 'mono', budgetPercent: 60, setDescriptionPlacement: 'context', lastSelectedSets: [], mode: null, provider: 'mock', browseSort: 'newest' };
 
 export const settings = $state({
   loaded: false,
@@ -52,6 +53,8 @@ export async function loadSettings(): Promise<void> {
   settings.anthropicKey = (saved['provider.anthropic.key'] as string | undefined) ?? '';
   settings.openrouterKey = (saved['provider.openrouter.key'] as string | undefined) ?? '';
   settings.prefs = { ...DEFAULT_PREFS, ...((saved['prefs'] as Partial<Prefs> | undefined) ?? {}) };
+  // A device that saved "follow the system" before the picker changed lands on the default theme.
+  if (settings.prefs.theme !== 'light' && settings.prefs.theme !== 'dark') settings.prefs.theme = DEFAULT_PREFS.theme;
   applyTheme(settings.prefs.theme, settings.prefs.skin);
   settings.storage = { ...store.diagnostics, persistent: null };
   settings.loaded = true;
@@ -92,12 +95,11 @@ export async function savePrefs(patch: Partial<Prefs>): Promise<void> {
   await write('prefs', $state.snapshot(settings.prefs));
 }
 
-/** Theme: `system` follows the OS; light and dark are forced through `data-theme` and `color-scheme`. The skin rides on `data-skin`. */
+/** The look: the skin rides on `data-skin`, its theme on `data-theme` and `color-scheme`. The OS is never consulted. */
 export function applyTheme(theme: Prefs['theme'], skin: Prefs['skin'] = 'mono'): void {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
-  if (theme === 'system') delete root.dataset['theme'];
-  else root.dataset['theme'] = theme;
-  root.style.colorScheme = theme === 'system' ? 'light dark' : theme;
+  root.dataset['theme'] = theme;
+  root.style.colorScheme = theme;
   root.dataset['skin'] = skin;
 }

@@ -2,8 +2,9 @@
    skins, chosen in Settings and applied as data-skin on <html>. A skin is one
    token set: type, ink, paper, field, edge and bevel, pattern, accent, state.
    Screens use the tokens and the shared element styles below; no screen
-   carries a raw color. Dark mode redefines the tokens under data-theme or
-   prefers-color-scheme. `--font-display` is the face for headings and the
+   carries a raw color. Each skin has a light and a dark theme, chosen with
+   it in one picker and applied as data-theme; the OS's preference is never
+   consulted (2026-09-12). `--font-display` is the face for headings and the
    title bar; three skins echo `--font` into it, Synthwave has its own. */
 
 @font-face { font-family: 'Pixelify Sans'; font-style: normal; font-weight: 400 700; font-display: swap; src: url(./assets/fonts/pixelify-sans-latin.woff2) format('woff2'); }
@@ -15,7 +16,7 @@
 /* ---------------------------------------------------------------- tokens */
 
 :root, :root[data-skin='mono'] {
-  color-scheme: light dark;
+  color-scheme: light;
   --font: 'Pixelify Sans', 'Chicago', 'Geneva', system-ui, sans-serif; --font-display: var(--font);
   --fs: 16px; --fs-small: 13px; --fs-h2: 22px; --fs-h3: 17px; --lh: 1.3;
   --ink: #000; --paper: #fff; --muted: #7a7a7a; --edge: #000;
@@ -109,13 +110,7 @@
 }
 
 /* Dark: the same four skins with their tokens redefined. Monochrome inverts;
-   the others carry their own dark palettes. The toggle wins in both directions. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-skin]):not([data-theme='light']), :root[data-skin='mono']:not([data-theme='light']) { --ink: #fff; --paper: #000; --muted: #8a8a8a; --edge: #fff; --arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' shape-rendering='crispEdges'%3E%3Cpath d='M8 12l4-4H4z' fill='%23fff'/%3E%3C/svg%3E"); }
-  :root[data-skin='bevel']:not([data-theme='light']) { --ink: #e8e8e8; --paper: #3c3c3c; --muted: #b0b0b0; --lt: #6a6a6a; --lt2: #555; --dk: #1a1a1a; --dk2: #000; --desktop: #003838; --field-bg: #1e1e1e; --field-ink: #e8e8e8; --placeholder: #8a8a8a; --link: #9ab0ff; --code-ink: #9ab0ff; --accent-bg: #000080; --ok: #7fd17f; --danger: #ff8080; --warn: #ffc080; --notice-bg: #2e2e1e; --danger-bg: #1e1e1e; --danger-ink: #ff8080; --titlebar-bg: #000050; --arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' shape-rendering='crispEdges'%3E%3Cpath d='M8 11l3-3H5z' fill='%23e8e8e8'/%3E%3C/svg%3E"); }
-  :root[data-skin='synthwave']:not([data-theme='light']) { --ink: #f2e9ff; --paper: #16092e; --muted: #a78bd6; --edge: #ff2fa8; --link: #22e7ff; --glow: rgba(255,47,168,0.55); --glow-in: rgba(34,231,255,0.35); --halo: rgba(34,231,255,0.45); --desktop: linear-gradient(rgba(255,47,168,0.28) 1px, transparent 1px) 0 0 / 100% 24px, linear-gradient(90deg, rgba(255,47,168,0.28) 1px, transparent 1px) 0 0 / 24px 100%, #0b0420; --field-bg: #0b0420; --field-ink: #f2e9ff; --placeholder: #7b64a8; --ok: #3ff5c5; --danger: #ff5c7a; --warn: #ffd166; --notice-bg: #1f0d45; --danger-bg: #2a0a1f; --danger-ink: #ff5c7a; --arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' shape-rendering='crispEdges'%3E%3Cpath d='M8 12l4-4H4z' fill='%2322e7ff'/%3E%3C/svg%3E"); }
-  :root[data-skin='workbench']:not([data-theme='light']) { --ink: #e0eaf5; --paper: #002a55; --muted: #7fa0c8; --desktop: #001a33; --field-bg: #101820; --field-ink: #e0eaf5; --placeholder: #7fa0c8; --raise: inset -2px -2px 0 #000, inset 2px 2px 0 #7fa0c8; --sink: inset 2px 2px 0 #000, inset -2px -2px 0 #7fa0c8; --titlebar-bg: repeating-linear-gradient(#002a55 0 2px, #e0eaf5 2px 4px) 0 3px / 100% 16px no-repeat, #e0eaf5; --titlebar-ink: #002a55; --title-pill: #e0eaf5; --notice-bg: #101820; --arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' shape-rendering='crispEdges'%3E%3Cpath d='M8 12l4-4H4z' fill='%23e0eaf5'/%3E%3C/svg%3E"); }
-}
+   the others carry their own dark palettes. Only data-theme selects it. */
 :root:not([data-skin])[data-theme='dark'], :root[data-skin='mono'][data-theme='dark'] { --ink: #fff; --paper: #000; --muted: #8a8a8a; --edge: #fff; --arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' shape-rendering='crispEdges'%3E%3Cpath d='M8 12l4-4H4z' fill='%23fff'/%3E%3C/svg%3E"); }
 :root[data-skin='bevel'][data-theme='dark'] { --ink: #e8e8e8; --paper: #3c3c3c; --muted: #b0b0b0; --lt: #6a6a6a; --lt2: #555; --dk: #1a1a1a; --dk2: #000; --desktop: #003838; --field-bg: #1e1e1e; --field-ink: #e8e8e8; --placeholder: #8a8a8a; --link: #9ab0ff; --code-ink: #9ab0ff; --accent-bg: #000080; --ok: #7fd17f; --danger: #ff8080; --warn: #ffc080; --notice-bg: #2e2e1e; --danger-bg: #1e1e1e; --danger-ink: #ff8080; --titlebar-bg: #000050; --arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' shape-rendering='crispEdges'%3E%3Cpath d='M8 11l3-3H5z' fill='%23e8e8e8'/%3E%3C/svg%3E"); }
 :root[data-skin='synthwave'][data-theme='dark'] { --ink: #f2e9ff; --paper: #16092e; --muted: #a78bd6; --edge: #ff2fa8; --link: #22e7ff; --glow: rgba(255,47,168,0.55); --glow-in: rgba(34,231,255,0.35); --halo: rgba(34,231,255,0.45); --desktop: linear-gradient(rgba(255,47,168,0.28) 1px, transparent 1px) 0 0 / 100% 24px, linear-gradient(90deg, rgba(255,47,168,0.28) 1px, transparent 1px) 0 0 / 24px 100%, #0b0420; --field-bg: #0b0420; --field-ink: #f2e9ff; --placeholder: #7b64a8; --ok: #3ff5c5; --danger: #ff5c7a; --warn: #ffd166; --notice-bg: #1f0d45; --danger-bg: #2a0a1f; --danger-ink: #ff5c7a; --arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' shape-rendering='crispEdges'%3E%3Cpath d='M8 12l4-4H4z' fill='%2322e7ff'/%3E%3C/svg%3E"); }

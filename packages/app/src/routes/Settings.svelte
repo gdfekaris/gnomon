@@ -8,7 +8,7 @@
   import ValidationPanel from '../lib/components/ValidationPanel.svelte';
   import { route } from '../lib/router.svelte';
   import { session } from '../lib/stores/session.svelte';
-  import { settings, saveGit, savePrefs, saveProviderKeys } from '../lib/stores/settings.svelte';
+  import { type Prefs, settings, saveGit, savePrefs, saveProviderKeys } from '../lib/stores/settings.svelte';
   import { snapshot } from '../lib/stores/snapshot.svelte';
   import { UPDATE_CHECK_TEXT, applyUpdate, checkForUpdate, pwa } from '../lib/stores/pwa.svelte';
 
@@ -125,20 +125,16 @@
 <section>
   <h3>Appearance</h3>
   <label>
-    Skin
-    <select value={settings.prefs.skin} onchange={(e) => savePrefs({ skin: (e.currentTarget as HTMLSelectElement).value as 'mono' | 'bevel' | 'workbench' | 'synthwave' })} data-testid="skin">
-      <option value="mono">Monochrome (default)</option>
-      <option value="bevel">Gray bevel</option>
-      <option value="workbench">Four-color workbench</option>
-      <option value="synthwave">Synthwave</option>
-    </select>
-  </label>
-  <label>
-    Theme
-    <select value={settings.prefs.theme} onchange={(e) => savePrefs({ theme: (e.currentTarget as HTMLSelectElement).value as 'system' | 'light' | 'dark' })} data-testid="theme">
-      <option value="system">Follow the system</option>
-      <option value="light">Light</option>
-      <option value="dark">Dark</option>
+    Look
+    <select value={`${settings.prefs.skin}:${settings.prefs.theme}`} onchange={(e) => { const [skin, theme] = (e.currentTarget as HTMLSelectElement).value.split(':') as [Prefs['skin'], Prefs['theme']]; void savePrefs({ skin, theme }); }} data-testid="look">
+      <option value="mono:dark">Monochrome, dark (default)</option>
+      <option value="mono:light">Monochrome, light</option>
+      <option value="bevel:dark">Gray bevel, dark</option>
+      <option value="bevel:light">Gray bevel, light</option>
+      <option value="workbench:dark">Four-color workbench, dark</option>
+      <option value="workbench:light">Four-color workbench, light</option>
+      <option value="synthwave:dark">Synthwave, night</option>
+      <option value="synthwave:light">Synthwave, daybreak</option>
     </select>
   </label>
 </section>

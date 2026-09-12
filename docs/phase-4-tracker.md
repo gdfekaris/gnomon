@@ -179,6 +179,10 @@ Open at the close of Phase 3 (2026-09-11); none blocks a Phase 4 block.
   light one. It is the one skin with two faces, so `--font-display`
   exists for headings and the title bar and the other three echo
   `--font` into it.
+- **One Look picker, the OS never consulted** (2026-09-12): Settings
+  offers eight looks, four skins in light and dark, Monochrome dark by
+  default; "follow the system" is gone and a device that had saved it
+  lands on the default theme. The look is remembered on the device.
 - **Create-from-template is not pre-probed** (Phase 3): a token that
   cannot create a repository is explained when `POST /user/repos` refuses.
 - **Accepting a principle proposal never writes the principle** (schema

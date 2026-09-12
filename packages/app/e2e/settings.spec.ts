@@ -36,21 +36,23 @@ test('a clean brain reports valid, and the indexes offer appears when they are s
   await expect(page.getByTestId('validation')).toContainText('The brain is valid and its indexes are current.');
 });
 
-test('provider keys, budget, and theme persist on the device', async ({ page }) => {
+test('provider keys, budget, and the look persist on the device', async ({ page }) => {
   await page.goto('/#/settings');
   await page.getByTestId('key-anthropic').fill('sk-ant-test');
   await page.getByTestId('save-keys').click();
   await expect(page.getByText('Saved on this device.')).toBeVisible();
   await page.getByTestId('budget').fill('40');
-  await page.getByTestId('theme').selectOption('dark');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.getByTestId('look').selectOption('bevel:light');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'bevel');
 
   await page.reload();
   await expect(page.getByTestId('key-anthropic')).toHaveValue('sk-ant-test');
   await expect(page.getByText('Context budget: 40%')).toBeVisible();
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  await page.getByTestId('theme').selectOption('system');
-  await expect(page.locator('html')).not.toHaveAttribute('data-theme', /.+/);
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'bevel');
+  await expect(page.getByTestId('look')).toHaveValue('bevel:light');
 });
 
 test('a bad GitHub connection explains itself', async ({ page }) => {
@@ -69,43 +71,50 @@ test('a bad GitHub connection explains itself', async ({ page }) => {
   await expect(page.getByRole('alert')).toContainText('GitHub rejected the token');
 });
 
-test('the skin is a setting: four late-1980s GUIs, Monochrome by default, kept on the device, with a dark variant each', async ({ page }) => {
+// One picker, eight looks: four skins with a light and a dark theme each, Monochrome dark by default, kept on
+// the device, and never taken from the OS (2026-09-12).
+test('the look is one setting: four skins in light and dark, Monochrome dark by default, never from the OS', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('/#/settings');
   await expect(page.locator('html')).toHaveAttribute('data-skin', 'mono');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   const bg = () => page.evaluate(() => getComputedStyle(document.querySelector('main.window')!).backgroundColor);
   const font = () => page.evaluate(() => getComputedStyle(document.body).fontFamily);
-  expect(await bg()).toBe('rgb(255, 255, 255)');
+  expect(await bg()).toBe('rgb(0, 0, 0)'); // Monochrome dark, whatever the OS prefers
   expect(await font()).toContain('Pixelify Sans');
+  await page.getByTestId('look').selectOption('mono:light');
+  expect(await bg()).toBe('rgb(255, 255, 255)');
 
-  await page.getByTestId('skin').selectOption('workbench');
+  await page.getByTestId('look').selectOption('workbench:light');
   await expect(page.locator('html')).toHaveAttribute('data-skin', 'workbench');
   expect(await bg()).toBe('rgb(0, 85, 170)');
   expect(await font()).toContain('VT323');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-skin', 'workbench');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await page.getByTestId('look').selectOption('workbench:dark');
+  expect(await bg()).toBe('rgb(0, 42, 85)');
 
-  await page.getByTestId('skin').selectOption('bevel');
+  await page.getByTestId('look').selectOption('bevel:light');
   expect(await bg()).toBe('rgb(192, 192, 192)');
   expect(await font()).toContain('DotGothic16');
+  await page.getByTestId('look').selectOption('bevel:dark');
+  expect(await bg()).toBe('rgb(60, 60, 60)');
 
-  // Synthwave: daybreak in the light theme, two faces (the display one on headings and the title bar)
-  await page.getByTestId('skin').selectOption('synthwave');
+  // Synthwave: daybreak and night, two faces (the display one on headings and the title bar)
+  await page.getByTestId('look').selectOption('synthwave:light');
   expect(await bg()).toBe('rgb(246, 239, 255)');
   expect(await font()).toContain('Share Tech Mono');
   expect(await page.evaluate(() => getComputedStyle(document.querySelector('h2')!).fontFamily)).toContain('Audiowide');
   expect(await page.evaluate(() => getComputedStyle(document.querySelector('.titlebar h1')!).fontFamily)).toContain('Audiowide');
   expect(await page.evaluate(() => getComputedStyle(document.querySelector('.titlebar h1')!).textTransform)).toBe('uppercase');
-
-  // dark mode: Monochrome inverts, the others carry their own dark paper; Synthwave's is night
-  await page.getByTestId('skin').selectOption('mono');
-  await page.getByTestId('theme').selectOption('dark');
-  expect(await bg()).toBe('rgb(0, 0, 0)');
-  await page.getByTestId('skin').selectOption('bevel');
-  expect(await bg()).toBe('rgb(60, 60, 60)');
-  await page.getByTestId('skin').selectOption('synthwave');
+  await page.getByTestId('look').selectOption('synthwave:dark');
   expect(await bg()).toBe('rgb(22, 9, 46)');
-  await page.getByTestId('theme').selectOption('system');
-  await page.getByTestId('skin').selectOption('mono');
+
+  // the OS flipping to dark changes nothing about a light look
+  await page.getByTestId('look').selectOption('mono:light');
+  await page.emulateMedia({ colorScheme: 'dark' });
+  expect(await bg()).toBe('rgb(255, 255, 255)');
 });
 
 // The maintainer's phone showed only the demo provider after every launch
