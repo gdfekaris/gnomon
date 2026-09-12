@@ -69,7 +69,7 @@ test('a bad GitHub connection explains itself', async ({ page }) => {
   await expect(page.getByRole('alert')).toContainText('GitHub rejected the token');
 });
 
-test('the skin is a setting: three late-1980s GUIs, Monochrome by default, kept on the device, with a dark variant each', async ({ page }) => {
+test('the skin is a setting: four late-1980s GUIs, Monochrome by default, kept on the device, with a dark variant each', async ({ page }) => {
   await page.goto('/#/settings');
   await expect(page.locator('html')).toHaveAttribute('data-skin', 'mono');
   const bg = () => page.evaluate(() => getComputedStyle(document.querySelector('main.window')!).backgroundColor);
@@ -88,12 +88,22 @@ test('the skin is a setting: three late-1980s GUIs, Monochrome by default, kept 
   expect(await bg()).toBe('rgb(192, 192, 192)');
   expect(await font()).toContain('DotGothic16');
 
-  // dark mode: Monochrome inverts, the others carry their own dark paper
+  // Synthwave: daybreak in the light theme, two faces (the display one on headings and the title bar)
+  await page.getByTestId('skin').selectOption('synthwave');
+  expect(await bg()).toBe('rgb(246, 239, 255)');
+  expect(await font()).toContain('Share Tech Mono');
+  expect(await page.evaluate(() => getComputedStyle(document.querySelector('h2')!).fontFamily)).toContain('Audiowide');
+  expect(await page.evaluate(() => getComputedStyle(document.querySelector('.titlebar h1')!).fontFamily)).toContain('Audiowide');
+  expect(await page.evaluate(() => getComputedStyle(document.querySelector('.titlebar h1')!).textTransform)).toBe('uppercase');
+
+  // dark mode: Monochrome inverts, the others carry their own dark paper; Synthwave's is night
   await page.getByTestId('skin').selectOption('mono');
   await page.getByTestId('theme').selectOption('dark');
   expect(await bg()).toBe('rgb(0, 0, 0)');
   await page.getByTestId('skin').selectOption('bevel');
   expect(await bg()).toBe('rgb(60, 60, 60)');
+  await page.getByTestId('skin').selectOption('synthwave');
+  expect(await bg()).toBe('rgb(22, 9, 46)');
   await page.getByTestId('theme').selectOption('system');
   await page.getByTestId('skin').selectOption('mono');
 });

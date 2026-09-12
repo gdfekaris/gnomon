@@ -67,7 +67,7 @@ When the pass is done: delete the tracker, break down Phase 5, and write
 - Errors render next to the control that failed, never at the foot of a
   screen. Settings → About carries diagnostics; ask for that line before
   guessing at a device problem.
-- Styling: the app is a late-1980s GUI in three skins (`data-skin` on
+- Styling: the app is a late-1980s GUI in four skins (`data-skin` on
   `<html>`, Monochrome default), all tokens and shared element styles in
   `packages/app/src/app.css`. Screens carry layout only, never a raw
   color; use the tokens (`--ink`, `--paper`, `--edge`, `--raise`, ...) and

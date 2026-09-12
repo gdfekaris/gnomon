@@ -126,10 +126,11 @@
   <h3>Appearance</h3>
   <label>
     Skin
-    <select value={settings.prefs.skin} onchange={(e) => savePrefs({ skin: (e.currentTarget as HTMLSelectElement).value as 'mono' | 'bevel' | 'workbench' })} data-testid="skin">
+    <select value={settings.prefs.skin} onchange={(e) => savePrefs({ skin: (e.currentTarget as HTMLSelectElement).value as 'mono' | 'bevel' | 'workbench' | 'synthwave' })} data-testid="skin">
       <option value="mono">Monochrome (default)</option>
       <option value="bevel">Gray bevel</option>
       <option value="workbench">Four-color workbench</option>
+      <option value="synthwave">Synthwave</option>
     </select>
   </label>
   <label>

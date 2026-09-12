@@ -9,8 +9,8 @@ import { SettingsPersistence, type StorageDiagnostics } from '../services/persis
 export interface GitSettings { token: string; owner: string; name: string; }
 export interface Prefs {
   theme: 'system' | 'light' | 'dark';
-  /** the visual skin (block 4): three late-1980s GUIs, Monochrome by default */
-  skin: 'mono' | 'bevel' | 'workbench';
+  /** the visual skin (block 4): four late-1980s GUIs, Monochrome by default */
+  skin: 'mono' | 'bevel' | 'workbench' | 'synthwave';
   budgetPercent: number;
   setDescriptionPlacement: 'context' | 'system';
   lastSelectedSets: string[];

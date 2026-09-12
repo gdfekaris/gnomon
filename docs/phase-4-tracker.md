@@ -173,6 +173,12 @@ Open at the close of Phase 3 (2026-09-11); none blocks a Phase 4 block.
 - **Three skins, one switch** (Phase 3): Monochrome (default), Gray
   bevel, Four-color workbench; tokens in `packages/app/src/app.css`; the
   canvas working files in `docs/design/`.
+- **A fourth skin, Synthwave** (2026-09-12): drafted on the canvas as
+  Skin D (the shared-pieces sheet, Capture at night and at daybreak),
+  then built as one token block; night is its dark theme, daybreak its
+  light one. It is the one skin with two faces, so `--font-display`
+  exists for headings and the title bar and the other three echo
+  `--font` into it.
 - **Create-from-template is not pre-probed** (Phase 3): a token that
   cannot create a repository is explained when `POST /user/repos` refuses.
 - **Accepting a principle proposal never writes the principle** (schema
