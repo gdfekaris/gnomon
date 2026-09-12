@@ -179,6 +179,14 @@ Open at the close of Phase 3 (2026-09-11); none blocks a Phase 4 block.
   light one. It is the one skin with two faces, so `--font-display`
   exists for headings and the title bar and the other three echo
   `--font` into it.
+- **A link proposal is a proposed ground, nothing looser** (2026-09-12):
+  schema §4.7 now says so; `related` holds principles and a link
+  proposal never touches it. Filing writes the new source into a link
+  proposal's `grounds`, the Proposals screen says "Proposes a ground: add
+  X to the grounds of Y", the filing prompt asks for links only as
+  evidence. The word "relate" is reserved: a later feature may let a
+  source be related to a principle as a looser tie than grounding, and
+  widening `related` to source slugs is the sketched shape.
 - **One Look picker, the OS never consulted** (2026-09-12): Settings
   offers eight looks, four skins in light and dark, Monochrome dark by
   default; "follow the system" is gone and a device that had saved it

@@ -189,13 +189,13 @@ There is no status field. A principle in a set is in force. A principle the cura
 | `target_set` | yes for `principle`, `amendment`, `link` | Set slug the suggestion belongs to. |
 | `target` | yes for `amendment`, `link`, `tag` | The affected principle (`<set-slug>/<principle-slug>`) or source slug. |
 | `from_source` | no | The source slug whose filing prompted this proposal. |
-| `grounds` | no | Source slugs the suggestion rests on. |
+| `grounds` | no | Source slugs the suggestion rests on. For `link`, the sources to add to the target principle's `grounds`. |
 | `status` | yes | `open`, `accepted`, `declined`. |
 | `curated` | yes | `agent-proposed` when an agent wrote it; `human` when the curator did. Never `ratified`. |
 
 **Body:** the rationale, any length, written by the proposer.
 
-`kind` meanings: `principle` — a suggested new principle; `link` — a suggested `grounds` or `related` addition to an existing principle; `tag` — suggested tags for a source; `amendment` — a suggested change to an existing principle's wording.
+`kind` meanings: `principle` — a suggested new principle; `link` — a suggested ground: add the source or sources in `grounds` to the `grounds` of the principle named in `target`, as evidence for it (a link proposal never touches `related`, which holds principles); `tag` — suggested tags for a source; `amendment` — a suggested change to an existing principle's wording.
 
 Proposal files are **outside the curation state machine** (§5): they are never ratified, and `status` is their whole lifecycle. Agents create proposal files and otherwise leave them alone, with one carve-out: an agent may set `status` on a proposal in a session where the curator explicitly decided that item, and may write nothing else in doing so. Accepting a `principle` or `amendment` proposal never produces the file automatically; the curator writes the principle by hand (the app pre-fills the editor from the proposal), and the result is `curated: human` saved deliberately.
 

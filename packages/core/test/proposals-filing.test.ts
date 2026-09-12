@@ -75,6 +75,18 @@ describe('buildFiling (spec §7.6, schema §7.6)', () => {
     { kind: 'tag' as const, title: 'Tag with flow', rationale: 'Groups it with the Stoic captures.\n' },
   ];
 
+  it('a link proposal from a filing names the new source in its grounds: it proposes that source as a ground', () => {
+    const link = { kind: 'link' as const, title: 'Ground courage in this', target_set: 'ps-g8xw', target: 'ps-g8xw/courage-before-comfort', rationale: 'Evidence.\n' };
+    const b = buildFiling(s, capture, meta, [link], { now: NOW });
+    const p = parseFile('maps/proposals/P-20260906-001.md', textOf(b, 'maps/proposals/P-20260906-001.md')) as BrainFile<ProposalFm>;
+    expect(p.fm.kind).toBe('link');
+    expect(p.fm.target).toBe('ps-g8xw/courage-before-comfort');
+    expect(p.fm.from_source).toBe('watts-join-the-dance');
+    expect(p.fm.grounds).toEqual(['watts-join-the-dance']);
+    const other = buildFiling(s, capture, meta, [{ ...link, grounds: ['aurelius-meditations-4-3'] }], { now: NOW });
+    expect((parseFile('maps/proposals/P-20260906-001.md', textOf(other, 'maps/proposals/P-20260906-001.md')) as BrainFile<ProposalFm>).fm.grounds).toEqual(['aurelius-meditations-4-3', 'watts-join-the-dance']);
+  });
+
   it('files a text-only capture: raw copied byte for byte, notes stubbed, proposals numbered, capture marked', () => {
     const b = buildFiling(s, capture, meta, proposals, { now: NOW });
     expect(b.message).toBe('File: watts-join-the-dance');

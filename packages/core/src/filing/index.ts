@@ -82,7 +82,9 @@ export function buildFiling(s: BrainSnapshot, capture: BrainFile<InboxFm>, meta:
     const id = nextProposalId(s, opts.now, drawn);
     drawn.push(id);
     const target = p.target ?? (p.kind === 'tag' ? slug : undefined);
-    writes.push(buildProposal({ ...p, ...(target !== undefined ? { target } : {}), id, from_source: slug, curated: 'agent-proposed', now: opts.now }));
+    // A link proposal is a proposed ground (schema §4.7): the new source is what it proposes to add.
+    const grounds = p.kind === 'link' ? [...new Set([...(p.grounds ?? []), slug])] : p.grounds;
+    writes.push(buildProposal({ ...p, ...(target !== undefined ? { target } : {}), ...(grounds !== undefined ? { grounds } : {}), id, from_source: slug, curated: 'agent-proposed', now: opts.now }));
   }
 
   const marked: BrainFile<InboxFm> = { ...capture, fm: { ...capture.fm, status: 'filed', filed_as: slug } };

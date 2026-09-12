@@ -154,7 +154,7 @@
     <div class="from" role="status" data-testid="from-proposal">
       <p><strong>From proposal <code>{prefill.id}</code></strong> ({prefill.kind}){#if prefill.kind !== 'principle'}: <em>{s.files.get(`maps/proposals/${prefill.id}.md`) && 'title' in s.files.get(`maps/proposals/${prefill.id}.md`)!.fm ? (s.files.get(`maps/proposals/${prefill.id}.md`)!.fm as { title: string }).title : ''}</em>{/if}</p>
       {#if prefill.rationale}<p class="rationale">{prefill.rationale}</p>{/if}
-      <p class="hint">{prefill.kind === 'principle' ? 'The draft below is the proposal\'s wording. A principle is yours only once you have rewritten it in your own words.' : 'Apply what you agree with by hand; the proposal is only a suggestion.'}</p>
+      <p class="hint">{prefill.kind === 'principle' ? 'The draft below is the proposal\'s wording. A principle is yours only once you have rewritten it in your own words.' : prefill.kind === 'link' ? 'This proposes a ground: pick the source below and add it to this principle\'s grounds if you agree. The proposal is only a suggestion.' : 'Apply what you agree with by hand; the proposal is only a suggestion.'}</p>
     </div>
   {/if}
   {#if kind === 'principle'}

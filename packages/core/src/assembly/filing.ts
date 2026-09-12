@@ -27,7 +27,7 @@ Answer with exactly one JSON object and nothing else: no prose, no code fences. 
   },
   "proposals": [
     { "kind": "principle", "title": "a principle this passage could support", "target_set": "ps-xxxx", "rationale": "why" },
-    { "kind": "link", "title": "what to link", "target_set": "ps-xxxx", "target": "ps-xxxx/principle-slug", "rationale": "how this passage grounds, complicates, or contradicts that principle" },
+    { "kind": "link", "title": "ground that principle in this passage", "target_set": "ps-xxxx", "target": "ps-xxxx/principle-slug", "rationale": "how this passage is evidence for that principle" },
     { "kind": "amendment", "title": "suggested rewording", "target_set": "ps-xxxx", "target": "ps-xxxx/principle-slug", "rationale": "why" },
     { "kind": "tag", "title": "tags to add", "rationale": "why" }
   ]
@@ -38,6 +38,7 @@ Rules:
 - Leave an optional field out rather than guess it. A URL you inferred is a passage that cannot be re-found. "unknown" is a fine author.
 - Only use the set slugs, principle refs, and source slugs listed in the material. Never invent one.
 - Proposals are suggestions. A "principle" proposal is a principle the curator might write; you do not write it. An empty proposals list is fine.
+- A "link" proposal means one thing: add this passage to that principle's grounds, as evidence for it. Use it when the passage supports the principle or bears on it directly. If the passage complicates or contradicts the principle enough that its wording should change, propose an "amendment" instead. Nothing looser than a ground is proposed here.
 - Keep titles to one line. Rationales may be any length.`;
 
 export interface FilingPrompt { ok: true; system: string; context: string; tokensUsed: number; }

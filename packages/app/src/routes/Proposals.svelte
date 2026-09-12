@@ -43,7 +43,9 @@
       acting = null;
     }
   }
-  const acceptLabel = (p: ProposalFm) => (p.kind === 'principle' ? 'Accept and write it' : p.kind === 'amendment' || p.kind === 'link' ? 'Accept and edit the principle' : p.kind === 'tag' && p.target ? 'Accept and edit the tags' : 'Accept');
+  const acceptLabel = (p: ProposalFm) => (p.kind === 'principle' ? 'Accept and write it' : p.kind === 'link' ? 'Accept and add the ground' : p.kind === 'amendment' ? 'Accept and edit the principle' : p.kind === 'tag' && p.target ? 'Accept and edit the tags' : 'Accept');
+  // A link proposal proposes a ground and nothing looser (schema §4.7): the sources it names, or the one it came from.
+  const groundsOf = (p: ProposalFm): string[] => (p.grounds?.length ? p.grounds : p.from_source ? [p.from_source] : []);
   const targetHref = (p: ProposalFm) => (p.target ? (p.kind === 'tag' ? browseHref(`sources/${p.target}/raw.md`) : browseHref(`principles/${p.target}.md`)) : null);
 </script>
 
@@ -59,6 +61,9 @@
         {@const id = proposalId(p.path)}
         <article class="proposal" data-testid="proposal-{id}">
           <h4><span class="kind">{p.fm.kind}</span> {p.fm.title} <small><code>{id}</code>{#if p.fm.curated === 'human'} · yours{/if}</small></h4>
+          {#if p.fm.kind === 'link' && p.fm.target}
+            <p class="proposes" data-testid="proposes">Proposes a ground: add {#each groundsOf(p.fm) as g, i (g)}{i ? ', ' : ''}<a href={browseHref(`sources/${g}/raw.md`)}>{linkLabel(`sources/${g}/raw.md`, s)}</a>{/each} to the grounds of <a href={targetHref(p.fm)}>{linkLabel(`principles/${p.fm.target}.md`, s)}</a>.</p>
+          {/if}
           <p class="links">
             {#if p.fm.target}<span>Target: <a href={targetHref(p.fm)}>{p.fm.target}</a></span>{/if}
             {#if p.fm.from_source}<span>From: <a href={browseHref(`sources/${p.fm.from_source}/raw.md`)}>{linkLabel(`sources/${p.fm.from_source}/raw.md`, s)}</a></span>{/if}

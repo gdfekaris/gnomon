@@ -160,10 +160,13 @@ For each `inbox/<stem>.md` with `status: unfiled`, one commit each:
 5. Create `sources/<slug>/notes.md` from `templates/notes.md`, empty body.
 6. For each suggestion, write one `maps/proposals/P-<YYYYMMDD>-<nnn>.md`
    from `templates/proposal.md`: `<nnn>` is one more than today's highest
-   existing number, zero-padded to three digits. Suggest which principles
-   this capture grounds, complicates, or contradicts (`kind: link` or
-   `amendment`, with `target`), a principle it might support
-   (`kind: principle`, with `target_set`), or tags (`kind: tag`, with
+   existing number, zero-padded to three digits. Suggest a ground: a
+   principle this capture is evidence for (`kind: link`, with `target`
+   and the capture's slug in `grounds`; accepting it adds the source to
+   that principle's `grounds`, nothing looser); a change to a principle's
+   wording where the capture complicates or contradicts it
+   (`kind: amendment`, with `target`); a principle it might support
+   (`kind: principle`, with `target_set`); or tags (`kind: tag`, with
    `target: <slug>`). Set `from_source: <slug>`. The body is your
    rationale.
 7. In the capture, set `status: filed` and `filed_as: <slug>`. Change
@@ -230,5 +233,5 @@ optional `tags`. Then by type:
 - `inbox`: `status`; optional `note`, `attachment`, `filed_as`.
 - `proposal`: `kind`, `title`, `status`; `target_set` for principle,
   amendment, link; `target` for amendment, link, tag; optional
-  `from_source`, `grounds`.
+  `from_source`, `grounds` (for link, the sources to add as grounds).
 - `index`: `type` only. Generated. Never yours.
