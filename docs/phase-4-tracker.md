@@ -241,6 +241,17 @@ Open at the close of Phase 3 (2026-09-11); none blocks a Phase 4 block.
   device problem.
 - Errors belong next to the control that failed, never at the foot of a
   screen: a phone never sees the foot.
+- The maintainer's UX pass of 2026-09-11 (17 commits after e20fa5c) set
+  three conventions that later screens must keep. The app speaks its own
+  words for the schema's states: `human` is "yours", `ratified` is
+  "ratified", `agent-proposed` is "awaiting review", a capture is "not
+  filed" or "filed as"; the files keep the schema's words. Every action
+  button carries `use:hold={busy}` (`src/lib/press.ts`), which draws it
+  pressed until its work ends; a screen with one busy flag across several
+  controls remembers which was pressed. Inside `.content` any token may
+  break and grid or flex items may shrink, but a button never does. The
+  Browse tab is sources only; sets, captures, and proposals live on their
+  own tabs. The icon is the "Noon" mark from `tools/make-icons.mjs`.
 - The demo brain accepts `#/settings?demo-omit=a,b` to drop paths. Its
   git history is one seed commit, so the fixture's own pending filing
   does not appear in the Inbox's filing list. Proposal ids and timestamps
