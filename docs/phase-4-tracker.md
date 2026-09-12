@@ -261,7 +261,9 @@ Open at the close of Phase 3 (2026-09-11); none blocks a Phase 4 block.
   controls remembers which was pressed. Inside `.content` any token may
   break and grid or flex items may shrink, but a button never does. The
   Browse tab is sources only; sets, captures, and proposals live on their
-  own tabs. The icon is the "Noon" mark from `tools/make-icons.mjs`. The Inbox
+  own tabs. The icon is the "Titanium dial" from `tools/make-icons.mjs`
+  (2026-09-12, a rendered cybernetic sundial chosen from four drafts on
+  the canvas's Tile page; it replaced the one-bit "Noon" mark). The Inbox
   review panel carries the edit links for a pending filing's source and
   notes (2026-09-12): an editor opened with `?back=<in-app hash>` returns
   there on Save and on Back, and `#/inbox?filing=<slug>` shows that filing

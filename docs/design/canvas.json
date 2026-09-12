@@ -7,6 +7,10 @@
   {
    "id": "page-2",
    "name": "Skins"
+  },
+  {
+   "id": "page-3",
+   "name": "Tile"
   }
  ],
  "artboards": [
@@ -198,6 +202,15 @@
    "w": 390,
    "h": 844,
    "page": "page-2"
+  },
+  {
+   "file": "TileDrafts.dc.html",
+   "title": "Tile · cybernetic sundial, rendered drafts (A chosen)",
+   "x": 0,
+   "y": 0,
+   "w": 1240,
+   "h": 900,
+   "page": "page-3"
   }
  ],
  "annotations": [
