@@ -23,6 +23,18 @@
 
   const mb = (n: number) => (n / (1024 * 1024)).toFixed(1);
   const file = $derived(files?.[0] ?? null);
+  // Clear starts over: it empties the three fields and drops the error. It asks first, inline like the editor's
+  // Back, because a thought typed on the phone is not on the clipboard the way a pasted passage is.
+  const filled = $derived(text !== '' || note !== '' || file !== null);
+  let clearing = $state(false);
+  function clear() {
+    text = '';
+    note = '';
+    files = null;
+    if (fileInput) fileInput.value = '';
+    error = null;
+    clearing = false;
+  }
   // A flush from the network watcher surfaces here.
   $effect(() => {
     if (pending.flushed) {
@@ -91,7 +103,21 @@
       <input type="file" bind:files bind:this={fileInput} data-testid="capture-file" />
     </label>
     {#if file}<p class="hint">{file.name} · {mb(file.size)} MB</p>{/if}
-    <button type="submit" class="primary" disabled={saving || text.trim() === ''} use:hold={saving} data-testid="capture-save">{saving ? 'Saving…' : network.online ? 'Save to inbox' : 'Keep until online'}</button>
+    {#if clearing && filled}
+      <div class="confirm" role="alertdialog" data-testid="clear-confirm">
+        <p>Clear the capture? The passage, the note, and the attached file will be gone.</p>
+        <div class="row">
+          <button type="button" onclick={clear} data-testid="clear-yes">Clear</button>
+          <button type="button" class="primary" onclick={() => (clearing = false)} data-testid="clear-no">Keep</button>
+        </div>
+      </div>
+    {/if}
+    <div class="row">
+      <button type="submit" class="primary" disabled={saving || text.trim() === ''} use:hold={saving} data-testid="capture-save">{saving ? 'Saving…' : network.online ? 'Save to inbox' : 'Keep until online'}</button>
+      {#if filled}
+        <button type="button" onclick={() => (clearing = true)} disabled={saving || clearing} data-testid="capture-clear">Clear</button>
+      {/if}
+    </div>
   </form>
   {#if error}<p class="error" role="alert">{error}</p>{/if}
 {/if}
@@ -100,6 +126,7 @@
   form { display: grid; gap: 1rem; }
   label { display: grid; gap: 0.35rem; }
   textarea { min-height: 10rem; }
-  form button.primary { justify-self: center; }
+  .row { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; }
+  .confirm .row { justify-content: start; margin-top: 0.5rem; }
   .hint { margin: 0; }
 </style>
