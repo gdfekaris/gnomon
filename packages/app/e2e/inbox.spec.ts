@@ -109,3 +109,22 @@ test('a filing edited before ratification still ratifies the rest, and an edited
   await page.goto('/#/settings');
   await expect(page.getByTestId('refusal-count')).toHaveText('0 refusals');
 });
+
+// A URL in a passage widened the Inbox past the phone in WebKit, which un-pegged the tab bar and left the
+// page zoomed. The page must stay as wide as the screen whatever a capture contains.
+test('a filing with a long URL in its passage does not widen the page past the screen', async ({ page }) => {
+  await page.goto('/#/capture');
+  await page.getByTestId('capture-text').fill('See https://example.org/a/very/long/path/that/never/breaks/anywhere/at/all/index.html for more.');
+  await page.getByTestId('capture-save').click();
+  await expect(page.getByTestId('saved')).toBeVisible();
+  await page.goto('/#/inbox');
+  await page.getByTestId('process').click();
+  await expect(page.getByTestId('process-results')).toContainText('filed as');
+  await expect(page.getByTestId('review-panel').first()).toBeVisible();
+  const width = await page.evaluate(() => ({ screen: document.documentElement.clientWidth, page: document.documentElement.scrollWidth }));
+  expect(width.page).toBe(width.screen);
+  const filing = page.getByTestId('filing-unknown-see-https-example-org');
+  await expect(filing.getByTestId('ratify')).toBeVisible();
+  await filing.getByTestId('ratify').click();
+  await expect(filing.getByTestId('state')).toHaveText('ratified');
+});

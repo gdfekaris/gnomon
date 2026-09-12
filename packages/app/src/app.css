@@ -120,6 +120,12 @@ body {
 :root[data-skin='workbench'] .titlebar h1 { text-align: left; font-weight: 400; font-size: 20px; }
 :root[data-skin='workbench'] .titlebar h1 span { padding: 0 10px; }
 .content { flex: 1; padding: 14px; display: flow-root; }
+/* A long token (a URL in a passage, say) has no break WebKit will take, and a grid item will not shrink
+   below its content's minimum width, so one such token widened the whole page past the phone; iOS then
+   zoomed and panned the layout, and the sticky tab bar, pinned to the layout viewport, came unpegged
+   (maintainer, 2026-09-11). Any token may break, and grid and flex items may shrink. */
+.content { overflow-wrap: anywhere; }
+.content :is(.grid, [class*='row'], form, label, article, section, li, div) > * { min-width: 0; }
 .content > :first-child { margin-top: 0; }
 
 nav.tabs {
