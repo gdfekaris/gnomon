@@ -94,9 +94,9 @@
   {#if !onboarding}
     <nav class="tabs">
       <a href="#/capture" class:active={route.name === 'capture'}><Icon name="capture" />Capture</a>
-      <a href="#/browse" class:active={route.name === 'browse'}><Icon name="browse" />Browse</a>
       <a href="#/inbox" class:active={route.name === 'inbox'}><Icon name="inbox" />Inbox</a>
       <a href="#/proposals" class:active={route.name === 'proposals'}><Icon name="proposals" />Proposals</a>
+      <a href="#/browse" class:active={route.name === 'browse'}><Icon name="browse" />Browse</a>
       <a href="#/sets" class:active={route.name === 'sets' || route.name === 'edit'}><Icon name="sets" />Sets</a>
       <a href="#/reason" class:active={route.name === 'reason'}><Icon name="reason" />Reason</a>
       <a href="#/settings" class:active={route.name === 'settings'}><Icon name="settings" />Settings</a>
