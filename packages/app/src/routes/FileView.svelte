@@ -7,6 +7,7 @@
   import AttachmentView from '../lib/components/AttachmentView.svelte';
   import { browseHref, linkLabel } from '../lib/markdown';
   import { snapshot } from '../lib/stores/snapshot.svelte';
+  import { lastBrowse } from '../lib/lastBrowse';
 
   let { path, anchor = undefined }: { path: string; anchor?: string | undefined } = $props();
   const s = $derived(snapshot.current);
@@ -25,7 +26,7 @@
   const curatedLabel = (v: unknown) => (fm?.['type'] === 'proposal' && v === 'agent-proposed' ? "the model's" : (CURATED[String(v)] ?? String(v)));
 </script>
 
-<p><a href="#/browse">← Browse</a></p>
+<p><a href={lastBrowse.hash} data-testid="back-to-browse">← Browse</a></p>
 {#if !s}
   <ConnectionNotice />
 {:else if attachment}

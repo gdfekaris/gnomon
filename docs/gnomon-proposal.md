@@ -121,7 +121,7 @@ Frontmatter carries `curated: human | agent-proposed | ratified`, tags, and sour
 
 **Capture** (default screen): large paste target, optional note field, optional attach-a-file control, save-to-inbox.
 
-**Browse**: folder-aware file list with tag filter; principles grouped by set in set `order` and listed in precedence order within each set, labelled "Set 2 — Work"; file view renders markdown, links, backlinks panel, and an attachment preview or download where one exists; edit honors curation rules; `raw.md` bodies and attachments have no edit affordance.
+**Browse**: the sources as a library: a search over title, author, work, tags, slug, and year (never the passage text), tags with counts and the most-used few in view, shelves by author and work under the author sort, month landmarks under the date sorts, fifty rows at a time; file view renders markdown, links, backlinks panel, and an attachment preview or download where one exists; edit honors curation rules; `raw.md` bodies and attachments have no edit affordance. Sets, captures, and proposals have their own screens.
 
 **Inbox & proposals**: inbox captures, "process inbox with AI" action, proposals list from `maps/proposals/` grouped by target set with accept/decline, ratify/reject flows built on commit history with the mobile review view from §9 decision 3.
 

@@ -125,8 +125,9 @@ commands, and any UI.
   text. Done when the maintainer has run one session that way and the
   smoke checklist gains the step.
 
-## UX block: Browse at scale (2026-09-12)
+## UX block: Browse at scale (2026-09-12) — done 2026-09-12
 
+Built the same day, all "done when" checks green on both engines.
 Scoped after the maintainer asked what happens to Browse at hundreds of
 sources. The whole brain is in memory, so filtering and grouping are
 local and instant; the constraints are the phone screen and the tag
