@@ -17,7 +17,9 @@
   // `copy`: a new principle pre-filled from an existing one in another set (files never move, schema §1 rule 1:
   // a principle changes set by being created there and deleted here, two commits). `copied`: the copy has been
   // made; this editor is on the original and offers to delete it, dangling references listed.
-  let { path, newIn = undefined, from = undefined, copy = undefined, copied = undefined }: { path: string; newIn?: string | undefined; from?: string | undefined; copy?: string | undefined; copied?: string | undefined } = $props();
+  // `returnTo`: where Back and a plain save return to when the editor was opened from somewhere other than
+  // the file view (the Inbox review panel sends `#/inbox?filing=<slug>` so the filing is open again on return).
+  let { path, newIn = undefined, from = undefined, copy = undefined, copied = undefined, returnTo = undefined }: { path: string; newIn?: string | undefined; from?: string | undefined; copy?: string | undefined; copied?: string | undefined; returnTo?: string | undefined } = $props();
   const s = $derived(snapshot.current);
   const file = $derived(newIn ? undefined : s?.files.get(path));
   const kind = $derived<'principle' | 'notes' | 'source' | 'none'>(newIn ? 'principle' : file?.fm.type === 'principle' || file?.fm.type === 'notes' || file?.fm.type === 'source' ? file.fm.type : 'none');
@@ -53,7 +55,7 @@
   const signature = () => JSON.stringify({ title, body, grounds, related, tags, author, work, year, locator, origin });
   let baseline = $state('');
   const dirty = $derived(signature() !== baseline);
-  const backHref = $derived(newIn ? '#/sets' : browseHref(path));
+  const backHref = $derived(newIn ? '#/sets' : returnTo ?? browseHref(path));
   let leaving = $state(false);
   function back(e: Event) {
     if (!dirty) return;
@@ -97,7 +99,7 @@
     error = null;
     try {
       const to = await action();
-      location.hash = browseHref(typeof to === 'string' ? to : path);
+      location.hash = typeof to === 'string' ? browseHref(to) : returnTo ?? browseHref(path);
     } catch (e) {
       error = describeError(e);
     } finally {

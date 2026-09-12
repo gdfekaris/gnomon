@@ -21,3 +21,8 @@ export function parseRoute(hash: string): Route {
   const rest = parts.slice(1);
   return { name, rest, path: rest.join('/'), anchor, query };
 }
+
+/** A return target carried in a query (`?back=`): only an in-app hash is honored, anything else is dropped. */
+export function inAppHash(value: string | null | undefined): string | undefined {
+  return value && value.startsWith('#/') ? value : undefined;
+}

@@ -110,6 +110,49 @@ test('a filing edited before ratification still ratifies the rest, and an edited
   await expect(page.getByTestId('refusal-count')).toHaveText('0 refusals');
 });
 
+// The review panel is where the judgment happens, so "right except the author" is decided there too: each new
+// markdown file row carries its edit link, and the editor comes back to the same filing, open, after Save or Back.
+test('the review panel offers edit links, and the editor returns to the open filing', async ({ page }) => {
+  await page.getByTestId('process').click();
+  await expect(page.getByTestId('process-results')).toContainText('filed as unknown-the-only-way-to');
+  const filing = page.getByTestId('filing-unknown-the-only-way-to');
+  await expect(filing.getByTestId('edit-source')).toHaveText('Edit metadata');
+  await expect(filing.getByTestId('edit-notes')).toHaveText('Edit');
+
+  // Back without a change lands on the filing, not on the file view
+  await filing.getByTestId('edit-source').click();
+  await expect(page.getByTestId('edit-author')).toBeVisible();
+  await page.getByTestId('edit-back').click();
+  await expect(page).toHaveURL(/#\/inbox\?filing=unknown-the-only-way-to$/);
+  await expect(filing.getByTestId('review-panel')).toBeVisible();
+
+  // fix the author: the source is yours, the notes still await review, and the filing is open on return
+  await filing.getByTestId('edit-source').click();
+  await page.getByTestId('edit-author').fill('Someone');
+  await page.getByTestId('edit-save').click();
+  await expect(page).toHaveURL(/#\/inbox\?filing=unknown-the-only-way-to$/);
+  await expect(filing.getByTestId('state')).toHaveText('awaiting review');
+  await expect(filing.getByTestId('review-panel')).toBeVisible();
+  await expect(filing.getByTestId('edit-source')).toBeVisible();
+
+  // then the notes: nothing is left for Ratify, the filing reads "yours" and is still open on return
+  await filing.getByTestId('edit-notes').click();
+  await page.getByTestId('edit-body').fill('Heard this one in a lecture.');
+  await page.getByTestId('edit-save').click();
+  await expect(page).toHaveURL(/#\/inbox\?filing=unknown-the-only-way-to$/);
+  await expect(filing.getByTestId('state')).toHaveText('yours');
+  await expect(filing.getByTestId('review-panel')).toBeVisible();
+  await expect(filing.getByTestId('yours-note')).toBeVisible();
+  await expect(filing.getByTestId('ratify')).toHaveCount(0);
+  await expect(filing.getByTestId('edit-source')).toHaveCount(0);
+  await expect(filing.getByTestId('show-files')).toHaveText('Hide files');
+  await page.goto('/#/browse/sources/unknown-the-only-way-to/raw.md');
+  await expect(page.getByTestId('frontmatter')).toContainText('Someone');
+  await expect(page.getByTestId('fm-curated')).toHaveText('yours');
+  await page.goto('/#/settings');
+  await expect(page.getByTestId('refusal-count')).toHaveText('0 refusals');
+});
+
 // A URL in a passage widened the Inbox past the phone in WebKit, which un-pegged the tab bar and left the
 // page zoomed. The page must stay as wide as the screen whatever a capture contains.
 test('a filing with a long URL in its passage does not widen the page past the screen', async ({ page }) => {

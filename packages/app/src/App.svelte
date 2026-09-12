@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
   import { route } from './lib/router.svelte';
+  import { inAppHash } from './lib/route';
   import { loadSettings, savePrefs, settings } from './lib/stores/settings.svelte';
   import { configureReasoner, reasoning } from './lib/stores/reasoning.svelte';
   import { session } from './lib/stores/session.svelte';
@@ -78,13 +79,13 @@
     {:else if route.name === 'sets'}
       <Sets />
     {:else if route.name === 'edit'}
-      <Editor path={route.path} from={route.query.get('from') ?? undefined} copied={route.query.get('copied') ?? undefined} />
+      <Editor path={route.path} from={route.query.get('from') ?? undefined} copied={route.query.get('copied') ?? undefined} returnTo={inAppHash(route.query.get('back'))} />
     {:else if route.name === 'proposals'}
       <Proposals />
     {:else if route.name === 'reason'}
       <Reason />
     {:else if route.name === 'inbox'}
-      <Inbox />
+      <Inbox filing={route.query.get('filing') ?? undefined} />
     {:else if route.name === 'settings'}
       <Settings />
     {:else}

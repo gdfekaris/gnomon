@@ -17,6 +17,9 @@
   import { settings } from '../lib/stores/settings.svelte';
   import { snapshot } from '../lib/stores/snapshot.svelte';
 
+  // `filing`: a slug to show open on arrival (`#/inbox?filing=<slug>`), which is how the editor returns
+  // to the filing whose row sent it; a filing that is no longer pending is collapsed otherwise.
+  let { filing = undefined }: { filing?: string | undefined } = $props();
   const s = $derived(snapshot.current);
   const captures = $derived(s ? unfiledCaptures(s) : []);
   const PROVIDER_LABELS: Record<string, string> = { mock: 'Demo model (no key)', anthropic: 'Anthropic', openrouter: 'OpenRouter' };
@@ -32,6 +35,15 @@
   // A filing awaiting review is shown open, Ratify and Reject in view: looking at it is why it is listed.
   // Decided ones are collapsed; "Show files" opens the same panel for the record.
   let open = $state<string | null>(null);
+  let openedFor = $state<string | null>(null);
+  $effect(() => {
+    if (!filing || openedFor === filing) return;
+    const f = inbox.filings.find((x) => x.slug === filing);
+    if (!f) return;
+    openedFor = filing;
+    open = f.sha;
+    requestAnimationFrame(() => document.querySelector(`[data-testid="filing-${filing}"]`)?.scrollIntoView({ block: 'start' }));
+  });
   let busy = $state<string | null>(null);
   let error = $state<string | null>(null);
   let conflict = $state<{ sha: string; paths: string[] } | null>(null);
@@ -67,6 +79,8 @@
     }
   }
   const isOpen = (f: FilingEntry) => f.state === 'pending' || open === f.sha;
+  // The editor comes back to this filing, open, whether it is still awaiting review or is now yours.
+  const editHref = (path: string, slug: string) => `#/edit/${path}?back=${encodeURIComponent(`#/inbox?filing=${slug}`)}`;
   const reviewFor = (f: FilingEntry): FilingReview | null => (isOpen(f) && s ? reviewOf(brain, f.changes) : null);
   // Which filing an error belongs to: the message is shown under that filing's buttons, where the tap was,
   // not at the foot of the page where a phone never sees it.
@@ -184,6 +198,11 @@
               {#each review.added as file (file.path)}
                 <article class="added">
                   <h4><a href={browseHref(file.path)}>{linkLabel(file.path, s)}</a> <small><code>{file.path}</code> · new</small></h4>
+                  {#if f.state === 'pending' && file.path.endsWith('/raw.md')}
+                    <p class="edit"><a href={editHref(file.path, f.slug)} data-testid="edit-source">Edit metadata</a> <small>· the passage text is immutable; an edit makes this source yours</small></p>
+                  {:else if f.state === 'pending' && file.path.endsWith('/notes.md')}
+                    <p class="edit"><a href={editHref(file.path, f.slug)} data-testid="edit-notes">Edit</a> <small>· an edit makes the notes yours</small></p>
+                  {/if}
                   {#if file.body}<MarkdownView body={file.body} path={file.path} />{:else}<p class="empty">(empty body)</p>{/if}
                 </article>
               {/each}
@@ -241,6 +260,7 @@
   .head { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
   .review { margin-top: 0.75rem; display: grid; gap: 0.75rem; border-top: var(--bw, 1px) solid var(--edge); padding-top: 0.75rem; }
   .added h4, article h4 { margin: 0 0 0.25rem; }
+  .added .edit { margin: 0 0 0.5rem; }
   .attachment { margin: 0; }
   ul[data-testid='unfiled'] { padding-left: 0.25rem; list-style: none; }
 </style>

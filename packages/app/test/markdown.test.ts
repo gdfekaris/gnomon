@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { type TreeEntry, buildSnapshot, isFrontmatterPath } from '@gnomon/core';
 import { browseHref, headingId, linkLabel, renderMarkdown } from '../src/lib/markdown';
 import { attachmentKind, mimeFor } from '../src/lib/attachments';
-import { parseRoute } from '../src/lib/route';
+import { inAppHash, parseRoute } from '../src/lib/route';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const FIXTURE = join(here, '..', '..', 'core', 'fixtures', 'brain');
@@ -81,5 +81,13 @@ describe('parseRoute', () => {
     expect(parseRoute('#/browse').path).toBe('');
     expect(parseRoute('').name).toBe('capture');
     expect(parseRoute('#/nope/x').name).toBe('capture');
+  });
+  it('carries an encoded in-app hash through a query, and inAppHash keeps only those', () => {
+    const back = parseRoute(`#/edit/sources/x-y/raw.md?back=${encodeURIComponent('#/inbox?filing=x-y')}`);
+    expect(back).toMatchObject({ name: 'edit', path: 'sources/x-y/raw.md', anchor: undefined });
+    expect(inAppHash(back.query.get('back'))).toBe('#/inbox?filing=x-y');
+    expect(inAppHash('https://example.org/')).toBeUndefined();
+    expect(inAppHash('javascript:alert(1)')).toBeUndefined();
+    expect(inAppHash(null)).toBeUndefined();
   });
 });

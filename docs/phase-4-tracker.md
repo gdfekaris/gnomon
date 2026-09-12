@@ -251,7 +251,12 @@ Open at the close of Phase 3 (2026-09-11); none blocks a Phase 4 block.
   controls remembers which was pressed. Inside `.content` any token may
   break and grid or flex items may shrink, but a button never does. The
   Browse tab is sources only; sets, captures, and proposals live on their
-  own tabs. The icon is the "Noon" mark from `tools/make-icons.mjs`.
+  own tabs. The icon is the "Noon" mark from `tools/make-icons.mjs`. The Inbox
+  review panel carries the edit links for a pending filing's source and
+  notes (2026-09-12): an editor opened with `?back=<in-app hash>` returns
+  there on Save and on Back, and `#/inbox?filing=<slug>` shows that filing
+  open on arrival; the edit still makes the file yours, as decided in
+  Phase 2.
 - The demo brain accepts `#/settings?demo-omit=a,b` to drop paths. Its
   git history is one seed commit, so the fixture's own pending filing
   does not appear in the Inbox's filing list. Proposal ids and timestamps
