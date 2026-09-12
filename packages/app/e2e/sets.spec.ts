@@ -23,8 +23,12 @@ test('create Set 3, rename it, reorder principles, delete Set 1, and the survivo
 
   const work = page.getByTestId('principles-ps-7k2m');
   await expect(work.locator('li a')).toHaveText(['Say the hard thing first', 'Write to find out']);
+  // Each row carries its precedence number, and the numbers follow a reorder.
+  await expect(work.locator('.num')).toHaveText(['1.', '2.']);
   await work.locator('li').nth(1).getByTestId('principle-up').click();
   await expect(work.locator('li a')).toHaveText(['Write to find out', 'Say the hard thing first']);
+  await expect(work.locator('.num')).toHaveText(['1.', '2.']);
+  await expect(work.locator('li').first()).toContainText('1. Write to find out');
 
   const set1 = page.getByTestId('set-ps-g8xw');
   await set1.getByTestId('set-delete').click();

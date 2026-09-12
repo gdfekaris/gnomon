@@ -126,7 +126,8 @@
               ondragover={(e) => e.preventDefault()}
               ondrop={(e) => { e.stopPropagation(); dropPrinciple(e, slug, j); }}
             >
-              <a href={browseHref(p.path)}>{p.fm.title}</a>
+              <span class="num" aria-label="precedence {p.fm.order}">{p.fm.order}.</span>
+              <a href={browseHref(p.path)} class="title">{p.fm.title}</a>
               <span class="controls">
                 <button onclick={() => movePrinciple(brain, slug, principleSlug(p.path), -1)} disabled={busy || j === 0} aria-label="Move principle up" data-testid="principle-up">↑</button>
                 <button onclick={() => movePrinciple(brain, slug, principleSlug(p.path), 1)} disabled={busy || j === principles.length - 1} aria-label="Move principle down" data-testid="principle-down">↓</button>
@@ -156,8 +157,14 @@
   .head h3 { margin: 0; }
   .controls { display: inline-flex; gap: 0.25rem; flex-wrap: nowrap; }
   .controls button { min-height: 0; padding: 0.25rem 0.5rem; font-size: var(--fs-small); border-radius: calc(var(--radius) - 2px); }
-  .principles { padding-left: 1.25rem; }
-  .principles li { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin: 0.25rem 0; }
+  /* Order is precedence: each row carries its number from the file's `order`, which the arrows and drags
+     rewrite, so the numbers follow a reorder. A flex row draws no list marker, hence the span. */
+  .principles { padding-left: 0; list-style: none; }
+  .principles li { display: flex; align-items: center; gap: 0.5rem; margin: 0; padding: 0.35rem 0; border-top: var(--status-border, 1px dotted var(--edge)); }
+  .principles li:first-child { border-top: 0; }
+  .principles li.empty { border-top: 0; }
+  .num { flex: 0 0 1.5rem; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .title { flex: 1 1 auto; min-width: 0; }
   .framing { color: var(--muted); font-size: var(--fs-small); white-space: pre-wrap; margin: 0.5rem 0; }
   .confirm { flex-direction: column; align-items: stretch; }
   .confirm p { margin: 0 0 6px; }
