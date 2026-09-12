@@ -22,6 +22,12 @@
   let models = $state<ModelInfo[]>([]);
   let model = $state<ModelInfo | null>(null);
   let modelsFor = $state<string | null>(null);
+  // A filing changes exactly two fields on its capture (schema §7.6 step 6). When the added lines are those two,
+  // the panel says so in the app's words; anything else shows as the raw lines, so an oddity is visible.
+  const filedAs = (lines: string[]): string | null => {
+    const m = lines.map((l) => /^(status|filed_as): (.+)$/.exec(l));
+    return lines.length === 2 && m[0]?.[1] === 'status' && m[0][2] === 'filed' && m[1]?.[1] === 'filed_as' ? m[1][2]! : null;
+  };
   // A filing awaiting review is shown open, Ratify and Reject in view: looking at it is why it is listed.
   // Decided ones are collapsed; "Show files" opens the same panel for the record.
   let open = $state<string | null>(null);
@@ -184,9 +190,14 @@
                 <p class="attachment"><a href={browseHref(a.path)}>{a.path.slice(a.path.lastIndexOf('/') + 1)}</a> <small>· attachment · {(a.size / 1024).toFixed(1)} KB · new</small></p>
               {/each}
               {#if review.capture}
+                {@const slug = filedAs(review.capture.addedLines)}
                 <article>
-                  <h4><code>{review.capture.path}</code> <small>· modified</small></h4>
-                  <pre class="plus" data-testid="capture-lines">{review.capture.addedLines.map((l) => `+ ${l}`).join('\n')}</pre>
+                  <h4>Capture <a href={browseHref(review.capture.path)}><code>{review.capture.path.slice('inbox/'.length, -3)}</code></a> <small>· modified</small></h4>
+                  {#if slug}
+                    <p data-testid="capture-filed">Now filed as <a href={browseHref(`sources/${slug}/raw.md`)}>{slug}</a>.</p>
+                  {:else}
+                    <pre class="plus" data-testid="capture-lines">{review.capture.addedLines.map((l) => `+ ${l}`).join('\n')}</pre>
+                  {/if}
                 </article>
               {/if}
               {#if f.state === 'pending'}

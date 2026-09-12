@@ -24,7 +24,8 @@ test('file a capture with the demo model, review it, ratify it; file another and
   await expect(panel).toContainText('The only way to make sense out of change');
   await expect(panel).toContainText('sources/unknown-the-only-way-to/raw.md');
   await expect(panel).toContainText('maps/proposals/');
-  await expect(panel.getByTestId('capture-lines')).toHaveText('+ status: filed\n+ filed_as: unknown-the-only-way-to');
+  await expect(panel.getByTestId('capture-filed')).toHaveText('Now filed as unknown-the-only-way-to.');
+  await expect(panel.getByTestId('capture-lines')).toHaveCount(0);
   await panel.getByTestId('ratify').click();
   await expect(filing.getByTestId('state')).toHaveText('ratified');
   await expect(filing.getByTestId('review-panel')).toHaveCount(0); // decided: collapsed
