@@ -125,6 +125,124 @@ commands, and any UI.
   text. Done when the maintainer has run one session that way and the
   smoke checklist gains the step.
 
+## UX block: Browse at scale (2026-09-12)
+
+Scoped after the maintainer asked what happens to Browse at hundreds of
+sources. The whole brain is in memory, so filtering and grouping are
+local and instant; the constraints are the phone screen and the tag
+vocabulary. One block, one screen, its own service. Ticked when committed
+and CI is green, like a phase block.
+
+**Goal.** Browse stays a human-friendly library at hundreds of sources: a
+search that finds a source by what you remember of it, tags that do not
+crowd the screen, shelves by author and work, landmarks in time, and a
+list that never renders more than a page at once.
+
+**Non-goals.** Searching passage or notes text (frontmatter only, by the
+maintainer's decision). Tag renaming or merging (a Tags screen with
+counts and a bulk rename is its own discussion). An A–Z jump bar (wait
+until authors pass about forty). Persisting search or expanded shelves
+across launches.
+
+**Where the logic lives.** `src/lib/services/browse.ts`, framework-free,
+unit-tested in `test/browse.test.ts`: `normalize(text)` (lowercase, NFD,
+strip combining marks, collapse whitespace), `matches(source, terms)`,
+`filterSources(sources, {q, tags})`, `tagCounts(sources)`,
+`topTags(counts, selected, n)`, `shelves(sources)`, `monthOf(created)`,
+`page(list, shown)`. `Browse.svelte` keeps layout and state only.
+
+### 1. Search
+
+- A text field under the meta line and above the tags, placeholder
+  "Search titles, authors, works, tags", `data-testid="browse-search"`,
+  with a clear control (×, `data-testid="browse-clear"`) shown when the
+  field is not empty. No search button; results update as you type.
+- **Matching.** The query is split on whitespace into terms; every term
+  must match. A term matches a source when it is a substring of the
+  normalized `title`, `author`, `work`, any tag, or the source slug; a
+  term that is all digits also matches an equal `year`. Normalization is
+  case- and diacritic-insensitive: `emile` finds Émile.
+- Search stacks on the tag filter and respects the sort. A count line
+  above the list reads "12 of 240 sources" whenever a search or tag
+  filter is active (`data-testid="browse-count"`).
+- The query lives in the hash, `#/browse?q=…`, alongside `tag`, so the
+  file view's "← Browse" returns to the same search; the file view keeps
+  the last Browse hash in a module variable and uses it for that link.
+  Nothing about the search is saved on the device.
+- Empty result: "No source matches “q”." with a link that clears the
+  search (and keeps the tags).
+
+### 2. Tags with counts, fewer in view
+
+- Counts are the number of sources carrying the tag, over the whole
+  brain (not faceted by the current filter); tags carried only by notes
+  or captures do not appear as chips.
+- Each chip shows the tag and its count, the count small and muted:
+  "stoicism 12".
+- In view by default: the twelve most-used tags, ties alphabetical, plus
+  every selected tag. A chip "All tags (n)" (`data-testid="all-tags"`)
+  toggles the full list, alphabetical, with counts; collapsed again on
+  the next visit.
+- Tapping a chip toggles it. Several selected tags combine with AND. The
+  "all" chip clears them. The hash carries `tag=a,b` (comma-separated);
+  the single-tag links from a file view (`?tag=x`) keep working.
+- The "Notes tagged x" section stays as it is, for a single selected
+  tag; with several selected it lists notes carrying all of them.
+
+### 3. Shelves (the author sort)
+
+- Under Sort: Author the list is an outline. Each author is a heading
+  with a count ("Marcus Aurelius · 5"), collapsed by default; tapping it
+  expands that author. Expanded authors are remembered for the session
+  (component state), not on the device.
+- Inside an author with two or more sources, works are sub-headings
+  ("Meditations (c. 180) · 3") in codepoint order, as the index groups
+  them; sources without a `work` sit first, directly under the author.
+  An author with one source shows it directly.
+- With a search or tag filter active, every author that has a match is
+  expanded automatically and the counts are match counts.
+- `data-testid="shelf-{author-slug}"` on each heading, `aria-expanded`
+  on it.
+
+### 4. Landmarks (the date sorts)
+
+- Under Newest and Oldest, a heading per month, "September 2026", from
+  the UTC date of `created`. A month with one source still gets one.
+  Headings are plain `h3`, not sticky (the tab bar is the one sticky
+  thing).
+
+### 5. Paging
+
+- At most fifty source rows are rendered, then a button "Show 50 more
+  (190 left)" (`data-testid="show-more"`); a final page shows "Show the
+  last n". The page resets whenever the search, the tags, or the sort
+  changes. In shelves, only expanded rows count toward the page.
+
+### 6. Test affordance
+
+- `connectDemo` gains `fill`: `#/settings?demo-fill=n` clones the
+  fixture's four sources n times with distinct slugs, titles, authors
+  drawn from a small list, works, years, months spread across a year, and
+  tags drawn from a list of thirty, so a flow can browse a few hundred
+  sources without a real brain. Test-only, like `demo-omit`.
+
+### 7. Styling
+
+- Tokens and shared classes only: the search is a normal input; chips
+  are `.chip` with a `small` count inside; shelf headings are `h3` with a
+  button role; the count line is `.meta`. One new shared rule at most, for
+  the count inside a chip.
+
+**Done when**, on Chromium and WebKit: typing narrows the list and the
+count line says so; `emile` finds Émile; the query survives a trip into
+a file and back; two tags AND together and the hash carries both; the
+top twelve chips show counts and "All tags" reveals the rest; author
+shelves start collapsed with counts, open on tap, and open by themselves
+under a filter; Newest shows month headings; a demo brain filled to three
+hundred sources renders fifty rows and pages; the unit tests cover every
+function in `browse.ts`; the existing Browse flows still pass; and
+proposal §6 and spec §10's Browse lines are updated in the same commit.
+
 ## Carried from Phase 3
 
 Open at the close of Phase 3 (2026-09-11); none blocks a Phase 4 block.
