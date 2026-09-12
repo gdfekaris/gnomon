@@ -2,6 +2,7 @@
   // Reason — US-8, US-9, US-10, US-19; proposal §6. Set picker chips, task
   // presets, provider and model picker, the budget bar from assemble
   // before sending, a streaming transcript, and citations as links.
+  import { hold } from '../lib/press';
   import { type Task, setLabel } from '@gnomon/core';
   import { renderAnswer } from '../lib/markdown';
   import { brain } from '../lib/services/index';
@@ -127,7 +128,7 @@
       {/if}
     </div>
     <div class="row">
-      <button class="primary" onclick={send} disabled={!canSend} data-testid="send">Send</button>
+      <button class="primary" onclick={send} disabled={!canSend} use:hold={reasoning.streaming} data-testid="send">{reasoning.streaming ? 'Sending…' : 'Send'}</button>
       {#if reasoning.streaming}<button onclick={() => reasoner.stop()} data-testid="stop">Stop</button>{/if}
       {#if reasoning.transcript.length}<button class="quiet" onclick={() => reasoner.clear()} disabled={reasoning.streaming}>Clear</button>{/if}
     </div>

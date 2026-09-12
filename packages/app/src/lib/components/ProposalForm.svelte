@@ -1,6 +1,7 @@
 <script lang="ts">
   // Save a Relate answer's proposal as your own (Phase 3 block 5): kind and
   // target chosen in a small form pre-filled from the answer, one commit.
+  import { hold } from '../press';
   import { untrack } from 'svelte';
   import { setLabel } from '@gnomon/core';
   import { brain, describeError } from '../services/index';
@@ -68,7 +69,7 @@
   <label>Rationale <textarea bind:value={rationale} rows="4" data-testid="proposal-rationale"></textarea></label>
   <label>Grounds <small>(source slugs, comma-separated)</small> <input bind:value={grounds} data-testid="proposal-grounds" /></label>
   <div class="row">
-    <button type="submit" class="primary" disabled={busy || !title.trim() || !targetSet || (kind === 'amendment' && !target)} data-testid="proposal-save">{busy ? 'Saving…' : 'Save proposal'}</button>
+    <button type="submit" class="primary" disabled={busy || !title.trim() || !targetSet || (kind === 'amendment' && !target)} use:hold={busy} data-testid="proposal-save">{busy ? 'Saving…' : 'Save proposal'}</button>
     <button type="button" class="quiet" onclick={oncancel} disabled={busy}>Cancel</button>
   </div>
   {#if error}<p class="error" role="alert">{error}</p>{/if}

@@ -2,6 +2,7 @@
   // Inbox — US-2, US-3; proposal §6, §9 decision 3. Unfiled captures,
   // "process inbox with AI", recent filings from history, the review view
   // from compare, ratify and reject.
+  import { hold } from '../lib/press';
   import { type FilingReview } from '@gnomon/core';
   import type { ModelInfo } from '@gnomon/providers';
   import MarkdownView from '../lib/components/MarkdownView.svelte';
@@ -136,7 +137,7 @@
           {#each models as m (m.id)}<option value={m}>{m.label}</option>{/each}
         </select>
       </label>
-      <button class="primary" onclick={process} disabled={busy !== null || !captures.length || !model} data-testid="process">Process inbox with AI</button>
+      <button class="primary" onclick={process} disabled={busy !== null || !captures.length || !model} use:hold={busy === 'process'} data-testid="process">{busy === 'process' ? 'Processing…' : 'Process inbox with AI'}</button>
     </div>
     {#if inbox.processing}<p class="queued" role="status">Filing {inbox.processing.done + 1} of {inbox.processing.total}…</p>{/if}
     {#if inbox.results.length}
@@ -202,8 +203,8 @@
               {/if}
               {#if f.state === 'pending'}
                 <div class="row">
-                  <button class="primary" onclick={() => doRatify(f)} disabled={busy !== null} data-testid="ratify">Ratify</button>
-                  <button onclick={() => doReject(f)} disabled={busy !== null} data-testid="reject">Reject</button>
+                  <button class="primary" onclick={() => doRatify(f)} disabled={busy !== null} use:hold={busy === f.sha && acting === 'ratify'} data-testid="ratify">Ratify</button>
+                  <button onclick={() => doReject(f)} disabled={busy !== null} use:hold={busy === f.sha && acting === 'reject'} data-testid="reject">Reject</button>
                   {#if busy === f.sha}<span role="status" class="hint" data-testid="deciding">{acting === 'ratify' ? 'Ratifying…' : 'Rejecting…'} one commit, then the list reloads.</span>{/if}
                 </div>
               {:else if f.state === 'ratified'}

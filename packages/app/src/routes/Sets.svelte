@@ -3,6 +3,7 @@
   // rename, reorder (drag, plus Move up/down for keyboards), delete with a
   // confirmation naming the principle count and the dangling report; the
   // per-set description; principle reorder within a set.
+  import { hold } from '../lib/press';
   import { setLabel } from '@gnomon/core';
   import { brain, describeError } from '../lib/services/index';
   import { type DeletePlan, describeSet, moveSet, movePrinciple, newSet, placePrinciple, placeSet, planDeletePrinciple, planDeleteSet, renameSet } from '../lib/services/sets';
@@ -12,6 +13,8 @@
 
   const s = $derived(snapshot.current);
   let busy = $state(false);
+  /** which control is doing the work, so it alone stays pressed while the rest are disabled */
+  let pressed = $state<string | null>(null);
   let error = $state<string | null>(null);
   let newName = $state('');
   let renaming = $state<string | null>(null);
@@ -24,8 +27,9 @@
   const slugOf = (path: string) => path.split('/')[1]!;
   const principleSlug = (path: string) => path.split('/')[2]!.replace(/\.md$/, '');
 
-  async function run(action: () => Promise<unknown>) {
+  async function run(key: string, action: () => Promise<unknown>) {
     busy = true;
+    pressed = key;
     error = null;
     try {
       await action();
@@ -33,25 +37,28 @@
       error = describeError(e);
     } finally {
       busy = false;
+      pressed = null;
     }
   }
-  const create = () => run(async () => { await newSet(brain, { name: newName.trim() }); newName = ''; });
+  const create = () => run('new-set', async () => { await newSet(brain, { name: newName.trim() }); newName = ''; });
   const startRename = (slug: string, current: string | undefined) => { renaming = slug; renameValue = current ?? ''; };
-  const saveRename = (slug: string) => run(async () => { await renameSet(brain, slug, renameValue); renaming = null; });
+  const saveRename = (slug: string) => run(`rename:${slug}`, async () => { await renameSet(brain, slug, renameValue); renaming = null; });
   const startDescribe = (slug: string, body: string) => { describing = slug; describeValue = body; };
-  const saveDescribe = (slug: string) => run(async () => { await describeSet(brain, slug, describeValue); describing = null; });
+  const saveDescribe = (slug: string) => run(`describe:${slug}`, async () => { await describeSet(brain, slug, describeValue); describing = null; });
   const askDeleteSet = (slug: string) => { plan = { ...planDeleteSet(brain, slug), kind: 'set' }; };
   const askDeletePrinciple = (path: string) => { plan = { ...planDeletePrinciple(brain, path), kind: 'principle' }; };
-  const confirmDelete = () => run(async () => { await plan!.commit(); plan = null; });
+  const confirmDelete = () => run('delete', async () => { await plan!.commit(); plan = null; });
+  const nudgeSet = (slug: string, direction: -1 | 1) => run(`set:${slug}:${direction}`, () => moveSet(brain, slug, direction));
+  const nudgePrinciple = (set: string, slug: string, direction: -1 | 1) => run(`principle:${set}/${slug}:${direction}`, () => movePrinciple(brain, set, slug, direction));
 
   function dropSet(e: DragEvent, index: number) {
     e.preventDefault();
-    if (dragging?.kind === 'set') void run(() => placeSet(brain, dragging!.slug, index));
+    if (dragging?.kind === 'set') void run('drop', () => placeSet(brain, dragging!.slug, index));
     dragging = null;
   }
   function dropPrinciple(e: DragEvent, set: string, index: number) {
     e.preventDefault();
-    if (dragging?.kind === 'principle' && dragging.set === set) void run(() => placePrinciple(brain, set, dragging!.slug, index));
+    if (dragging?.kind === 'principle' && dragging.set === set) void run('drop', () => placePrinciple(brain, set, dragging!.slug, index));
     dragging = null;
   }
 </script>
@@ -75,7 +82,7 @@
         <p>These references will dangle until you edit them:</p>
         <ul data-testid="dangling">{#each plan.dangling as d (d.path + d.ref)}<li><code>{d.path}</code> → {d.ref}</li>{/each}</ul>
       {/if}
-      <button onclick={confirmDelete} disabled={busy} data-testid="delete-confirm-yes">Delete</button>
+      <button onclick={confirmDelete} disabled={busy} use:hold={pressed === 'delete'} data-testid="delete-confirm-yes">{pressed === 'delete' ? 'Deleting…' : 'Delete'}</button>
       <button onclick={() => (plan = null)} disabled={busy}>Cancel</button>
     </div>
   {/if}
@@ -95,13 +102,13 @@
         <div class="head">
           {#if renaming === slug}
             <input bind:value={renameValue} placeholder="Sub-name (blank for none)" data-testid="rename-input" />
-            <button onclick={() => saveRename(slug)} disabled={busy} data-testid="rename-save">Save</button>
+            <button onclick={() => saveRename(slug)} disabled={busy} use:hold={pressed === `rename:${slug}`} data-testid="rename-save">Save</button>
             <button onclick={() => (renaming = null)}>Cancel</button>
           {:else}
             <h3><a href={browseHref(set.path)} data-testid="set-label">{setLabel(set.fm)}</a></h3>
             <span class="controls">
-              <button onclick={() => moveSet(brain, slug, -1)} disabled={busy || i === 0} aria-label="Move set up" data-testid="set-up">↑</button>
-              <button onclick={() => moveSet(brain, slug, 1)} disabled={busy || i === s.sets.length - 1} aria-label="Move set down" data-testid="set-down">↓</button>
+              <button onclick={() => nudgeSet(slug, -1)} disabled={busy || i === 0} use:hold={pressed === `set:${slug}:-1`} aria-label="Move set up" data-testid="set-up">↑</button>
+              <button onclick={() => nudgeSet(slug, 1)} disabled={busy || i === s.sets.length - 1} use:hold={pressed === `set:${slug}:1`} aria-label="Move set down" data-testid="set-down">↓</button>
               <button onclick={() => startRename(slug, set.fm.name)} disabled={busy} data-testid="set-rename">Rename</button>
               <button onclick={() => startDescribe(slug, set.body)} disabled={busy} data-testid="set-describe">Describe</button>
               <button onclick={() => askDeleteSet(slug)} disabled={busy || s.sets.length === 1} data-testid="set-delete">Delete</button>
@@ -113,7 +120,7 @@
             Framing for this set <small>(sent to the model verbatim whenever the set is selected)</small>
             <textarea bind:value={describeValue} rows="4" data-testid="describe-input"></textarea>
           </label>
-          <button onclick={() => saveDescribe(slug)} disabled={busy} data-testid="describe-save">Save</button>
+          <button onclick={() => saveDescribe(slug)} disabled={busy} use:hold={pressed === `describe:${slug}`} data-testid="describe-save">Save</button>
           <button onclick={() => (describing = null)}>Cancel</button>
         {:else if set.body}
           <p class="framing">{set.body}</p>
@@ -129,8 +136,8 @@
               <span class="num" aria-label="precedence {p.fm.order}">{p.fm.order}.</span>
               <a href={browseHref(p.path)} class="title">{p.fm.title}</a>
               <span class="controls">
-                <button onclick={() => movePrinciple(brain, slug, principleSlug(p.path), -1)} disabled={busy || j === 0} aria-label="Move principle up" data-testid="principle-up">↑</button>
-                <button onclick={() => movePrinciple(brain, slug, principleSlug(p.path), 1)} disabled={busy || j === principles.length - 1} aria-label="Move principle down" data-testid="principle-down">↓</button>
+                <button onclick={() => nudgePrinciple(slug, principleSlug(p.path), -1)} disabled={busy || j === 0} use:hold={pressed === `principle:${slug}/${principleSlug(p.path)}:-1`} aria-label="Move principle up" data-testid="principle-up">↑</button>
+                <button onclick={() => nudgePrinciple(slug, principleSlug(p.path), 1)} disabled={busy || j === principles.length - 1} use:hold={pressed === `principle:${slug}/${principleSlug(p.path)}:1`} aria-label="Move principle down" data-testid="principle-down">↓</button>
                 <button onclick={() => askDeletePrinciple(p.path)} disabled={busy} aria-label="Delete principle" data-testid="principle-delete">Delete</button>
               </span>
             </li>
@@ -145,7 +152,7 @@
 
   <form class="new" onsubmit={(e) => { e.preventDefault(); void create(); }}>
     <label>New set <input bind:value={newName} placeholder="Optional sub-name, e.g. Work" data-testid="new-set-name" /></label>
-    <button type="submit" disabled={busy} data-testid="new-set">Create Set {s.sets.length + 1}</button>
+    <button type="submit" disabled={busy} use:hold={pressed === 'new-set'} data-testid="new-set">Create Set {s.sets.length + 1}</button>
   </form>
   {#if error}<p class="error" role="alert">{error}</p>{/if}
 {/if}

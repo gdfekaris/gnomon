@@ -2,6 +2,7 @@
   // Connect-existing results (US-15): refusals with an Add button for each
   // missing scaffold item, warnings, and the index offer. Content is never
   // touched; what the app cannot fix is listed for the curator.
+  import { hold } from '../press';
   import type { CommitBatch } from '@gnomon/core';
   import { SCAFFOLD } from '../scaffold';
   import { brain, describeError } from '../services/index';
@@ -11,12 +12,15 @@
 
   let report = $state<ConnectReport | null>(null);
   let busy = $state(false);
+  /** which control is doing the work, so it alone stays pressed */
+  let pressed = $state<string | null>(null);
   let error = $state<string | null>(null);
 
   async function check() {
     const driver = session.driver;
     if (!driver) return;
     busy = true;
+    pressed = 'check';
     error = null;
     try {
       report = await inspectBrain(brain, driver, SCAFFOLD);
@@ -24,12 +28,14 @@
       error = describeError(e);
     } finally {
       busy = false;
+      pressed = null;
     }
   }
-  async function apply(batch: CommitBatch) {
+  async function apply(batch: CommitBatch, key: string) {
     const driver = session.driver;
     if (!driver) return;
     busy = true;
+    pressed = key;
     error = null;
     try {
       report = await applyOffer(brain, driver, SCAFFOLD, batch);
@@ -37,6 +43,7 @@
       error = describeError(e);
     } finally {
       busy = false;
+      pressed = null;
     }
   }
   // Re-check whenever a different brain (head) is loaded.
@@ -53,7 +60,7 @@
     <p>
       <strong data-testid="refusal-count">{report.refusals.length} refusal{report.refusals.length === 1 ? '' : 's'}</strong>,
       <span data-testid="warning-count">{report.warnings.length} warning{report.warnings.length === 1 ? '' : 's'}</span>
-      <button onclick={check} disabled={busy}>Re-check</button>
+      <button onclick={check} disabled={busy} use:hold={pressed === 'check'}>Re-check</button>
     </p>
     {#if report.refusals.length}
       <ul class="issues" data-testid="refusals">
@@ -62,7 +69,7 @@
           <li>
             <code>{i.path}</code> — {i.message} <small>({i.rule})</small>
             {#if offer}
-              <button onclick={() => apply(offer.batch)} disabled={busy} data-testid="offer-{offer.path}">{offer.label}</button>
+              <button onclick={() => apply(offer.batch, offer.path)} disabled={busy} use:hold={pressed === offer.path} data-testid="offer-{offer.path}">{offer.label}</button>
             {:else}
               <em>fix by hand; the app never rewrites your files</em>
             {/if}
@@ -78,7 +85,7 @@
       </ul>
     {/if}
     {#if report.indexes}
-      <p>The generated index files are stale. <button onclick={() => apply(report!.indexes!)} disabled={busy} data-testid="offer-indexes">Regenerate indexes</button></p>
+      <p>The generated index files are stale. <button onclick={() => apply(report!.indexes!, 'indexes')} disabled={busy} use:hold={pressed === 'indexes'} data-testid="offer-indexes">Regenerate indexes</button></p>
     {/if}
     {#if !report.refusals.length && !report.warnings.length && !report.indexes}
       <p class="ok">The brain is valid and its indexes are current.</p>

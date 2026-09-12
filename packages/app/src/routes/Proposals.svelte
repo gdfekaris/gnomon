@@ -3,6 +3,7 @@
   // set with kind, title, rationale, and links; accept and decline record
   // one Decide: commit each; accepting a principle or amendment opens the
   // editor pre-filled. The curator writes the principle; the app never does.
+  import { hold } from '../lib/press';
   import type { BrainFile, ProposalFm } from '@gnomon/core';
   import MarkdownView from '../lib/components/MarkdownView.svelte';
   import { browseHref, linkLabel } from '../lib/markdown';
@@ -66,8 +67,8 @@
           </p>
           {#if p.body}<MarkdownView body={p.body} path={p.path} />{/if}
           <div class="row">
-            <button onclick={() => act(p, 'accepted')} disabled={busy !== null} data-testid="accept">{busy === id && acting === 'accepted' ? 'Accepting…' : acceptLabel(p.fm)}</button>
-            <button onclick={() => act(p, 'declined')} disabled={busy !== null} data-testid="decline">{busy === id && acting === 'declined' ? 'Declining…' : 'Decline'}</button>
+            <button onclick={() => act(p, 'accepted')} disabled={busy !== null} use:hold={busy === id && acting === 'accepted'} data-testid="accept">{busy === id && acting === 'accepted' ? 'Accepting…' : acceptLabel(p.fm)}</button>
+            <button onclick={() => act(p, 'declined')} disabled={busy !== null} use:hold={busy === id && acting === 'declined'} data-testid="decline">{busy === id && acting === 'declined' ? 'Declining…' : 'Decline'}</button>
             {#if busy === id}<span role="status" class="hint" data-testid="deciding">One commit to your repository; a few seconds.</span>{/if}
           </div>
         </article>

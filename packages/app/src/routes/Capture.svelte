@@ -1,6 +1,7 @@
 <script lang="ts">
   // Capture — spec §10.4, US-1, and the offline queue of spec §14. The
   // default screen: paste target, note, attach-a-file, save. One commit.
+  import { hold } from '../lib/press';
   import { AttachmentTooLargeError, ATTACHMENT_LIMIT_BYTES } from '@gnomon/storage';
   import ConnectionNotice from '../lib/components/ConnectionNotice.svelte';
   import Nudge from '../lib/components/Nudge.svelte';
@@ -90,7 +91,7 @@
       <input type="file" bind:files bind:this={fileInput} data-testid="capture-file" />
     </label>
     {#if file}<p class="hint">{file.name} · {mb(file.size)} MB</p>{/if}
-    <button type="submit" class="primary" disabled={saving || text.trim() === ''} data-testid="capture-save">{saving ? 'Saving…' : network.online ? 'Save to inbox' : 'Keep until online'}</button>
+    <button type="submit" class="primary" disabled={saving || text.trim() === ''} use:hold={saving} data-testid="capture-save">{saving ? 'Saving…' : network.online ? 'Save to inbox' : 'Keep until online'}</button>
   </form>
   {#if error}<p class="error" role="alert">{error}</p>{/if}
 {/if}

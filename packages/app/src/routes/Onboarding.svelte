@@ -6,6 +6,7 @@
   // who can see what → the optional swap to a single-repository token
   // (create path only) → Add to Home Screen → Capture. Block 1's service
   // does the work; this screen only asks and explains.
+  import { hold } from '../lib/press';
   import { GitHubDriver } from '@gnomon/storage';
   import ValidationPanel from '../lib/components/ValidationPanel.svelte';
   import { SCAFFOLD } from '../lib/scaffold';
@@ -228,7 +229,7 @@
     </label>
     <p class="hint">Stored only in this browser on this device. It is sent to GitHub and nowhere else.</p>
     <div class="actions">
-      <button type="submit" class="primary" disabled={busy || !token.trim() || !name.trim() || (intent === 'connect' && !owner.trim())} data-testid="onboard-go">
+      <button type="submit" class="primary" disabled={busy || !token.trim() || !name.trim() || (intent === 'connect' && !owner.trim())} use:hold={busy} data-testid="onboard-go">
         {busy ? 'Working…' : intent === 'create' ? 'Create my brain' : 'Connect'}
       </button>
       <button type="button" class="link" onclick={() => (step = 'welcome')} disabled={busy}>Back</button>
@@ -289,7 +290,7 @@
     </label>
   {/if}
   <div class="actions">
-    {#if !swapped}<button onclick={swap} disabled={busy || !swapToken.trim()} data-testid="swap-go">Use this token instead</button>{/if}
+    {#if !swapped}<button onclick={swap} disabled={busy || !swapToken.trim()} use:hold={busy} data-testid="swap-go">Use this token instead</button>{/if}
     <button class={swapped ? '' : 'link'} onclick={next} disabled={busy} data-testid="onboard-next">{swapped ? 'Continue' : 'Skip for now'}</button>
   </div>
 {:else if step === 'install'}

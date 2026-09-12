@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { hold } from '../press';
   import Icon from './Icon.svelte';
   import { brain } from '../services/index';
   import { snapshot } from '../stores/snapshot.svelte';
@@ -16,7 +17,7 @@
 {#if snapshot.stale}
   <div class="banner" role="status">
     <Icon name="clock" /><span class="grow">Your repository has newer changes.</span>
-    <button onclick={refresh} disabled={busy}>{busy ? 'Refreshing…' : 'Refresh'}</button>
+    <button onclick={refresh} disabled={busy} use:hold={busy}>{busy ? 'Refreshing…' : 'Refresh'}</button>
   </div>
 {/if}
 

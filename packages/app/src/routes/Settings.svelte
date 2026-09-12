@@ -2,6 +2,7 @@
   // Settings — proposal §6: git connection, AI providers, context budget,
   // privacy disclosure, theme; connect-existing validation (US-15). The
   // encryption toggle is Phase 4 and the token walkthrough is Phase 3.
+  import { hold } from '../lib/press';
   import pkg from '../../package.json';
   import { connectDemo, connectGitHub, describeError, disconnect } from '../lib/services/index';
   import ValidationPanel from '../lib/components/ValidationPanel.svelte';
@@ -25,6 +26,8 @@
   let anthropic = $state(settings.anthropicKey);
   let openrouter = $state(settings.openrouterKey);
   let busy = $state(false);
+  /** which control is doing the work, so it alone stays pressed */
+  let pressed = $state<string | null>(null);
   let error = $state<string | null>(null);
   let savedKeys = $state(false);
   // On-device settings load after launch; pick them up once they arrive.
@@ -37,8 +40,9 @@
     openrouter = settings.openrouterKey;
   });
 
-  async function run(action: () => Promise<void>) {
+  async function run(key: string, action: () => Promise<void>) {
     busy = true;
+    pressed = key;
     error = null;
     try {
       await action();
@@ -46,20 +50,21 @@
       error = describeError(e);
     } finally {
       busy = false;
+      pressed = null;
     }
   }
-  const useDemo = () => run(() => connectDemo((route.query.get('demo-omit') ?? '').split(',').filter(Boolean)));
-  const useGitHub = () => run(async () => {
+  const useDemo = () => run('demo', () => connectDemo((route.query.get('demo-omit') ?? '').split(',').filter(Boolean)));
+  const useGitHub = () => run('connect', async () => {
     const git = { owner: owner.trim(), name: name.trim(), token: token.trim() };
     await saveGit(git);
     await connectGitHub(git);
   });
-  const signOut = () => run(async () => {
+  const signOut = () => run('disconnect', async () => {
     disconnect();
     await saveGit(null);
     token = '';
   });
-  const saveKeys = () => run(async () => {
+  const saveKeys = () => run('keys', async () => {
     await saveProviderKeys({ anthropic: anthropic.trim(), openrouter: openrouter.trim() });
     savedKeys = true;
   });
@@ -72,7 +77,7 @@
   {#if session.driver}
     <p>Connected: <strong>{session.label}</strong> ({session.mode}).</p>
     <ValidationPanel />
-    <button onclick={signOut} disabled={busy}>Disconnect</button>
+    <button onclick={signOut} disabled={busy} use:hold={pressed === 'disconnect'}>Disconnect</button>
   {:else}
     <p>Not connected. <a href="#/onboarding">Set up or connect a brain</a>.</p>
   {/if}
@@ -81,7 +86,7 @@
 <section>
   <h3>Demo brain</h3>
   <p>A small brain that lives only in this tab. Nothing you do to it is saved.</p>
-  <button onclick={useDemo} disabled={busy} data-testid="use-demo">Use the demo brain</button>
+  <button onclick={useDemo} disabled={busy} use:hold={pressed === 'demo'} data-testid="use-demo">Use the demo brain</button>
 </section>
 
 <section>
@@ -89,7 +94,7 @@
   <label>Owner <input bind:value={owner} autocapitalize="off" autocomplete="off" data-testid="git-owner" /></label>
   <label>Repository <input bind:value={name} autocapitalize="off" autocomplete="off" data-testid="git-name" /></label>
   <label>Fine-grained token <input bind:value={token} type="password" autocomplete="off" data-testid="git-token" /></label>
-  <button class="primary" onclick={useGitHub} disabled={busy || !owner || !name || !token}>Connect</button>
+  <button class="primary" onclick={useGitHub} disabled={busy || !owner || !name || !token} use:hold={pressed === 'connect'}>{pressed === 'connect' ? 'Connecting…' : 'Connect'}</button>
   <p class="hint">A fine-grained token with Contents read and write on the one repository. Stored only on this device.</p>
 </section>
 
@@ -97,7 +102,7 @@
   <h3>AI providers</h3>
   <label>Anthropic API key <input bind:value={anthropic} type="password" autocomplete="off" data-testid="key-anthropic" /></label>
   <label>OpenRouter API key <input bind:value={openrouter} type="password" autocomplete="off" data-testid="key-openrouter" /></label>
-  <button onclick={saveKeys} disabled={busy} data-testid="save-keys">Save keys</button>
+  <button onclick={saveKeys} disabled={busy} use:hold={pressed === 'keys'} data-testid="save-keys">Save keys</button>
   {#if savedKeys}<span class="hint">Saved on this device.</span>{/if}
   <p class="hint">Used by the Reason screen (Phase 2). Keys never leave this device except to the provider you chose.</p>
 </section>
@@ -159,9 +164,9 @@
   <p class="hint">
     Gnomon {pkg.version}, build <span data-testid="build">{__GNOMON_BUILD__}</span>.
     {#if pwa.needRefresh}
-      A newer build is ready: <button type="button" class="small primary" onclick={applyUpdate} data-testid="update-now">Update now</button>
+      A newer build is ready: <button type="button" class="small primary" onclick={applyUpdate} disabled={pwa.applying} use:hold={pwa.applying} data-testid="update-now">Update now</button>
     {:else}
-      <button type="button" class="small" onclick={checkForUpdate} disabled={pwa.checking} data-testid="check-update">{pwa.checking ? 'Checking…' : 'Check for updates'}</button>
+      <button type="button" class="small" onclick={checkForUpdate} disabled={pwa.checking} use:hold={pwa.checking} data-testid="check-update">{pwa.checking ? 'Checking…' : 'Check for updates'}</button>
       {#if pwa.lastCheck}<span role="status" data-testid="update-status">{UPDATE_CHECK_TEXT[pwa.lastCheck]}</span>{/if}
     {/if}
   </p>

@@ -11,7 +11,7 @@ import { registerSW } from 'virtual:pwa-register';
 /** What the last update check found; every check ends in one of these so the Settings button always answers. */
 export type UpdateCheck = 'current' | 'installing' | 'update' | 'failed' | 'unavailable';
 
-export const pwa = $state({ needRefresh: false, offlineReady: false, checking: false, lastCheck: null as UpdateCheck | null });
+export const pwa = $state({ needRefresh: false, offlineReady: false, checking: false, applying: false, lastCheck: null as UpdateCheck | null });
 
 export const UPDATE_CHECK_TEXT: Record<UpdateCheck, string> = {
   current: 'No update: this is the latest build.',
@@ -68,5 +68,10 @@ export async function checkForUpdate(): Promise<void> {
 /** Activate the waiting worker and reload. */
 export async function applyUpdate(): Promise<void> {
   pwa.needRefresh = false;
-  await update?.(true);
+  pwa.applying = true;
+  try {
+    await update?.(true);
+  } finally {
+    pwa.applying = false;
+  }
 }

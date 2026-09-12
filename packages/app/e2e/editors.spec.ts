@@ -168,6 +168,7 @@ test('the save button reports progress while the commit is in flight', async ({ 
   bridge.latencyMs = 150;
   await page.getByTestId('edit-save').click();
   await expect(page.getByTestId('edit-save')).toHaveText('Adding…');
+  await expect(page.getByTestId('edit-save')).toHaveAttribute('aria-busy', 'true'); // drawn pressed until the commit lands
   await expect(page.getByTestId('saving')).toBeVisible();
   await expect(page).toHaveURL(/#\/browse\/principles\/ps-7k2m\/finish-what-you-start\.md$/, { timeout: 15_000 });
   expect([...gh.commits.values()].map((c) => c.message)).toContain('Add principle: Finish what you start');

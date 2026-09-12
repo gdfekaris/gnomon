@@ -2,6 +2,7 @@
   // Editor — US-4, US-6, US-7. One route, dispatched by file type:
   // principle (create or edit), notes, or source metadata. Sets are edited
   // on the Sets screen; raw.md bodies and attachments have no editor.
+  import { hold } from '../lib/press';
   import { untrack } from 'svelte';
   import { type BrainFile, type NotesFm, type PrincipleFm, type SourceFm, setLabel } from '@gnomon/core';
   import ConnectionNotice from '../lib/components/ConnectionNotice.svelte';
@@ -174,7 +175,7 @@
             <p class="hint">Nothing in the brain references the original.</p>
           {/if}
           <div class="row">
-            <button type="button" class="primary" onclick={deleteOriginal} disabled={busy} data-testid="delete-original-yes">Delete the original</button>
+            <button type="button" class="primary" onclick={deleteOriginal} disabled={busy} use:hold={busy} data-testid="delete-original-yes">Delete the original</button>
             <button type="button" onclick={() => (deletePlan = null)} disabled={busy}>Not now</button>
           </div>
         {:else}
@@ -218,7 +219,7 @@
       {/if}
       <label>Related principles <small>(set/slug, comma-separated)</small> <input bind:value={related} data-testid="edit-related" /></label>
       <label>Tags <small>(comma-separated)</small> <input bind:value={tags} data-testid="edit-tags" /></label>
-      <button type="submit" class="primary" disabled={busy || !title.trim()} data-testid="edit-save">{busy ? (newIn ? 'Adding…' : 'Saving…') : newIn ? 'Add principle' : 'Save'}</button>
+      <button type="submit" class="primary" disabled={busy || !title.trim()} use:hold={busy} data-testid="edit-save">{busy ? (newIn ? 'Adding…' : 'Saving…') : newIn ? 'Add principle' : 'Save'}</button>
       {#if busy}<span role="status" class="hint" data-testid="saving">One commit to your repository; a few seconds.</span>{/if}
       {#if kind === 'principle' && !newIn && !otherSets.length}
         <p class="hint" data-testid="copy-needs-set">To copy this principle to another set, <a href="#/sets">create that set first</a>; a copy control appears here once the brain has more than one set.</p>
@@ -240,7 +241,7 @@
     <p class="hint">Marginalia, corrections, and context. Saving makes this file yours ({(file!.fm as NotesFm).curated === 'human' ? 'it already is' : `it is ${(file!.fm as NotesFm).curated} now`}).</p>
     <form onsubmit={(e) => { e.preventDefault(); void save(); }}>
       <label>Notes <textarea bind:value={body} rows="12" data-testid="edit-body"></textarea></label>
-      <button type="submit" class="primary" disabled={busy} data-testid="edit-save">{busy ? 'Saving…' : 'Save'}</button>
+      <button type="submit" class="primary" disabled={busy} use:hold={busy} data-testid="edit-save">{busy ? 'Saving…' : 'Save'}</button>
     </form>
   {:else}
     <h2>Edit source metadata</h2>
@@ -253,7 +254,7 @@
       <label>Locator <input bind:value={locator} /></label>
       <label>Origin <input bind:value={origin} /></label>
       <label>Tags <small>(comma-separated)</small> <input bind:value={tags} data-testid="edit-tags" /></label>
-      <button type="submit" class="primary" disabled={busy || !title.trim()} data-testid="edit-save">{busy ? 'Saving…' : 'Save'}</button>
+      <button type="submit" class="primary" disabled={busy || !title.trim()} use:hold={busy} data-testid="edit-save">{busy ? 'Saving…' : 'Save'}</button>
     </form>
     <h3>Passage (read-only)</h3>
     <pre class="passage" data-testid="passage-readonly">{(file as BrainFile<SourceFm>).body}</pre>
