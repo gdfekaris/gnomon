@@ -302,6 +302,8 @@ p.ok[role='status'] { color: var(--ok); }
 :root[data-skin='workbench'] p.ok[role='status'] { color: var(--ink); }
 :root[data-skin='workbench'] :is(.notice, .nudge, .banner, .status, p.queued, p.offline) { background: #fff; color: #0055aa; }
 :root[data-skin='workbench'][data-theme='dark'] :is(.notice, .nudge, .banner, .status, p.queued, p.offline) { background: var(--notice-bg); color: var(--ink); }
+/* On the white notice the workbench orange reads at 2.4:1; a darker orange keeps the link's identity at 5:1. */
+:root[data-skin='workbench']:not([data-theme='dark']) :is(.notice, .nudge, .banner, .status, p.queued, p.offline) a { color: #b85400; }
 .panel { border: var(--bw) solid var(--edge); border-radius: var(--radius-box); padding: 10px; margin-bottom: 10px; background: var(--paper); }
 :root[data-skin='bevel'] .panel { border: 2px groove var(--lt2); }
 :root[data-skin='workbench'] .panel { box-shadow: var(--raise); }
