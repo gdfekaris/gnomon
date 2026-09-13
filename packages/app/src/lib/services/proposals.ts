@@ -91,10 +91,13 @@ export function prefillFrom(s: BrainSnapshot, id: string, setSlug: string): Pref
   const p = s.files.get(`maps/proposals/${id}.md`) as BrainFile<ProposalFm> | undefined;
   if (!p || p.fm.type !== 'proposal') return null;
   const fromPath = `principles/${setSlug}/new.md`;
-  const grounds = p.fm.grounds ?? [];
+  // The source the proposal came from is a ground of the principle it proposes (2026-09-13), with whatever
+  // else the proposal names; a source that is no longer in the brain is left out.
+  const grounds = [...new Set([...(p.fm.grounds ?? []), ...(p.fm.from_source ? [p.fm.from_source] : [])])].filter((g) => s.files.has(`sources/${g}/raw.md`));
   const links = grounds.map((g) => `- ${renderDualLink(fromPath, `sources/${g}/raw.md`, 'raw')}`);
+  // The draft is the proposal's wording and nothing else: read it, save it as it is, or put it in your own words.
   const body = [
-    p.fm.kind === 'principle' ? `${p.fm.title}\n\n(Drafted from a proposal. Rewrite this in your own words before saving.)` : '',
+    p.fm.kind === 'principle' ? p.fm.title : '',
     links.length ? `**Grounding passages:**\n\n${links.join('\n')}` : '',
     `Written from ${renderDualLink(fromPath, p.path, 'proposal')}.`,
   ].filter(Boolean).join('\n\n') + '\n';

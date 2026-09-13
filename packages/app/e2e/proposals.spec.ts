@@ -122,3 +122,28 @@ test('accepting a link proposal adds the ground to the principle and shows it', 
   await page.goto('/#/settings');
   await expect(page.getByTestId('refusal-count')).toHaveText('0 refusals');
 });
+
+// A principle proposal from a filing arrives with the capture as a ground, and its draft is only the proposal's
+// wording: read it, save it as it is, and the principle has the ground and no instruction text.
+test('accepting a principle proposal pre-fills its source as a ground, and an unedited draft saves clean', async ({ page }) => {
+  await page.goto('/#/inbox');
+  await page.getByTestId('process').click();
+  await expect(page.getByTestId('process-results')).toContainText('filed as unknown-the-only-way-to with 3 proposals');
+  await page.goto('/#/proposals');
+  const set1 = page.getByTestId('group-ps-g8xw');
+  const principle = set1.locator('article.proposal').filter({ hasText: 'asks of me' });
+  await expect(principle).toContainText('Grounds: unknown-the-only-way-to');
+  await principle.getByTestId('accept').click();
+  await expect(page).toHaveURL(/#\/sets\/ps-g8xw\/new-principle\?from=/);
+  await expect(page.getByTestId('ground-unknown-the-only-way-to')).toBeVisible();
+  await expect(page.getByTestId('edit-body')).not.toHaveValue(/Drafted|Rewrite/);
+  await expect(page.getByTestId('edit-body')).toHaveValue(/\*\*Grounding passages:\*\*\n\n- \[\[sources\/unknown-the-only-way-to\/raw\]\]/);
+  await expect(page.getByTestId('from-proposal')).toContainText('Save it as it is, or put it in your own words.');
+  await page.getByTestId('edit-save').click();
+  await expect(page).toHaveURL(/#\/browse\/principles\/ps-g8xw\/what-the-only-way-to-make-sense-asks-of-me\.md$/);
+  await expect(page.getByTestId('frontmatter')).toContainText('unknown-the-only-way-to');
+  await expect(page.getByTestId('fm-curated')).toHaveText('yours');
+  await expect(page.locator('main')).not.toContainText('Drafted from a proposal');
+  await page.goto('/#/settings');
+  await expect(page.getByTestId('refusal-count')).toHaveText('0 refusals');
+});

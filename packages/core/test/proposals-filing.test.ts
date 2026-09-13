@@ -75,6 +75,14 @@ describe('buildFiling (spec §7.6, schema §7.6)', () => {
     { kind: 'tag' as const, title: 'Tag with flow', rationale: 'Groups it with the Stoic captures.\n' },
   ];
 
+  it('a principle proposal from a filing names the new source in its grounds: the principle rests on the capture', () => {
+    const principle = { kind: 'principle' as const, title: 'Move with change', target_set: 'ps-g8xw', rationale: 'Why.\n' };
+    const b = buildFiling(s, capture, meta, [principle, { ...principle, grounds: ['aurelius-meditations-4-3'] }], { now: NOW });
+    const fm = (n: number) => (parseFile(`maps/proposals/P-20260906-00${n}.md`, textOf(b, `maps/proposals/P-20260906-00${n}.md`)) as BrainFile<ProposalFm>).fm;
+    expect(fm(1).grounds).toEqual(['watts-join-the-dance']);
+    expect(fm(2).grounds).toEqual(['aurelius-meditations-4-3', 'watts-join-the-dance']);
+  });
+
   it('a link proposal from a filing names the new source in its grounds: it proposes that source as a ground', () => {
     const link = { kind: 'link' as const, title: 'Ground courage in this', target_set: 'ps-g8xw', target: 'ps-g8xw/courage-before-comfort', rationale: 'Evidence.\n' };
     const b = buildFiling(s, capture, meta, [link], { now: NOW });

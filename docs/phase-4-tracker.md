@@ -306,6 +306,14 @@ Open at the close of Phase 3 (2026-09-11); none blocks a Phase 4 block.
   evidence. The word "relate" is reserved: a later feature may let a
   source be related to a principle as a looser tie than grounding, and
   widening `related` to source slugs is the sketched shape.
+- **A principle proposal carries its source as a ground, and its draft is
+  clean** (2026-09-13): filing writes the capture into a principle
+  proposal's `grounds`; accepting pre-fills those sources (and
+  `from_source`) as the new principle's grounds with their dual links;
+  the draft body is the proposal's wording, the grounding passages, and
+  the "written from" line, with no instruction text in the field, so an
+  unedited draft saves clean. The note that it may be saved as is or
+  reworded sits in the panel above the field.
 - **Accepting a link proposal adds the ground** (2026-09-12): two
   commits, `Decide:` then `Edit principle:`, the second appending the
   proposal's sources to `grounds` and their dual links to the body; the

@@ -52,7 +52,7 @@ describe('proposals service (US-3, schema §4.7, §7.10)', () => {
     const pre = prefillFrom(s, 'P-20260905-001', 'ps-7k2m')!;
     expect(pre.title).toBe('Rise to the work');
     expect(pre.grounds).toEqual(['aurelius-meditations-5-1']);
-    expect(pre.body).toBe('Rise to the work\n\n(Drafted from a proposal. Rewrite this in your own words before saving.)\n\n**Grounding passages:**\n\n- [[sources/aurelius-meditations-5-1/raw]] ([raw](../../sources/aurelius-meditations-5-1/raw.md))\n\nWritten from [[maps/proposals/P-20260905-001]] ([proposal](../../maps/proposals/P-20260905-001.md)).\n');
+    expect(pre.body).toBe('Rise to the work\n\n**Grounding passages:**\n\n- [[sources/aurelius-meditations-5-1/raw]] ([raw](../../sources/aurelius-meditations-5-1/raw.md))\n\nWritten from [[maps/proposals/P-20260905-001]] ([proposal](../../maps/proposals/P-20260905-001.md)).\n');
     expect(prefillFrom(s, 'P-20260905-003', 'ps-7k2m')!.title).toBe('');
     expect(prefillFrom(s, 'P-19990101-001', 'ps-7k2m')).toBeNull();
   });
@@ -178,5 +178,27 @@ describe('accepting a link proposal adds the ground (schema §4.7, 2026-09-12)',
     await expect(addGround(brain, p)).rejects.toThrow(/no longer in the brain/);
     expect(brain.snapshot!.head).toBe(head);
     expect((brain.snapshot!.files.get(p.path)!.fm as ProposalFm).status).toBe('open');
+  });
+});
+
+describe('a principle proposal pre-fills its source as a ground (2026-09-13)', () => {
+  it('from_source becomes a ground with its link in the body, once, and a missing source is left out', async () => {
+    const brain = await connected();
+    const s0 = brain.snapshot!;
+    const text = (id: string, from: string, grounds: string[]) => `---\ntype: proposal\nkind: principle\ntitle: Keep the morning\ntarget_set: ps-g8xw\nfrom_source: ${from}\ngrounds:${grounds.length ? '\n' + grounds.map((g) => `  - ${g}`).join('\n') : ' []'}\nstatus: open\ncurated: agent-proposed\ncreated: 2026-09-13T08:00:00Z\nupdated: 2026-09-13T08:00:00Z\n---\nBecause mornings.\n`;
+    await brain.commit({ message: 'Add proposal: P-20260913-001', expectedHead: s0.head, writes: [
+      { path: 'maps/proposals/P-20260913-001.md', text: text('P-20260913-001', 'weil-attention', []) },
+      { path: 'maps/proposals/P-20260913-002.md', text: text('P-20260913-002', 'weil-attention', ['weil-attention', 'didion-why-i-write']) },
+      { path: 'maps/proposals/P-20260913-003.md', text: text('P-20260913-003', 'gone-source', []) },
+    ], deletes: [] });
+    const s = brain.snapshot!;
+    const one = prefillFrom(s, 'P-20260913-001', 'ps-g8xw')!;
+    expect(one.grounds).toEqual(['weil-attention']);
+    expect(one.body).toBe('Keep the morning\n\n**Grounding passages:**\n\n- [[sources/weil-attention/raw]] ([raw](../../sources/weil-attention/raw.md))\n\nWritten from [[maps/proposals/P-20260913-001]] ([proposal](../../maps/proposals/P-20260913-001.md)).\n');
+    expect(one.body).not.toMatch(/Drafted|Rewrite/);
+    expect(prefillFrom(s, 'P-20260913-002', 'ps-g8xw')!.grounds).toEqual(['weil-attention', 'didion-why-i-write']);
+    const gone = prefillFrom(s, 'P-20260913-003', 'ps-g8xw')!;
+    expect(gone.grounds).toEqual([]);
+    expect(gone.body).toBe('Keep the morning\n\nWritten from [[maps/proposals/P-20260913-003]] ([proposal](../../maps/proposals/P-20260913-003.md)).\n');
   });
 });

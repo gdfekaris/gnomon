@@ -189,7 +189,7 @@ There is no status field. A principle in a set is in force. A principle the cura
 | `target_set` | yes for `principle`, `amendment`, `link` | Set slug the suggestion belongs to. |
 | `target` | yes for `amendment`, `link`, `tag` | The affected principle (`<set-slug>/<principle-slug>`) or source slug. |
 | `from_source` | no | The source slug whose filing prompted this proposal. |
-| `grounds` | no | Source slugs the suggestion rests on. For `link`, the sources to add to the target principle's `grounds`. |
+| `grounds` | no | Source slugs the suggestion rests on. For `link`, the sources to add to the target principle's `grounds`. For `principle`, the sources the proposed principle rests on; a filing includes its capture, and accepting pre-fills them as the new principle's `grounds`. |
 | `status` | yes | `open`, `accepted`, `declined`. |
 | `curated` | yes | `agent-proposed` when an agent wrote it; `human` when the curator did. Never `ratified`. |
 
