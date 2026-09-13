@@ -117,6 +117,41 @@ test('the look is one setting: four skins in light and dark, Monochrome dark by 
   expect(await bg()).toBe('rgb(255, 255, 255)');
 });
 
+// Every look must keep its messages readable: the nudge was blue on blue in Workbench light (maintainer,
+// 2026-09-13) because one selector list outranked another. Text against its own box, in all eight.
+test('in every look the nudge, the tag chips, and a status line have readable contrast', async ({ page }) => {
+  await page.goto('/#/settings?demo-omit=inbox/20260906-070000-2bq.md');
+  await page.getByTestId('use-demo').click();
+  await expect(page.getByText('Connected: demo brain')).toBeVisible();
+  const ratio = async (selector: string) => page.locator(selector).first().evaluate((el) => {
+    const lum = (rgb: string) => {
+      const [r, g, b] = rgb.match(/[\d.]+/g)!.slice(0, 3).map(Number).map((c) => { const s = c / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; });
+      return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+    };
+    let node: Element | null = el;
+    let bg = getComputedStyle(el).backgroundColor;
+    while (node && (bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent')) { node = node.parentElement; if (node) bg = getComputedStyle(node).backgroundColor; }
+    const fg = getComputedStyle(el).color;
+    const [a, b] = [lum(fg), lum(bg)];
+    return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+  });
+  for (const look of ['mono:dark', 'mono:light', 'bevel:dark', 'bevel:light', 'workbench:dark', 'workbench:light', 'synthwave:dark', 'synthwave:light']) {
+    await page.goto('/#/settings');
+    await page.getByTestId('look').selectOption(look);
+    await page.goto('/#/capture');
+    await expect(page.getByTestId('nudge')).toBeVisible();
+    expect(await ratio('[data-testid="nudge"]'), `nudge in ${look}`).toBeGreaterThan(3);
+    expect(await ratio('[data-testid="nudge"] a'), `nudge link in ${look}`).toBeGreaterThan(3);
+    await page.goto('/#/browse');
+    expect(await ratio('[data-testid="tag-filter"] .chip'), `tags in ${look}`).toBeGreaterThan(3);
+    await page.goto('/#/capture');
+    await page.getByTestId('capture-text').fill(`A capture in ${look}.`);
+    await page.getByTestId('capture-save').click();
+    await expect(page.getByTestId('saved')).toBeVisible();
+    expect(await ratio('[data-testid="saved"]'), `saved notice in ${look}`).toBeGreaterThan(3);
+  }
+});
+
 // The maintainer's phone showed only the demo provider after every launch
 // until Save was pressed again: the screens listed a non-reactive copy of
 // the provider list. Saving a key must reach Inbox and Reason at once, and

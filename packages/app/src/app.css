@@ -286,7 +286,11 @@ input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-
   border: var(--bw) solid var(--edge); border-radius: var(--radius-box); background: var(--notice-bg); color: var(--ink); font-weight: normal;
 }
 :root[data-skin='bevel'] :is(.notice, .nudge, .banner, p.ok[role='status'], p.queued, p.offline, p.warning[role='status'], p.error[role='alert'], .toast, .from, .drift, .confirm) { box-shadow: var(--sink); }
-:root[data-skin='workbench'] :is(.notice, .nudge, .banner, p.ok[role='status'], p.queued, p.offline, p.warning[role='status'], p.error[role='alert'], .toast, .from, .drift, .confirm) { box-shadow: var(--raise); background: var(--paper); }
+/* Workbench: every message box is raised. The paper background is given only to the boxes that keep it; the
+   notice-like ones take white and blue below, and a selector list with a more specific member would outrank
+   that rule for all of them (2026-09-13: the nudge was blue on blue in the light theme). */
+:root[data-skin='workbench'] :is(.notice, .nudge, .banner, p.ok[role='status'], p.queued, p.offline, p.warning[role='status'], p.error[role='alert'], .toast, .from, .drift, .confirm) { box-shadow: var(--raise); }
+:root[data-skin='workbench'] :is(p.ok[role='status'], p.warning[role='status'], p.error[role='alert'], .toast, .from, .drift, .confirm) { background: var(--paper); }
 :root[data-skin='synthwave'] :is(.notice, .nudge, .from) { box-shadow: var(--raise); }
 :root[data-skin='synthwave'] p.ok[role='status'] { border-color: var(--ok); }
 .banner, .stale { border: var(--stale-border); }
