@@ -63,6 +63,6 @@ describe('MockProvider', () => {
     expect(demoScript(req)).toBe(demoFilingScript(req));
     const parsed = parseFilingReply(demoScript(req));
     expect(parsed.meta).toEqual({ title: 'The only way to make sense', author: 'unknown', tags: ['demo'] });
-    expect(parsed.proposals.map((p) => [p.kind, p.target_set])).toEqual([['tag', undefined], ['principle', 'ps-g8xw']]);
+    expect(parsed.proposals.map((p) => [p.kind, p.target_set])).toEqual([['tag', undefined], ['principle', 'ps-g8xw'], ['link', 'ps-g8xw']]);
   });
 });

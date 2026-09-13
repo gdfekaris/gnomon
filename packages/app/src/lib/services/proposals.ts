@@ -1,10 +1,13 @@
 // Proposals — US-3, schema §4.7, §7.10. Group open proposals by target set,
 // record decisions as one commit each, and derive what the editor should be
 // pre-filled with when a principle or amendment proposal is accepted. The
-// app never writes the principle itself; the curator does.
+// app never writes a principle itself; the curator does. A link proposal is
+// the exception in kind: it proposes a ground, and accepting it adds the
+// ground (2026-09-12), the Decide commit then an Edit principle commit.
 
-import { type BrainFile, type BrainSnapshot, type Citation, type ProposalFm, backlinks, buildProposal, decideProposal, nextProposalId, nowUtc, renderDualLink, setLabel, withIndexWrites } from '@gnomon/core';
+import { type BrainFile, type BrainSnapshot, type Citation, type PrincipleFm, type ProposalFm, backlinks, buildProposal, decideProposal, nextProposalId, nowUtc, renderDualLink, setLabel, updatePrinciple, withIndexWrites } from '@gnomon/core';
 import type { BrainService } from './brain';
+import { appendGroundingLink } from './edit';
 
 export interface ProposalGroup { key: string; label: string; open: BrainFile<ProposalFm>[]; decided: BrainFile<ProposalFm>[]; }
 
@@ -33,7 +36,41 @@ export async function decide(brain: BrainService, id: string, status: 'accepted'
   await brain.commit(decideProposal(s, id, status, nowUtc()));
 }
 
-/** Where accepting a proposal takes the curator: the pre-filled editor, or nothing for a link proposal. */
+/** What a link proposal still has to add: the principle's path, the sources it names, and those not yet grounds; null when the principle is gone. */
+export function groundsToAdd(s: BrainSnapshot, p: BrainFile<ProposalFm>): { path: string; sources: string[]; add: string[] } | null {
+  if (p.fm.kind !== 'link' || !p.fm.target) return null;
+  const path = `principles/${p.fm.target}.md`;
+  const principle = s.files.get(path) as BrainFile<PrincipleFm> | undefined;
+  if (!principle || principle.fm.type !== 'principle') return null;
+  const sources = p.fm.grounds?.length ? p.fm.grounds : p.fm.from_source ? [p.fm.from_source] : [];
+  const add = sources.filter((g) => !principle.fm.grounds.includes(g) && s.files.has(`sources/${g}/raw.md`));
+  return { path, sources, add };
+}
+
+/** The Edit principle commit that adds a link proposal's sources to the principle's grounds and body; nothing when they are grounds already. */
+export async function addGround(brain: BrainService, p: BrainFile<ProposalFm>): Promise<{ path: string; added: string[] }> {
+  const s = brain.snapshot;
+  if (!s) throw new Error('no brain is connected');
+  const plan = groundsToAdd(s, p);
+  if (!plan) throw new Error(`the principle ${p.fm.target ?? ''} is no longer in the brain; decline the proposal instead`);
+  if (plan.add.length === 0) return { path: plan.path, added: [] };
+  const principle = s.files.get(plan.path) as BrainFile<PrincipleFm>;
+  let body = principle.body;
+  for (const g of plan.add) body = appendGroundingLink(body, plan.path, g);
+  await brain.commit(updatePrinciple(s, plan.path, { grounds: [...principle.fm.grounds, ...plan.add], body, now: nowUtc() }));
+  return { path: plan.path, added: plan.add };
+}
+
+/** Accept a link proposal: refuse if the principle is gone, else Decide, then add the ground. */
+export async function acceptLink(brain: BrainService, p: BrainFile<ProposalFm>): Promise<{ path: string; added: string[] }> {
+  const s = brain.snapshot;
+  if (!s) throw new Error('no brain is connected');
+  if (!groundsToAdd(s, p)) throw new Error(`the principle ${p.fm.target ?? ''} is no longer in the brain; decline the proposal instead`);
+  await brain.commit(decideProposal(s, proposalId(p.path), 'accepted', nowUtc()));
+  return addGround(brain, p);
+}
+
+/** Where accepting a proposal takes the curator: the pre-filled editor; a link proposal is applied instead (`acceptLink`). */
 export function acceptanceRoute(p: BrainFile<ProposalFm>): string | null {
   const id = proposalId(p.path);
   switch (p.fm.kind) {

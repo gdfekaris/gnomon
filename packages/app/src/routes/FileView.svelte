@@ -8,6 +8,7 @@
   import { browseHref, linkLabel } from '../lib/markdown';
   import { snapshot } from '../lib/stores/snapshot.svelte';
   import { lastBrowse } from '../lib/lastBrowse';
+  import { route } from '../lib/router.svelte';
 
   let { path, anchor = undefined }: { path: string; anchor?: string | undefined } = $props();
   const s = $derived(snapshot.current);
@@ -24,6 +25,9 @@
   const skip = new Set(['type', 'title', 'tags', 'filed_as']);
   const CURATED: Record<string, string> = { human: 'yours', ratified: 'ratified', 'agent-proposed': 'awaiting review' };
   const curatedLabel = (v: unknown) => (fm?.['type'] === 'proposal' && v === 'agent-proposed' ? "the model's" : (CURATED[String(v)] ?? String(v)));
+  // Arriving from an accepted link proposal: say which ground was added, or that it was one already.
+  const added = $derived((route.query.get('added') ?? '').split(',').filter(Boolean));
+  const already = $derived(route.query.get('already') === '1');
 </script>
 
 <p><a href={lastBrowse.hash} data-testid="back-to-browse">← Browse</a></p>
@@ -37,6 +41,11 @@
 {:else}
   <h2>{typeof fm['title'] === 'string' ? fm['title'] : fm['type'] === 'principle-set' ? setLabel(file.fm as never) : path}</h2>
   <p class="meta"><code>{path}</code></p>
+  {#if added.length}
+    <p class="ok" role="status" data-testid="ground-added"><span>Added {#each added as g, i (g)}{i ? ', ' : ''}<a href={browseHref(`sources/${g}/raw.md`)}>{linkLabel(`sources/${g}/raw.md`, s)}</a>{/each} to the grounds.</span></p>
+  {:else if already}
+    <p class="ok" role="status" data-testid="ground-added"><span>Already a ground; the proposal is accepted.</span></p>
+  {/if}
   <dl data-testid="frontmatter">
     {#each Object.entries(fm).filter(([k]) => !skip.has(k)) as [k, v] (k)}
       {#if k === 'curated'}

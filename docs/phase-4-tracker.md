@@ -306,6 +306,15 @@ Open at the close of Phase 3 (2026-09-11); none blocks a Phase 4 block.
   evidence. The word "relate" is reserved: a later feature may let a
   source be related to a principle as a looser tie than grounding, and
   widening `related` to source slugs is the sketched shape.
+- **Accepting a link proposal adds the ground** (2026-09-12): two
+  commits, `Decide:` then `Edit principle:`, the second appending the
+  proposal's sources to `grounds` and their dual links to the body; the
+  principle's page then says what was added. A source that is a ground
+  already gets the decision only; a principle that is gone refuses the
+  accept beside the button; a ground that never landed (the head moved
+  between the commits) shows "not added yet: Add it" in the decided
+  list. The demo model now proposes a ground for the first principle it
+  is shown, so the flows and the demo brain exercise it.
 - **One Look picker, the OS never consulted** (2026-09-12): Settings
   offers eight looks, four skins in light and dark, Monochrome dark by
   default; "follow the system" is gone and a device that had saved it

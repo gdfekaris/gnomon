@@ -13,7 +13,7 @@ test('file a capture with the demo model, review it, ratify it; file another and
   await expect(page.getByTestId('filings').locator('li')).toHaveCount(1); // the fixture's pending Aurelius filing is not in git history here
   await expect(page.getByTestId('inbox-model')).toContainText('Demo model');
   await page.getByTestId('process').click();
-  await expect(page.getByTestId('process-results')).toContainText('filed as unknown-the-only-way-to with 2 proposals');
+  await expect(page.getByTestId('process-results')).toContainText('filed as unknown-the-only-way-to with 3 proposals');
   await expect(page.getByTestId('unfiled')).toContainText('Nothing waiting');
 
   const filing = page.getByTestId('filing-unknown-the-only-way-to');

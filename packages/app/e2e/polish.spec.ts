@@ -79,7 +79,7 @@ test('over the fixture the nudge follows the loop: file, review, decide, all cle
   await expect(nudge).toContainText('1 capture awaits filing.');
   await nudge.getByRole('link', { name: 'File in Inbox' }).click();
   await page.getByTestId('process').click();
-  await expect(page.getByTestId('process-results')).toContainText('filed as unknown-the-only-way-to with 2 proposals');
+  await expect(page.getByTestId('process-results')).toContainText('filed as unknown-the-only-way-to with 3 proposals');
 
   await page.goto('/#/capture');
   await expect(nudge).toHaveAttribute('data-kind', 'review');
@@ -91,11 +91,11 @@ test('over the fixture the nudge follows the loop: file, review, decide, all cle
 
   await page.goto('/#/capture');
   await expect(nudge).toHaveAttribute('data-kind', 'decide');
-  await expect(nudge).toContainText('4 open proposals await a decision.');
+  await expect(nudge).toContainText('5 open proposals await a decision.');
   await nudge.getByRole('link', { name: 'Decide in Proposals' }).click();
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 5; i++) {
     await page.getByTestId('decline').first().click();
-    await expect(page.getByTestId('decline')).toHaveCount(3 - i);
+    await expect(page.getByTestId('decline')).toHaveCount(4 - i);
   }
 
   // Every app commit regenerates the indexes on the way, so the loop ends clear even though the seed's index was stale.

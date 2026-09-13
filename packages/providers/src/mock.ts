@@ -28,8 +28,11 @@ export function demoFilingScript(req: CompletionRequest): string {
   const firstLine = capture.split('\n').find((l) => l.trim()) ?? 'Untitled capture';
   const title = firstLine.replace(/^#+\s*/, '').split(/\s+/).slice(0, 6).join(' ').replace(/[.,;:!?]+$/, '');
   const set = /set slug: (ps-[^\s]+)/.exec(context)?.[1];
+  const ref = /- ref `(ps-[^`]+)`/.exec(context)?.[1];
   const proposals: unknown[] = [{ kind: 'tag', title: 'Tag as a demo filing', rationale: 'Filed by the demo model; retag by hand.' }];
   if (set) proposals.push({ kind: 'principle', title: `What "${title}" asks of me`, target_set: set, rationale: 'The demo model suggests a principle wherever a capture makes a claim. Decide whether you hold it.' });
+  // A ground for the first principle it was shown (schema §4.7: a link proposal proposes a ground).
+  if (ref) proposals.push({ kind: 'link', title: `Ground ${ref.split('/')[1]} in this passage`, target_set: ref.split('/')[0], target: ref, rationale: 'The demo model offers the capture as evidence for the first principle it was shown. Accepting adds it to the grounds.' });
   return JSON.stringify({ meta: { title: title || 'Untitled capture', author: 'unknown', tags: ['demo'] }, proposals });
 }
 

@@ -95,3 +95,30 @@ test('an accepted principle proposal that was never written offers "Write it" fr
   await page.goto('/#/sets');
   await expect(page.getByTestId('set-ps-7k2m')).toContainText('Rise to the work');
 });
+
+// A link proposal proposes a ground, and accepting it adds the ground: the decision, then the principle edit,
+// then the principle's page saying so. The decided list points at the principle.
+test('accepting a link proposal adds the ground to the principle and shows it', async ({ page }) => {
+  await page.goto('/#/inbox');
+  await page.getByTestId('process').click();
+  await expect(page.getByTestId('process-results')).toContainText('filed as unknown-the-only-way-to with 3 proposals');
+  await page.goto('/#/proposals');
+  const set1 = page.getByTestId('group-ps-g8xw');
+  const link = set1.locator('article.proposal').filter({ hasText: 'Ground courage-before-comfort in this passage' });
+  await expect(link.getByTestId('proposes')).toHaveText('Proposes a ground: add The only way to make sense to the grounds of Courage before comfort.');
+  await expect(link.getByTestId('accept')).toHaveText('Accept and add the ground');
+  await link.getByTestId('accept').click();
+  await expect(page).toHaveURL(/#\/browse\/principles\/ps-g8xw\/courage-before-comfort\.md\?added=unknown-the-only-way-to$/);
+  await expect(page.getByTestId('ground-added')).toHaveText('Added The only way to make sense to the grounds.');
+  await expect(page.getByTestId('frontmatter')).toContainText('unknown-the-only-way-to');
+  await expect(page.locator('main')).toContainText('Grounding passages');
+  await page.goto('/#/proposals');
+  await expect(set1.getByRole('heading', { level: 3 })).toContainText('1 open'); // the principle proposal remains
+  await set1.getByTestId('toggle-decided').click();
+  const decided = set1.getByTestId('decided-ps-g8xw').locator('li').filter({ hasText: 'Ground courage-before-comfort in this passage' });
+  await expect(decided.getByTestId('status')).toHaveText('accepted');
+  await expect(decided.getByTestId('ground-of')).toHaveText('Courage before comfort');
+  await expect(decided.getByTestId('add-ground')).toHaveCount(0);
+  await page.goto('/#/settings');
+  await expect(page.getByTestId('refusal-count')).toHaveText('0 refusals');
+});

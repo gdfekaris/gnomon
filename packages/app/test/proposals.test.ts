@@ -7,7 +7,7 @@ import { MemoryDriver } from '@gnomon/storage';
 import { BrainService, type SnapshotState } from '../src/lib/services/brain';
 import { createPrincipleIn } from '../src/lib/services/edit';
 import { MockProvider, demoScript } from '@gnomon/providers';
-import { acceptanceRoute, decide, extractProposal, groupProposals, prefillFrom, proposalId, saveProposal, writtenAs } from '../src/lib/services/proposals';
+import { acceptLink, acceptanceRoute, addGround, decide, extractProposal, groundsToAdd, groupProposals, prefillFrom, proposalId, saveProposal, writtenAs } from '../src/lib/services/proposals';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const FIXTURE = join(here, '..', '..', 'core', 'fixtures', 'brain');
@@ -116,5 +116,67 @@ describe('save as proposal (Phase 3 block 5, schema §4.7)', () => {
     const group = groupProposals(s).find((g) => g.key === 'ps-g8xw')!;
     expect(group.open.map((p) => proposalId(p.path))).toEqual([id]);
     await expect(saveProposal(brain, { kind: 'amendment', title: 'x', target_set: 'ps-g8xw', rationale: 'r', grounds: [] })).rejects.toThrow();
+  });
+});
+
+describe('accepting a link proposal adds the ground (schema §4.7, 2026-09-12)', () => {
+  const link = (target: string, grounds: string[], from?: string): BrainFile<ProposalFm> => ({
+    path: 'maps/proposals/P-20260912-001.md', sha: '', encrypted: false, body: 'Evidence.\n',
+    fm: { type: 'proposal', kind: 'link', title: 'Ground it', target_set: target.split('/')[0]!, target, grounds, ...(from ? { from_source: from } : {}), status: 'open', curated: 'agent-proposed', created: '2026-09-12T10:00:00Z', updated: '2026-09-12T10:00:00Z' },
+  });
+  async function connectedWithDriver() {
+    const state: SnapshotState = { current: null, stale: false, loading: false, error: null };
+    const brain = new BrainService(state);
+    const driver = await MemoryDriver.create(seed());
+    await brain.connect(driver);
+    return { brain, driver };
+  }
+  async function withOpenLink(brain: BrainService, p: BrainFile<ProposalFm>) {
+    const s = brain.snapshot!;
+    const text = `---\ntype: proposal\nkind: link\ntitle: ${p.fm.title}\ntarget_set: ${p.fm.target_set}\ntarget: ${p.fm.target}\n${p.fm.from_source ? `from_source: ${p.fm.from_source}\n` : ''}grounds:\n${p.fm.grounds!.map((g) => `  - ${g}`).join('\n')}\nstatus: open\ncurated: agent-proposed\ncreated: ${p.fm.created}\nupdated: ${p.fm.updated}\n---\nEvidence.\n`;
+    await brain.commit({ message: 'Add proposal: P-20260912-001', expectedHead: s.head, writes: [{ path: p.path, text }], deletes: [] });
+    return brain.snapshot!.files.get(p.path) as BrainFile<ProposalFm>;
+  }
+  it('names what is still to add: the proposal\'s sources not yet grounds, or the source it came from', async () => {
+    const brain = await connected();
+    const s = brain.snapshot!;
+    expect(groundsToAdd(s, link('ps-g8xw/courage-before-comfort', ['weil-attention']))).toEqual({ path: 'principles/ps-g8xw/courage-before-comfort.md', sources: ['weil-attention'], add: ['weil-attention'] });
+    expect(groundsToAdd(s, link('ps-g8xw/courage-before-comfort', ['aurelius-meditations-4-3']))?.add).toEqual([]); // a ground already
+    expect(groundsToAdd(s, link('ps-g8xw/courage-before-comfort', [], 'weil-attention'))?.add).toEqual(['weil-attention']);
+    expect(groundsToAdd(s, link('ps-g8xw/courage-before-comfort', ['no-such-source']))?.add).toEqual([]); // never a missing source
+    expect(groundsToAdd(s, link('ps-g8xw/gone', ['weil-attention']))).toBeNull();
+  });
+  it('accepts in two commits: the decision, then the ground in the frontmatter and the body', async () => {
+    const { brain, driver } = await connectedWithDriver();
+    const p = await withOpenLink(brain, link('ps-g8xw/courage-before-comfort', ['weil-attention']));
+    const before = brain.snapshot!.head;
+    const r = await acceptLink(brain, p);
+    expect(r).toEqual({ path: 'principles/ps-g8xw/courage-before-comfort.md', added: ['weil-attention'] });
+    const s = brain.snapshot!;
+    const history = await driver.history({ limit: 3 });
+    expect(history.map((c) => c.message)).toEqual(['Edit principle: Courage before comfort', 'Decide: P-20260912-001', 'Add proposal: P-20260912-001']);
+    expect(s.head).not.toBe(before);
+    const principle = s.files.get(r.path)!;
+    expect((principle.fm as { grounds: string[] }).grounds).toContain('weil-attention');
+    expect(principle.body).toContain('[[sources/weil-attention/raw]] ([raw](../../sources/weil-attention/raw.md))');
+    expect((s.files.get(p.path)!.fm as ProposalFm).status).toBe('accepted');
+    expect(groundsToAdd(s, s.files.get(p.path) as BrainFile<ProposalFm>)?.add).toEqual([]);
+    expect(validateSnapshot(s).filter((i) => i.level === 'refusal')).toEqual([]);
+  });
+  it('a source that is a ground already: the decision only, nothing added', async () => {
+    const { brain, driver } = await connectedWithDriver();
+    const p = await withOpenLink(brain, link('ps-g8xw/courage-before-comfort', ['aurelius-meditations-4-3']));
+    const r = await acceptLink(brain, p);
+    expect(r.added).toEqual([]);
+    expect((await driver.history({ limit: 1 }))[0]!.message).toBe('Decide: P-20260912-001');
+  });
+  it('refuses when the principle is gone, and writes nothing', async () => {
+    const brain = await connected();
+    const p = await withOpenLink(brain, link('ps-g8xw/gone', ['weil-attention']));
+    const head = brain.snapshot!.head;
+    await expect(acceptLink(brain, p)).rejects.toThrow(/no longer in the brain/);
+    await expect(addGround(brain, p)).rejects.toThrow(/no longer in the brain/);
+    expect(brain.snapshot!.head).toBe(head);
+    expect((brain.snapshot!.files.get(p.path)!.fm as ProposalFm).status).toBe('open');
   });
 });

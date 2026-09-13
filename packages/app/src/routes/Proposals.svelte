@@ -9,7 +9,7 @@
   import { browseHref, linkLabel } from '../lib/markdown';
   import ConnectionNotice from '../lib/components/ConnectionNotice.svelte';
   import { brain, describeError } from '../lib/services/index';
-  import { acceptanceRoute, decide, groupProposals, proposalId, writtenAs } from '../lib/services/proposals';
+  import { acceptLink, acceptanceRoute, addGround, decide, groundsToAdd, groupProposals, proposalId, writtenAs } from '../lib/services/proposals';
   import { session } from '../lib/stores/session.svelte';
   import { snapshot } from '../lib/stores/snapshot.svelte';
 
@@ -25,12 +25,21 @@
   let allDecided = $state<Record<string, boolean>>({});
   const recentFirst = (list: BrainFile<ProposalFm>[]) => [...list].sort((a, b) => (a.fm.updated < b.fm.updated ? 1 : a.fm.updated > b.fm.updated ? -1 : a.path < b.path ? 1 : -1));
 
+  // An error belongs under the proposal whose button was tapped, not at the foot of the page.
+  let failedOn = $state<string | null>(null);
   async function act(p: BrainFile<ProposalFm>, status: 'accepted' | 'declined') {
     const id = proposalId(p.path);
     busy = id;
     acting = status;
     error = null;
+    failedOn = null;
     try {
+      if (status === 'accepted' && p.fm.kind === 'link') {
+        // A link proposal proposes a ground; accepting it adds the ground and shows the principle.
+        const r = await acceptLink(brain, p);
+        location.hash = `${browseHref(r.path)}?${r.added.length ? `added=${encodeURIComponent(r.added.join(','))}` : 'already=1'}`;
+        return;
+      }
       await decide(brain, id, status);
       if (status === 'accepted') {
         const to = acceptanceRoute(p);
@@ -38,9 +47,26 @@
       }
     } catch (e) {
       error = describeError(e);
+      failedOn = id;
     } finally {
       busy = null;
       acting = null;
+    }
+  }
+  // An accepted link proposal whose ground never landed (the head moved between the two commits): add it now.
+  async function addIt(p: BrainFile<ProposalFm>) {
+    const id = proposalId(p.path);
+    busy = id;
+    error = null;
+    failedOn = null;
+    try {
+      const r = await addGround(brain, p);
+      location.hash = `${browseHref(r.path)}?added=${encodeURIComponent(r.added.join(','))}`;
+    } catch (e) {
+      error = describeError(e);
+      failedOn = id;
+    } finally {
+      busy = null;
     }
   }
   const acceptLabel = (p: ProposalFm) => (p.kind === 'principle' ? 'Accept and write it' : p.kind === 'link' ? 'Accept and add the ground' : p.kind === 'amendment' ? 'Accept and edit the principle' : p.kind === 'tag' && p.target ? 'Accept and edit the tags' : 'Accept');
@@ -53,7 +79,7 @@
 {#if !s}
   <ConnectionNotice />
 {:else}
-  <p class="hint">Suggestions from filing and desktop sessions. You decide; nothing here changes a principle until you write it yourself.</p>
+  <p class="hint">Suggestions from filing and desktop sessions. You decide; accepting a link adds the ground; everything else changes only when you write it yourself.</p>
   {#each groups as g (g.key)}
     <section data-testid="group-{g.key}">
       <h3>{g.label} <small>· {g.open.length} open</small></h3>
@@ -74,8 +100,9 @@
           <div class="row">
             <button onclick={() => act(p, 'accepted')} disabled={busy !== null} use:hold={busy === id && acting === 'accepted'} data-testid="accept">{busy === id && acting === 'accepted' ? 'Accepting…' : acceptLabel(p.fm)}</button>
             <button onclick={() => act(p, 'declined')} disabled={busy !== null} use:hold={busy === id && acting === 'declined'} data-testid="decline">{busy === id && acting === 'declined' ? 'Declining…' : 'Decline'}</button>
-            {#if busy === id}<span role="status" class="hint" data-testid="deciding">One commit to your repository; a few seconds.</span>{/if}
+            {#if busy === id}<span role="status" class="hint" data-testid="deciding">{p.fm.kind === 'link' && acting === 'accepted' ? 'Two commits to your repository: the decision, then the ground; a few seconds.' : 'One commit to your repository; a few seconds.'}</span>{/if}
           </div>
+          {#if error && failedOn === id}<p class="error" role="alert" data-testid="decide-error">{error}</p>{/if}
         </article>
       {:else}
         <p class="empty">Nothing open.</p>
@@ -86,13 +113,20 @@
           <ul class="decided" data-testid="decided-{g.key}">
             {#each (allDecided[g.key] ? recentFirst(g.decided) : recentFirst(g.decided).slice(0, RECENT_DECIDED)) as p (p.path)}
               {@const became = writtenAs(s, p.path)}
+              {@const pending = p.fm.status === 'accepted' && p.fm.kind === 'link' ? groundsToAdd(s, p) : null}
               <li data-testid="proposal-{proposalId(p.path)}">
                 <span class="kind">{p.fm.kind}</span> {p.fm.title} <small>· <span data-testid="status">{p.fm.status}</span></small>
                 {#if became.length}<span> → written as {#each became as f (f.path)}<a href={browseHref(f.path)} data-testid="written-as">{linkLabel(f.path, s)}</a> {/each}</span>
                 {:else if p.fm.status === 'accepted' && p.fm.kind === 'principle'}
                   <!-- Accepted, but nothing in the brain points back at it: the editor was left before the principle was added. -->
                   <span> · not written yet: <a href={acceptanceRoute(p) ?? '#/sets'} data-testid="write-it">Write it</a></span>
+                {:else if pending && pending.add.length}
+                  <!-- Accepted, but the ground never landed (the head moved between the two commits). -->
+                  <span> · not added yet: <button type="button" class="link" onclick={() => addIt(p)} disabled={busy !== null} data-testid="add-ground">Add it</button></span>
+                {:else if pending}
+                  <span> → ground of <a href={browseHref(pending.path)} data-testid="ground-of">{linkLabel(pending.path, s)}</a></span>
                 {/if}
+                {#if error && failedOn === proposalId(p.path)}<span class="error" role="alert" data-testid="decide-error">{error}</span>{/if}
                 <a href={browseHref(p.path)}><small>file</small></a>
               </li>
             {/each}
@@ -106,7 +140,7 @@
   {:else}
     <p class="empty">No proposals yet. Filing a capture from the Inbox produces the first ones.</p>
   {/each}
-  {#if error}<p class="error" role="alert">{error}</p>{/if}
+  {#if error && !failedOn}<p class="error" role="alert">{error}</p>{/if}
 {/if}
 
 <style>

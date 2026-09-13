@@ -41,8 +41,8 @@ describe('inbox service (US-2, US-3)', () => {
 
     const results = await processInbox(inbox, brain, driver, new MockProvider(), MOCK_MODEL, 19_200);
     expect(results.map((r) => [r.path, r.slug, r.proposals, r.error])).toEqual([
-      ['inbox/20260906-070000-2bq.md', 'unknown-the-only-way-to', 2, undefined],
-      [cap.path, 'unknown-a-photographed-page', 2, undefined],
+      ['inbox/20260906-070000-2bq.md', 'unknown-the-only-way-to', 3, undefined],
+      [cap.path, 'unknown-a-photographed-page', 3, undefined],
     ]);
     expect(unfiledCaptures(brain.snapshot!).length).toBe(0);
     expect(validateSnapshot(brain.snapshot!)).toEqual([]);
@@ -55,7 +55,7 @@ describe('inbox service (US-2, US-3)', () => {
     expect(inbox.filings.map((f) => [f.slug, f.state])).toEqual([['unknown-a-photographed-page', 'pending'], ['unknown-the-only-way-to', 'pending']]);
     const review = reviewOf(brain, inbox.filings[0]!.changes);
     // proposal ids carry today's UTC date (the service uses the real clock); the fixture already holds 001 and 002 for the 5th only
-    expect(review.added.map((f) => f.path.replace(/P-\d{8}-/, 'P-<today>-'))).toEqual(['maps/proposals/P-<today>-003.md', 'maps/proposals/P-<today>-004.md', 'sources/unknown-a-photographed-page/notes.md', 'sources/unknown-a-photographed-page/raw.md']);
+    expect(review.added.map((f) => f.path.replace(/P-\d{8}-/, 'P-<today>-'))).toEqual(['maps/proposals/P-<today>-004.md', 'maps/proposals/P-<today>-005.md', 'maps/proposals/P-<today>-006.md', 'sources/unknown-a-photographed-page/notes.md', 'sources/unknown-a-photographed-page/raw.md']);
     expect(review.attachments).toEqual([{ path: 'sources/unknown-a-photographed-page/original.png', size: 7 }]);
     expect(review.capture!.addedLines).toEqual(['status: filed', 'filed_as: unknown-a-photographed-page']);
   });
