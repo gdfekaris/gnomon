@@ -24,11 +24,19 @@ const snapshot = buildSnapshot({ head: 'h', tree, texts });
 
 describe('renderMarkdown (spec §7.1, §15)', () => {
   const from = 'principles/ps-g8xw/courage-before-comfort.md';
-  it('collapses a dual link to one anchor into the app', () => {
+  it('collapses a dual link to one anchor into the app, named by the target\'s title', () => {
     const html = renderMarkdown('See [[sources/aurelius-meditations-4-3/raw]] ([raw](../../sources/aurelius-meditations-4-3/raw.md)).', from, snapshot);
-    expect(html).toBe('<p>See <a href="#/browse/sources/aurelius-meditations-4-3/raw.md">raw</a>.</p>\n');
+    expect(html).toBe('<p>See <a href="#/browse/sources/aurelius-meditations-4-3/raw.md">Retire into thyself</a>.</p>\n');
     expect(html.match(/<a /g)!.length).toBe(1);
     expect(html).not.toContain('[[');
+  });
+  it('a kind word or a bare path as the label gives way to the title; a label the author wrote stays', () => {
+    const to = 'principles/ps-7k2m/say-the-hard-thing-first';
+    expect(renderMarkdown(`[[${to}]] ([principle](../../${to}.md))`, from, snapshot)).toContain('>Say the hard thing first<');
+    expect(renderMarkdown(`[[${to}]] ([${to}](../../${to}.md))`, from, snapshot)).toContain('>Say the hard thing first<');
+    expect(renderMarkdown(`[[${to}]] ([the hard-thing rule](../../${to}.md))`, from, snapshot)).toContain('>the hard-thing rule<');
+    expect(renderMarkdown('[notes](../../sources/weil-attention/notes.md)', from, snapshot)).toContain('>Notes on Attention as generosity<');
+    expect(renderMarkdown('[[maps/proposals/P-19990101-001]] ([proposal](../../maps/proposals/P-19990101-001.md))', from, snapshot)).toContain('>maps/proposals/P-19990101-001<'); // unknown target: the path
   });
   it('labels a lone wikilink with the target title and keeps anchors', () => {
     expect(renderMarkdown('[[sources/didion-why-i-write/raw#part-2]]', from, snapshot)).toBe(

@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/#/browse');
 });
 
-test('a principle shows one anchor per dual link, and backlinks', async ({ page }) => {
+test('a principle shows one anchor per dual link, named by its passage, and backlinks on request', async ({ page }) => {
   await page.goto('/#/browse/principles/ps-g8xw/courage-before-comfort.md');
   await expect(page.getByRole('heading', { name: 'Courage before comfort' })).toBeVisible();
   await expect(page.getByTestId('frontmatter')).toContainText('order');
@@ -17,12 +17,20 @@ test('a principle shows one anchor per dual link, and backlinks', async ({ page 
   const links = body.locator('a');
   await expect(links).toHaveCount(1);
   await expect(links).toHaveAttribute('href', '#/browse/sources/aurelius-meditations-4-3/raw.md');
+  await expect(links).toHaveText('Retire into thyself'); // the passage by name, not "raw"
   await expect(body).not.toContainText('[[');
+  await expect(page.getByTestId('backlinks')).toHaveCount(0); // folded until asked for
+  await expect(page.getByTestId('backlinks-toggle')).toHaveText('Show 2 backlinks'); // a principle and a link proposal point here
+  await page.getByTestId('backlinks-toggle').click();
   await expect(page.getByTestId('backlinks')).toContainText('Say the hard thing first');
+  await expect(page.getByTestId('backlinks-toggle')).toHaveText('Hide 2 backlinks');
 
   await links.click();
   await expect(page.getByRole('heading', { name: 'Retire into thyself' })).toBeVisible();
   await expect(page.getByTestId('file-body')).toContainText('Men seek retreats for themselves');
+  await expect(page.getByTestId('backlinks')).toHaveCount(0); // folded again on the next file
+  await expect(page.getByTestId('backlinks-toggle')).toHaveText('Show 2 backlinks');
+  await page.getByTestId('backlinks-toggle').click();
   await expect(page.getByTestId('backlinks')).toContainText('Courage before comfort');
   await expect(page.getByTestId('backlinks')).toContainText('Say the hard thing first');
 });

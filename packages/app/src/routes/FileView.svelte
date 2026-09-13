@@ -1,6 +1,7 @@
 <script lang="ts">
   // One brain file: frontmatter summary, rendered body, backlinks, attachment.
   // No editor in Phase 1; raw.md bodies never get one at all (US-5).
+  import { untrack } from 'svelte';
   import ConnectionNotice from '../lib/components/ConnectionNotice.svelte';
   import { type BrainFile, backlinks, setLabel } from '@gnomon/core';
   import MarkdownView from '../lib/components/MarkdownView.svelte';
@@ -15,6 +16,9 @@
   const file = $derived(s?.files.get(path) as BrainFile | undefined);
   const attachment = $derived(s?.attachments.has(path) ? path : null);
   const inbound = $derived(s ? (backlinks(s).get(path) ?? []) : []);
+  // Backlinks are one quiet line until asked for, and fold again on the next file (maintainer, 2026-09-13).
+  let showBacklinks = $state(false);
+  $effect(() => { void path; untrack(() => { showBacklinks = false; }); });
   const fm = $derived(file?.fm as Record<string, unknown> | undefined);
   const attachmentPath = $derived.by(() => {
     if (!fm || typeof fm['attachment'] !== 'string') return null;
@@ -80,17 +84,24 @@
   {:else}
     <p class="empty">(empty body)</p>
   {/if}
-  <h3>Backlinks</h3>
-  <ul data-testid="backlinks">
-    {#each inbound as from (from)}
-      <li><a href={browseHref(from)}>{linkLabel(from, s)}</a> <small><code>{from}</code></small></li>
+  <p class="backlinks">
+    {#if inbound.length}
+      <button type="button" class="link" aria-expanded={showBacklinks} onclick={() => (showBacklinks = !showBacklinks)} data-testid="backlinks-toggle">{showBacklinks ? 'Hide' : 'Show'} {inbound.length} backlink{inbound.length === 1 ? '' : 's'}</button>
     {:else}
-      <li class="empty">Nothing links here yet.</li>
-    {/each}
-  </ul>
+      <small class="empty" data-testid="no-backlinks">No backlinks yet.</small>
+    {/if}
+  </p>
+  {#if showBacklinks}
+    <ul data-testid="backlinks">
+      {#each inbound as from (from)}
+        <li><a href={browseHref(from)}>{linkLabel(from, s)}</a> <small><code>{from}</code></small></li>
+      {/each}
+    </ul>
+  {/if}
 {/if}
 
 <style>
+  .backlinks { margin-top: 1rem; }
   dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 1rem; font-size: var(--fs-small); margin: 0 0 12px; }
   dt { color: var(--muted); }
   dd { margin: 0; }

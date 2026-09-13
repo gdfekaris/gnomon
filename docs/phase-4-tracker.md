@@ -306,6 +306,12 @@ Open at the close of Phase 3 (2026-09-11); none blocks a Phase 4 block.
   evidence. The word "relate" is reserved: a later feature may let a
   source be related to a principle as a looser tie than grounding, and
   widening `related` to source slugs is the sketched shape.
+- **Links read as their targets; backlinks fold** (2026-09-13): a dual
+  link whose markdown label is a kind word (`raw`, `principle`,
+  `proposal`) or a bare path renders as the target's title; a label the
+  author wrote stays; a notes file reads "Notes on <source title>". The
+  files are untouched. A file page's backlinks are one line, "Show n
+  backlinks", folded on every visit; "No backlinks yet" when none.
 - **A principle proposal carries its source as a ground, and its draft is
   clean** (2026-09-13): filing writes the capture into a principle
   proposal's `grounds`; accepting pre-fills those sources (and

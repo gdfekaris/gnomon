@@ -25,7 +25,7 @@ test('write a principle from the editor with a grounding link from the picker', 
   await expect(page.getByRole('heading', { name: 'Rise to the work' })).toBeVisible();
   await expect(page.getByTestId('frontmatter')).toContainText('3');
   await expect(page.getByTestId('file-body').locator('a')).toHaveCount(1);
-  await expect(page.getByTestId('backlinks')).toHaveCount(1);
+  await expect(page.getByTestId('no-backlinks')).toHaveText('No backlinks yet.');
   await page.goto('/#/settings');
   await expect(page.getByTestId('validation')).toContainText('The brain is valid and its indexes are current.');
 });

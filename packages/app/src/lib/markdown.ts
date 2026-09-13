@@ -34,13 +34,24 @@ export function browseHref(path: string, anchor?: string): string {
   return `#/browse/${path}${anchor ? `#${anchor}` : ''}`;
 }
 
-/** A label for a link to `path`: the target's title when the snapshot has one, else the path without `.md`. */
+/** A label for a link to `path`: the target's title when the snapshot has one, a notes file by its source's title, else the path without `.md`. */
 export function linkLabel(path: string, snapshot: BrainSnapshot | null): string {
   const fm = snapshot?.files.get(path)?.fm;
   if (fm && 'title' in fm && typeof fm.title === 'string') return fm.title;
   if (fm?.type === 'principle-set') return path.split('/')[1]!;
+  if (fm?.type === 'notes') {
+    const raw = snapshot?.files.get(`sources/${fm.source}/raw.md`)?.fm;
+    if (raw && 'title' in raw && typeof raw.title === 'string') return `Notes on ${raw.title}`;
+  }
   return path.replace(/\.md$/, '');
 }
+
+// The schema's dual-link examples label the markdown half with a kind word (`raw`, `principle`, `proposal`):
+// it says what the link points at, not what the target is called. Such a label, or a bare path, is replaced
+// by the target's title when the brain knows it (maintainer, 2026-09-13); a label the author wrote stays.
+const KIND_LABELS = new Set(['raw', 'notes', 'principle', 'proposal', 'set', 'source', 'passage', 'link']);
+const isGenericLabel = (label: string | undefined, path: string): boolean =>
+  !label || KIND_LABELS.has(label.trim().toLowerCase()) || label.trim() === path || label.trim() === path.replace(/\.md$/, '');
 
 /**
  * Rewrite every brain link in `body` to a single markdown link into the app,
@@ -50,7 +61,7 @@ export function renderMarkdown(body: string, fromPath: string, snapshot: BrainSn
   let text = body;
   const refs = parseLinks(body, fromPath).sort((a, b) => b.start - a.start);
   for (const ref of refs) {
-    const label = ref.form === 'wiki' ? linkLabel(ref.path, snapshot) : (ref.label || linkLabel(ref.path, snapshot));
+    const label = ref.form === 'wiki' || isGenericLabel(ref.label, ref.path) ? linkLabel(ref.path, snapshot) : ref.label!;
     const link = `[${label.replace(/[[\]]/g, '')}](${browseHref(ref.path, ref.anchor)})`;
     text = text.slice(0, ref.start) + link + text.slice(ref.end);
   }
