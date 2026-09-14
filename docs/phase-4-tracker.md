@@ -244,6 +244,141 @@ hundred sources renders fifty rows and pages; the unit tests cover every
 function in `browse.ts`; the existing Browse flows still pass; and
 proposal §6 and spec §10's Browse lines are updated in the same commit.
 
+## Feature block: Derive principles from sources (2026-09-14) — specified, not started
+
+Asked for by the maintainer: pick a filed source, or several, and at the
+press of a button get three to ten principles rationally derived from
+it. Built as proposals, never as principles: the model derives, the
+curator accepts, edits, or declines each, and a one-tap "Write it as
+proposed" makes a pass over a batch fast. Principles stay the curator's
+(proposal §2, schema §4.5, §10) because every one that lands was chosen
+by the curator's tap on that wording. Four sub-blocks, in order, each a
+green commit; tick the block when all four are in.
+
+**Non-goals.** The model never sets `order`: accepted principles land in
+the order the curator accepts them, and Sets reorders. Derive proposes
+principles only, no amendments, links, or tags. Notes bodies are not
+sent, passages are. No automatic derive on filing. Proposal files are
+never deleted (declined ones stay, schema §4.7). Nothing runs on the
+desktop without an agent: Task E is the desktop form.
+
+### E1. Core: the task, the parser, the batch (M)
+
+- `core/assembly/derive.ts`: `DERIVE_PROMPT` (a constant, like the
+  filing prompt), `buildDerivePrompt(snapshot, sourceSlugs, targetSet,
+  budgetTokens)`, `parseDeriveReply(text, snapshot, sourceSlugs)`.
+- **Context, in order.** The target set's `_set.md` body and its
+  existing principles (title and body, with ref comments) so the model
+  avoids what the set already says; then each chosen source in full:
+  `### Passage: {title} — {author}` with `work`, `year`, and the `raw.md`
+  body verbatim, and its slug. Passages are the point: if they alone
+  exceed the budget the result is `{ ok: false, error:
+  'SOURCES_EXCEED_BUDGET', neededTokens, budgetTokens }`; the existing
+  principles are trimmed from the end first, with one line saying how
+  many were left out. Attachments are never read.
+- **The prompt's rules.** Derive only what the passages support, in the
+  curator's voice: each principle one line, a commitment stated plainly,
+  no hedging, no quotation as a principle. Three to ten for one source
+  by its length and richness; up to twenty for several. Every principle
+  names the chosen slugs it rests on, at least one. Nothing the set
+  already holds, restated. Rationale: two or three sentences that say
+  which passage, and why. Answer as strict JSON:
+  `{ "principles": [ { "title": "...", "rationale": "...", "grounds":
+  ["slug"] } ] }`.
+- **The parser** accepts one to twenty entries; refuses (with a
+  `FilingReplyError`-style error naming the entry) a missing or
+  multi-line title, an empty rationale, a ground outside the chosen
+  slugs, and a title equal to an existing principle's in the target set
+  (case-insensitive); drops exact duplicate titles within the reply.
+- `core/proposals`: `buildDerive(snapshot, targetSet, entries, opts)` →
+  one `CommitBatch`: one proposal file per entry, kind `principle`,
+  `target_set`, `grounds` as given, `curated: agent-proposed`, `status:
+  open`, ids sequential from `nextProposalId`, no `from_source` (several
+  sources may be behind one principle; `grounds` says which); the body
+  is the rationale; indexes ride along; message `Derive: {n} proposals
+  for {set label}` (schema §7, new). `nowUtc()` for timestamps.
+- Tests: the prompt refuses a budget the passages do not fit and trims
+  principles before passages; the parser's every refusal; the batch's
+  ids, grounds, message, and that `validateBatch` is clean over the
+  fixture.
+
+### E2. The format: schema, template, Task E (S)
+
+- Schema §7.12 "Derive proposals": the procedure above; the message
+  `Derive: {n} proposals for {set label}` joins the §7 vocabulary and
+  CLAUDE.md's list. §4.7: accepting a `principle` proposal "never
+  produces the file automatically" becomes: the app pre-fills the
+  principle from the proposal, and the curator either edits it or
+  writes it as proposed in one deliberate act; either way the result is
+  `curated: human`. `from_source` is documented as optional for derived
+  proposals, `grounds` carrying the sources.
+- `template/AGENTS.md` and the fixture's copy gain **Task E — Derive
+  principles from sources**: the same rules, the same output as
+  proposal files (one per principle, kind `principle`, grounds = the
+  sources, never a principle file), one commit `Derive: ...`, then
+  `validate` and `index` before the push. `.claude/commands/derive.md`
+  in both.
+- `gnomon validate` needs no change; a derived proposal is a proposal.
+
+### E3. One-tap accept on Proposals (S)
+
+- `services/proposals.ts`: `writeAsProposed(brain, p)` → `Decide:` then
+  `Add principle:` using the existing pre-fill (title, grounds, body with
+  the grounding links and the "written from" line) through
+  `createPrincipleIn`; returns the new path. Refuses when the target set
+  is gone (beside the button, Decline offered) or a principle with that
+  slug already exists in the set (the editor route instead, with the
+  reason).
+- Proposals screen: a `principle` proposal offers three controls:
+  **Write it as proposed** (`data-testid="write-as-proposed"`, one tap,
+  stays on Proposals, the row moves to decided with "→ written as"),
+  **Accept and edit** (today's editor route, renamed), **Decline**. The
+  "not written yet: Write it" affordance stays for an accepted one left
+  in the editor.
+- Unit tests for the two commits and both refusals; the existing flows
+  updated for the new label; a flow that writes one as proposed on both
+  engines.
+
+### E4. The app: Derive on Reason, the source picker, the demo model (L)
+
+- Reason gains the task **Derive principles** (`derive`) in the task
+  list. Under it: a **source picker** (search field reusing
+  `services/browse.ts` matching; results as rows with a checkbox; the
+  chosen sources as chips above, removable; at least one), a **target
+  set** select listing the sets plus "New set…" with an optional name
+  (the set is created first, one `Create principle set:` commit, then the
+  derive), the provider and model pickers as today, and the budget bar
+  from `buildDerivePrompt` reading "3 passages fit the budget" or the
+  refusal.
+- The button **Derive** (`use:hold`, "Deriving…"): one completion, not
+  streamed (as filing); parse; `buildDerive`; commit; then Proposals
+  with the target set's group open and a notice, `data-testid=
+  "derived"`: "8 proposals derived from Retire into thyself and Attention
+  as generosity. Write each as proposed, edit it, or decline it." A
+  parse refusal shows beside the button with the model's reply kept for
+  a retry.
+- A source page gets **Derive principles from this passage**
+  (`data-testid="derive-from"`), which opens Reason with the task and
+  that source picked (`#/reason?task=derive&sources=slug`); several
+  slugs allowed for Browse later.
+- `reasoning` store: the derive selection (sources, target) remembered
+  for the session, not the device.
+- Mock: `demoDeriveScript` returns three principles per chosen passage
+  built from its first sentences, grounds set, so the demo brain and the
+  flows exercise the path.
+- Flows, both engines: derive three from one source into Set 1 and see
+  them on Proposals with the notice and grounds; write one as proposed,
+  edit one, decline one, and see the set hold two in accept order with
+  their grounds; derive from two sources into a new set and see the set
+  created and the proposals under it; the source-page shortcut lands on
+  Reason with the source picked; a budget too small refuses before
+  sending; a reply with a ground outside the chosen sources is refused
+  beside the button. Proposal §6 and spec §8 gain the task.
+
+**Done when** the four sub-blocks are committed green, the maintainer
+has derived from a real source in their own brain, and the smoke
+checklist gains the step.
+
 ## Carried from Phase 3
 
 Open at the close of Phase 3 (2026-09-11); none blocks a Phase 4 block.
