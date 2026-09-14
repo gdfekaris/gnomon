@@ -6,7 +6,7 @@ import type { BrainFile, BrainSnapshot, CommitBatch, FileWrite, ProposalFm } fro
 import { ValidationError } from '../schema/issues';
 import { tryParseFile } from '../schema/parse';
 import { serializeFile } from '../schema/serialize';
-import { withIndexWrites } from '../index/index';
+import { setLabel, withIndexWrites } from '../index/index';
 
 /** What a filer (model or agent) proposes; the filing fills in the rest (spec §8.5). */
 export interface ProposalParams {
@@ -51,6 +51,28 @@ export function buildProposal(p: BuildProposalParams): FileWrite {
   const parsed = tryParseFile(path, text);
   if (!parsed.ok) throw new ValidationError(parsed.issues);
   return { path, text };
+}
+
+/** What a derive reply yields, one per principle (Task E); the sources it rests on, at least one. */
+export interface DeriveParams { title: string; rationale: string; grounds: string[] }
+
+/**
+ * Schema §7.12: one proposal file per derived principle, kind `principle`, `curated: agent-proposed`,
+ * `grounds` as given and no `from_source` (several sources may stand behind one principle), ids
+ * sequential within the day, indexes riding along. Message `Derive: {n} proposals for {set label}`.
+ */
+export function buildDerive(s: BrainSnapshot, targetSet: string, entries: DeriveParams[], opts: { now: string }): CommitBatch {
+  const set = s.sets.find((f) => f.path === `principles/${targetSet}/_set.md`);
+  if (!set) throw new Error(`no set '${targetSet}'`);
+  if (entries.length === 0) throw new Error('nothing to derive');
+  const drawn: string[] = [];
+  const writes: FileWrite[] = entries.map((e) => {
+    const id = nextProposalId(s, opts.now, drawn);
+    drawn.push(id);
+    return buildProposal({ id, kind: 'principle', title: e.title, target_set: targetSet, grounds: [...new Set(e.grounds)], rationale: e.rationale, curated: 'agent-proposed', now: opts.now });
+  });
+  const n = entries.length;
+  return withIndexWrites(s, { message: `Derive: ${n} proposal${n === 1 ? '' : 's'} for ${setLabel(set.fm)}`, expectedHead: s.head, writes, deletes: [] });
 }
 
 export function proposalAt(s: BrainSnapshot, id: string): BrainFile<ProposalFm> {

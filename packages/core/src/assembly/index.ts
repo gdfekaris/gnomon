@@ -186,3 +186,4 @@ export function parseCitations(text: string, snapshot: BrainSnapshot): Citation[
 }
 
 export * from './filing';
+export * from './derive';
