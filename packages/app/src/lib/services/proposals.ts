@@ -7,7 +7,7 @@
 
 import { type BrainFile, type BrainSnapshot, type Citation, type PrincipleFm, type ProposalFm, backlinks, buildProposal, decideProposal, nextProposalId, nowUtc, renderDualLink, setLabel, updatePrinciple, withIndexWrites } from '@gnomon/core';
 import type { BrainService } from './brain';
-import { appendGroundingLink } from './edit';
+import { appendGroundingLink, createPrincipleIn } from './edit';
 
 export interface ProposalGroup { key: string; label: string; open: BrainFile<ProposalFm>[]; decided: BrainFile<ProposalFm>[]; }
 
@@ -68,6 +68,24 @@ export async function acceptLink(brain: BrainService, p: BrainFile<ProposalFm>):
   if (!groundsToAdd(s, p)) throw new Error(`the principle ${p.fm.target ?? ''} is no longer in the brain; decline the proposal instead`);
   await brain.commit(decideProposal(s, proposalId(p.path), 'accepted', nowUtc()));
   return addGround(brain, p);
+}
+
+/**
+ * Write a principle proposal as proposed (schema §4.7, 2026-09-14): the Decide commit, then the Add principle
+ * commit from the same pre-fill the editor shows (title, grounds with their links, the "written from" line).
+ * The curator's tap on that wording is the deliberate act. Refuses when the target set is gone.
+ */
+export async function writeAsProposed(brain: BrainService, p: BrainFile<ProposalFm>): Promise<string> {
+  const s = brain.snapshot;
+  if (!s) throw new Error('no brain is connected');
+  if (p.fm.kind !== 'principle' || !p.fm.target_set) throw new Error('only a principle proposal can be written as proposed');
+  const setSlug = p.fm.target_set;
+  if (!s.sets.some((set) => set.path === `principles/${setSlug}/_set.md`)) throw new Error(`the set ${setSlug} is no longer in the brain; decline the proposal instead`);
+  const id = proposalId(p.path);
+  const pre = prefillFrom(s, id, setSlug);
+  if (!pre) throw new Error(`no proposal '${id}'`);
+  await brain.commit(decideProposal(s, id, 'accepted', nowUtc()));
+  return createPrincipleIn(brain, setSlug, { title: pre.title, body: pre.body, grounds: pre.grounds, related: [], tags: [] });
 }
 
 /** Where accepting a proposal takes the curator: the pre-filled editor; a link proposal is applied instead (`acceptLink`). */

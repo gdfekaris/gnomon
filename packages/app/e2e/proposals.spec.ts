@@ -147,3 +147,29 @@ test('accepting a principle proposal pre-fills its source as a ground, and an un
   await page.goto('/#/settings');
   await expect(page.getByTestId('refusal-count')).toHaveText('0 refusals');
 });
+
+// One tap writes a principle proposal as proposed: the decision, then the principle from the same pre-fill the
+// editor shows. The row moves to decided with the principle linked; the set holds it with its ground.
+test('"Write it as proposed" writes the principle in one tap', async ({ page }) => {
+  await page.goto('/#/proposals');
+  const work = page.getByTestId('group-ps-7k2m');
+  const row = work.getByTestId('proposal-P-20260905-001');
+  await expect(row.getByTestId('write-as-proposed')).toHaveText('Write it as proposed');
+  await expect(row.getByTestId('accept')).toHaveText('Accept and edit');
+  await row.getByTestId('write-as-proposed').click();
+  await expect(work.getByRole('heading', { level: 3 })).toContainText('1 open');
+  await expect(page).toHaveURL(/#\/proposals$/);
+  await work.getByTestId('toggle-decided').click();
+  const decided = work.getByTestId('decided-ps-7k2m').getByTestId('proposal-P-20260905-001');
+  await expect(decided.getByTestId('status')).toHaveText('accepted');
+  await expect(decided.getByTestId('written-as')).toHaveText('Rise to the work');
+  await decided.getByTestId('written-as').click();
+  await expect(page.getByRole('heading', { name: 'Rise to the work' })).toBeVisible();
+  await expect(page.getByTestId('frontmatter')).toContainText('aurelius-meditations-5-1');
+  await expect(page.getByTestId('fm-curated')).toHaveText('yours');
+  await expect(page.getByTestId('file-body')).toContainText('Grounding passages');
+  await page.goto('/#/sets');
+  await expect(page.getByTestId('set-ps-7k2m')).toContainText('Rise to the work');
+  await page.goto('/#/settings');
+  await expect(page.getByTestId('refusal-count')).toHaveText('0 refusals');
+});

@@ -84,5 +84,5 @@ test('relate a text with the demo model and save its proposal as yours (block 5)
   await expect(card).toContainText('Attention is a form of prayer');
   await expect(card).toContainText('yours');
   await expect(card).toContainText('Grounds: aurelius-meditations-4-3');
-  await expect(card.getByTestId('accept')).toHaveText('Accept and write it');
+  await expect(card.getByTestId('accept')).toHaveText('Accept and edit');
 });

@@ -7,7 +7,7 @@ import { MemoryDriver } from '@gnomon/storage';
 import { BrainService, type SnapshotState } from '../src/lib/services/brain';
 import { createPrincipleIn } from '../src/lib/services/edit';
 import { MockProvider, demoScript } from '@gnomon/providers';
-import { acceptLink, acceptanceRoute, addGround, decide, extractProposal, groundsToAdd, groupProposals, prefillFrom, proposalId, saveProposal, writtenAs } from '../src/lib/services/proposals';
+import { acceptLink, acceptanceRoute, addGround, decide, extractProposal, groundsToAdd, groupProposals, prefillFrom, proposalId, saveProposal, writeAsProposed, writtenAs } from '../src/lib/services/proposals';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const FIXTURE = join(here, '..', '..', 'core', 'fixtures', 'brain');
@@ -200,5 +200,35 @@ describe('a principle proposal pre-fills its source as a ground (2026-09-13)', (
     const gone = prefillFrom(s, 'P-20260913-003', 'ps-g8xw')!;
     expect(gone.grounds).toEqual([]);
     expect(gone.body).toBe('Keep the morning\n\nWritten from [[maps/proposals/P-20260913-003]] ([proposal](../../maps/proposals/P-20260913-003.md)).\n');
+  });
+});
+
+describe('writing a principle proposal as proposed (schema §4.7, 2026-09-14)', () => {
+  it('is the decision then the principle, from the pre-fill, and the proposal reads as written', async () => {
+    const state: SnapshotState = { current: null, stale: false, loading: false, error: null };
+    const brain = new BrainService(state);
+    const driver = await MemoryDriver.create(seed());
+    await brain.connect(driver);
+    const p = brain.snapshot!.files.get('maps/proposals/P-20260905-001.md') as BrainFile<ProposalFm>;
+    const path = await writeAsProposed(brain, p);
+    expect(path).toBe('principles/ps-7k2m/rise-to-the-work.md');
+    expect((await driver.history({ limit: 2 })).map((c) => c.message)).toEqual(['Add principle: Rise to the work', 'Decide: P-20260905-001']);
+    const s = brain.snapshot!;
+    const principle = s.files.get(path)!;
+    expect(principle.fm).toMatchObject({ type: 'principle', title: 'Rise to the work', set: 'ps-7k2m', grounds: ['aurelius-meditations-5-1'], curated: 'human' });
+    expect(principle.body).toBe('Rise to the work\n\n**Grounding passages:**\n\n- [[sources/aurelius-meditations-5-1/raw]] ([raw](../../sources/aurelius-meditations-5-1/raw.md))\n\nWritten from [[maps/proposals/P-20260905-001]] ([proposal](../../maps/proposals/P-20260905-001.md)).\n');
+    expect((s.files.get(p.path)!.fm as ProposalFm).status).toBe('accepted');
+    expect(writtenAs(s, p.path).map((f) => f.path)).toEqual([path]);
+    expect(validateSnapshot(s).filter((i) => i.level === 'refusal')).toEqual([]);
+  });
+  it('refuses a proposal that is not a principle, or whose set is gone, writing nothing', async () => {
+    const brain = await connected();
+    const head = brain.snapshot!.head;
+    const link = brain.snapshot!.files.get('maps/proposals/P-20260905-002.md') as BrainFile<ProposalFm>;
+    await expect(writeAsProposed(brain, link)).rejects.toThrow(/only a principle proposal/);
+    const gone = { ...brain.snapshot!.files.get('maps/proposals/P-20260905-001.md') as BrainFile<ProposalFm> };
+    gone.fm = { ...gone.fm, target_set: 'ps-zzzz' };
+    await expect(writeAsProposed(brain, gone)).rejects.toThrow(/no longer in the brain/);
+    expect(brain.snapshot!.head).toBe(head);
   });
 });

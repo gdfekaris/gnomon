@@ -9,14 +9,14 @@
   import { browseHref, linkLabel } from '../lib/markdown';
   import ConnectionNotice from '../lib/components/ConnectionNotice.svelte';
   import { brain, describeError } from '../lib/services/index';
-  import { acceptLink, acceptanceRoute, addGround, decide, groundsToAdd, groupProposals, proposalId, writtenAs } from '../lib/services/proposals';
+  import { acceptLink, acceptanceRoute, addGround, decide, groundsToAdd, groupProposals, proposalId, writeAsProposed, writtenAs } from '../lib/services/proposals';
   import { session } from '../lib/stores/session.svelte';
   import { snapshot } from '../lib/stores/snapshot.svelte';
 
   const s = $derived(snapshot.current);
   const groups = $derived(s ? groupProposals(s) : []);
   let busy = $state<string | null>(null);
-  let acting = $state<'accepted' | 'declined' | null>(null);
+  let acting = $state<'accepted' | 'declined' | 'written' | null>(null);
   let error = $state<string | null>(null);
   let showDecided = $state<Record<string, boolean>>({});
   // Decided proposals stay in the brain as the record of what was accepted or declined (schema §4.7), but the
@@ -53,6 +53,23 @@
       acting = null;
     }
   }
+  // A principle proposal written as proposed: the decision, then the principle, from the pre-fill; the row moves to decided.
+  async function writeIt(p: BrainFile<ProposalFm>) {
+    const id = proposalId(p.path);
+    busy = id;
+    acting = 'written';
+    error = null;
+    failedOn = null;
+    try {
+      await writeAsProposed(brain, p);
+    } catch (e) {
+      error = describeError(e);
+      failedOn = id;
+    } finally {
+      busy = null;
+      acting = null;
+    }
+  }
   // An accepted link proposal whose ground never landed (the head moved between the two commits): add it now.
   async function addIt(p: BrainFile<ProposalFm>) {
     const id = proposalId(p.path);
@@ -69,7 +86,7 @@
       busy = null;
     }
   }
-  const acceptLabel = (p: ProposalFm) => (p.kind === 'principle' ? 'Accept and write it' : p.kind === 'link' ? 'Accept and add the ground' : p.kind === 'amendment' ? 'Accept and edit the principle' : p.kind === 'tag' && p.target ? 'Accept and edit the tags' : 'Accept');
+  const acceptLabel = (p: ProposalFm) => (p.kind === 'principle' ? 'Accept and edit' : p.kind === 'link' ? 'Accept and add the ground' : p.kind === 'amendment' ? 'Accept and edit the principle' : p.kind === 'tag' && p.target ? 'Accept and edit the tags' : 'Accept');
   // A link proposal proposes a ground and nothing looser (schema §4.7): the sources it names, or the one it came from.
   const groundsOf = (p: ProposalFm): string[] => (p.grounds?.length ? p.grounds : p.from_source ? [p.from_source] : []);
   const targetHref = (p: ProposalFm) => (p.target ? (p.kind === 'tag' ? browseHref(`sources/${p.target}/raw.md`) : browseHref(`principles/${p.target}.md`)) : null);
@@ -79,7 +96,7 @@
 {#if !s}
   <ConnectionNotice />
 {:else}
-  <p class="hint">Suggestions from filing and desktop sessions. You decide; accepting a link adds the ground; everything else changes only when you write it yourself.</p>
+  <p class="hint">Suggestions from filing, deriving, and desktop sessions. You decide each one: write a principle as proposed or edit it first, add a ground, decline. Nothing changes until you do.</p>
   {#each groups as g (g.key)}
     <section data-testid="group-{g.key}">
       <h3>{g.label} <small>· {g.open.length} open</small></h3>
@@ -98,9 +115,12 @@
           </p>
           {#if p.body}<MarkdownView body={p.body} path={p.path} />{/if}
           <div class="row">
+            {#if p.fm.kind === 'principle' && p.fm.target_set}
+              <button class="primary" onclick={() => writeIt(p)} disabled={busy !== null} use:hold={busy === id && acting === 'written'} data-testid="write-as-proposed">{busy === id && acting === 'written' ? 'Writing…' : 'Write it as proposed'}</button>
+            {/if}
             <button onclick={() => act(p, 'accepted')} disabled={busy !== null} use:hold={busy === id && acting === 'accepted'} data-testid="accept">{busy === id && acting === 'accepted' ? 'Accepting…' : acceptLabel(p.fm)}</button>
             <button onclick={() => act(p, 'declined')} disabled={busy !== null} use:hold={busy === id && acting === 'declined'} data-testid="decline">{busy === id && acting === 'declined' ? 'Declining…' : 'Decline'}</button>
-            {#if busy === id}<span role="status" class="hint" data-testid="deciding">{p.fm.kind === 'link' && acting === 'accepted' ? 'Two commits to your repository: the decision, then the ground; a few seconds.' : 'One commit to your repository; a few seconds.'}</span>{/if}
+            {#if busy === id}<span role="status" class="hint" data-testid="deciding">{acting === 'written' ? 'Two commits to your repository: the decision, then the principle; a few seconds.' : p.fm.kind === 'link' && acting === 'accepted' ? 'Two commits to your repository: the decision, then the ground; a few seconds.' : 'One commit to your repository; a few seconds.'}</span>{/if}
           </div>
           {#if error && failedOn === id}<p class="error" role="alert" data-testid="decide-error">{error}</p>{/if}
         </article>
