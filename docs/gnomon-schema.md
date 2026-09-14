@@ -188,7 +188,7 @@ There is no status field. A principle in a set is in force. A principle the cura
 | `title` | yes | One line: the suggested principle, link, tags, or change. |
 | `target_set` | yes for `principle`, `amendment`, `link` | Set slug the suggestion belongs to. |
 | `target` | yes for `amendment`, `link`, `tag` | The affected principle (`<set-slug>/<principle-slug>`) or source slug. |
-| `from_source` | no | The source slug whose filing prompted this proposal. |
+| `from_source` | no | The source slug whose filing prompted this proposal. Absent on a derived proposal (§7.12), whose `grounds` name the sources. |
 | `grounds` | no | Source slugs the suggestion rests on. For `link`, the sources to add to the target principle's `grounds`. For `principle`, the sources the proposed principle rests on; a filing includes its capture, and accepting pre-fills them as the new principle's `grounds`. |
 | `status` | yes | `open`, `accepted`, `declined`. |
 | `curated` | yes | `agent-proposed` when an agent wrote it; `human` when the curator did. Never `ratified`. |
@@ -197,7 +197,7 @@ There is no status field. A principle in a set is in force. A principle the cura
 
 `kind` meanings: `principle` — a suggested new principle; `link` — a suggested ground: add the source or sources in `grounds` to the `grounds` of the principle named in `target`, as evidence for it (a link proposal never touches `related`, which holds principles); `tag` — suggested tags for a source; `amendment` — a suggested change to an existing principle's wording.
 
-Proposal files are **outside the curation state machine** (§5): they are never ratified, and `status` is their whole lifecycle. Agents create proposal files and otherwise leave them alone, with one carve-out: an agent may set `status` on a proposal in a session where the curator explicitly decided that item, and may write nothing else in doing so. Accepting a `principle` or `amendment` proposal never produces the file automatically; the curator writes the principle by hand (the app pre-fills the editor from the proposal), and the result is `curated: human` saved deliberately.
+Proposal files are **outside the curation state machine** (§5): they are never ratified, and `status` is their whole lifecycle. Agents create proposal files and otherwise leave them alone, with one carve-out: an agent may set `status` on a proposal in a session where the curator explicitly decided that item, and may write nothing else in doing so. Accepting a `principle` proposal never writes the principle behind the curator's back: the app pre-fills the principle from the proposal (its title, its `grounds` with their dual links), and the curator either edits it or writes it as proposed in one deliberate act; either way the result is `curated: human`. Accepting an `amendment` proposal opens the principle for the curator to reword. Accepting a `link` proposal adds the ground (§4.7 `kind`).
 
 There is no `maps/_proposals.md`. Open proposals are listed in `maps/_index.md`.
 
@@ -337,7 +337,11 @@ Rewrite `status` to `accepted` or `declined`; one commit `Decide: P-<date>-<nnn>
 
 The curator may write a proposal (§4.7) directly, for instance keeping the proposal section of a Relate answer: write `maps/proposals/P-<date>-<nnn>.md` with `curated: human` and `status: open`; regenerate indexes; one commit `Add proposal: P-<date>-<nnn>`. Agents never use this message; their proposals are written inside a `File:` commit.
 
-### 7.12 Desktop session discipline
+### 7.12 Derive proposals (Task E in AGENTS.md)
+
+The curator picks one or more filed sources and a target set; a model (in the app) or a desktop agent derives candidate principles from the passages and writes each as a proposal: `type: proposal`, `kind: principle`, `target_set`, `grounds` naming the chosen sources it rests on (at least one), `curated: agent-proposed`, `status: open`, no `from_source`; the body is the rationale. Three to ten for one source by its length and richness, at most twenty for several; nothing the set already holds. Never a principle file: the curator decides each proposal (§7.10, §4.7). One commit for the batch, `Derive: <n> proposals for <set label>`, indexes regenerated. The model never proposes an `order`; accepted principles take the order the curator accepts them in, and §7.9 reorders.
+
+### 7.13 Desktop session discipline
 
 Encoded in `AGENTS.md`: `git pull` at session start; one commit per action as above; before the final push, run `npx gnomon-cli validate` and fix or report refusals, then `npx gnomon-cli index`; `git push` at session end. Agents never leave the session with unpushed commits they made.
 

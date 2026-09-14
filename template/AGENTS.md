@@ -34,8 +34,9 @@ the capture, byte for byte.
 1. `git pull` before anything else. The brain is edited from several
    devices; a session that starts stale ends in a conflict.
 2. One commit per action, with these messages and no others:
-   `Capture: <stem>`, `File: <slug>`, `Decide: <proposal-id>`. Commit before
-   you move to the next item.
+   `Capture: <stem>`, `File: <slug>`, `Decide: <proposal-id>`,
+   `Derive: <n> proposals for <set label>`. Commit before you move to the
+   next item.
 3. Before your final push: `npx gnomon-cli validate`, then
    `npx gnomon-cli index`. Fix any refusal in a file you are allowed to
    touch; report any other refusal or warning to the curator. Commit the
@@ -185,13 +186,32 @@ cannot both be honored, cited), and **gaps** (questions one set answers
 and another is silent on). No new text is involved; if the curator wants a
 text compared across sets, run Task B with several sets.
 
+## Task E — Derive principles from sources
+
+Given one or more filed sources and a target set: read each `raw.md` in
+full, load the set as above, then derive candidate principles and write
+each as a proposal file (Task C step 6 format): `kind: principle`,
+`target_set: <set-slug>`, `grounds:` naming the chosen source slugs it
+rests on (at least one), no `from_source`; the body is your rationale,
+two or three sentences saying which passage and why.
+
+Rules: derive only what the passages support; one line per principle,
+in the curator's voice, a commitment stated plainly, never a quotation;
+three to ten for one source by its length and richness, at most twenty
+for several; nothing the set already holds, restated. Never write a
+principle file and never propose an order: the curator writes each
+principle by accepting its proposal, in the order they choose. One
+commit for the batch: `Derive: <n> proposals for <set label>`. Then
+`npx gnomon-cli validate && npx gnomon-cli index` before the push.
+
 ## Recording proposal decisions
 
 When the curator, in this session, says what to do with a proposal, set
 its `status` to `accepted` or `declined`, refresh `updated`, change
 nothing else, and commit `Decide: <id>`. An accepted `principle` or
-`amendment` is still written by the curator; you may draft wording in your
-reply for them to use, but you never write the principle file.
+`amendment` is still written by the curator (in the app, by writing it
+as proposed or editing it); you may draft wording in your reply for them
+to use, but you never write the principle file.
 
 ## Validation checklist
 
