@@ -60,9 +60,33 @@ function demoRelateScript(input: string, principles: string[], passages: string[
   ].join('\n');
 }
 
-/** The default script: a filing reply for the Task C prompt, otherwise a cited answer that names precedence. */
+/** Task E for the demo: three principles per passage, each from one of its first sentences, grounded in it. */
+export function demoDeriveScript(req: CompletionRequest): string {
+  const context = req.messages.filter((m) => m.role === 'user').map((m) => m.content).join('\n\n');
+  const principles: Array<{ title: string; rationale: string; grounds: string[] }> = [];
+  const seen = new Set<string>();
+  for (const m of context.matchAll(/^### Passage: (.+?) — [^\n]*\nslug: `([^`]+)`\n\n([\s\S]*?)(?=\n### Passage:|$)/gm)) {
+    const [, title, slug, body] = m as unknown as [string, string, string, string];
+    const sentences = body.replace(/\s+/g, ' ').trim().split(/(?<=[.!?])\s+/).filter((x) => x.length > 8).slice(0, 3);
+    if (sentences.length === 0) continue;
+    // Three per passage: one per sentence, and a short passage's first sentence turned three ways.
+    const PREFIXES = ['Hold to this', 'Act on it', 'Remember'];
+    for (let i = 0; i < 3; i++) {
+      const sentence = sentences[i] ?? sentences[0]!;
+      const prefix = sentences[i] ? 'Hold to this' : PREFIXES[i]!;
+      let t = `${prefix}: ${sentence.replace(/[.!?,;:]+$/, '').slice(0, 60)}`;
+      if (seen.has(t.toLowerCase())) t = `${t} (${i + 1})`;
+      seen.add(t.toLowerCase());
+      principles.push({ title: t, rationale: `The demo model took sentence ${Math.min(i + 1, sentences.length)} of "${title}" as it stands. Decide whether you hold it.`, grounds: [slug] });
+    }
+  }
+  return JSON.stringify({ principles });
+}
+
+/** The default script: a filing reply for the Task C prompt, a derive reply for Task E, otherwise a cited answer that names precedence. */
 export function demoScript(req: CompletionRequest): string {
   if (req.system.startsWith('You are filing a capture')) return demoFilingScript(req);
+  if (req.system.startsWith('You are deriving principles')) return demoDeriveScript(req);
   const context = req.messages.filter((m) => m.role === 'user').map((m) => m.content).join('\n\n');
   const principles = refsIn(context, 'principles/');
   const passages = refsIn(context, 'sources/');

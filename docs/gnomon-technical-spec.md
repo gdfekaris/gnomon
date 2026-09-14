@@ -295,6 +295,10 @@ Responses are scanned for `[[path]]` refs that resolve into the snapshot; each b
 
 Filing via the PWA is a structured-output completion, not free chat. The system prompt asks for a strict JSON object per capture: source metadata (`title`, `author`, `work?`, `year?`, `locator?`, `origin?`, `tags?`) and an array of proposals (`kind`, `title`, `target_set?`, `target?`, `grounds?`, `rationale`). The prompt carries the capture's text and note, never the attachment. The app validates the JSON against `SourceMeta` and `ProposalParams`, then calls `core/filing.buildFiling` (§7.6), which copies the body and attachment itself and commits one batch per capture. The model proposes metadata and proposals; it never produces the passage text. This structurally satisfies Schema §4.2 immutability even if the model is careless.
 
+### 8.6 Derive (Task E)
+
+`core/assembly/derive`: `buildDerivePrompt(snapshot, sourceSlugs, targetSet | null, budgetTokens)` puts the target set's description and existing principles first and the chosen passages in full after them; passages must fit, principles trim first. `parseDeriveReply` accepts one to twenty strict-JSON entries (`title`, `rationale`, `grounds` among the chosen slugs, nothing the set already holds). `core/proposals.buildDerive` writes one `principle` proposal per entry in one commit, `Derive: {n} proposals for {set label}` (Schema §7.12). The app's Reason screen carries the task with a source picker and a target set select ("New set…" creates the set first, only once the reply has parsed); the result lands on Proposals, where "Write it as proposed" is the Decide commit then the Add principle commit from the same pre-fill the editor shows. The demo provider scripts three principles per passage.
+
 ## 9. Ratification and rejection
 
 - **Ratify(filingSha):** `compare(parent(filingSha), filingSha)` → for every added file of `type: source` or `type: notes` with `curated: agent-proposed`, rewrite to `ratified` (touching `curated` and `updated` only); proposal files and the capture are left as the filing wrote them; regenerate indexes; one commit `Ratify: {slug}`.

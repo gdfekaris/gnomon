@@ -36,6 +36,12 @@ describe('buildDerivePrompt (Task E)', () => {
     expect(justPassages.context).toContain('more not shown, for room');
     expect(justPassages.context).toContain('Men seek retreats for themselves');
   });
+  it('a new, empty set as the target: no principles held, and nothing is refused as already held', () => {
+    const r = buildDerivePrompt(s, two, null, 100_000);
+    expect(r.ok && r.context).toContain('## The target set: a new set, empty');
+    expect(r.ok && r.context).toContain('(none)');
+    expect(parseDeriveReply(JSON.stringify({ principles: [{ title: 'Courage before comfort', rationale: 'r', grounds: ['weil-attention'] }] }), s, two, null)).toHaveLength(1);
+  });
   it('refuses an unknown set or source', () => {
     expect(() => buildDerivePrompt(s, ['nope'], 'ps-g8xw', 1000)).toThrow(/no source/);
     expect(() => buildDerivePrompt(s, two, 'ps-zzzz', 1000)).toThrow(/no set/);

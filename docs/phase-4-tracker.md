@@ -244,7 +244,7 @@ hundred sources renders fifty rows and pages; the unit tests cover every
 function in `browse.ts`; the existing Browse flows still pass; and
 proposal §6 and spec §10's Browse lines are updated in the same commit.
 
-## Feature block: Derive principles from sources (2026-09-14) — specified, not started
+## Feature block: Derive principles from sources (2026-09-14) — E1–E4 built 2026-09-14; the maintainer's real-brain derive and the checklist step remain
 
 Asked for by the maintainer: pick a filed source, or several, and at the
 press of a button get three to ten principles rationally derived from

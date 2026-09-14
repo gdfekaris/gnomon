@@ -5,9 +5,14 @@ import type { ModelInfo } from '@gnomon/providers';
 import { type ProviderId, type ReasoningState, ReasoningService } from '../services/reasoning';
 import { settings } from './settings.svelte';
 
-export const reasoning = $state<ReasoningState & { task: Task; provider: ProviderId; providers: ProviderId[]; model: ModelInfo | null; models: ModelInfo[]; input: string }>({
+/** The Reason screen's tasks: the four assembly tasks, and Derive, which has its own picker (Task E). */
+export type ScreenTask = Task | 'derive';
+
+export const reasoning = $state<ReasoningState & { task: ScreenTask; provider: ProviderId; providers: ProviderId[]; model: ModelInfo | null; models: ModelInfo[]; input: string; derive: { sources: string[]; target: string; newName: string } }>({
   transcript: [], streaming: false, error: null, preview: null,
   task: 'reason', provider: 'mock', providers: ['mock'], model: null, models: [], input: '',
+  // Derive's selection is remembered for the session, not the device: the chosen sources, the target set ('new' for a new one), its optional sub-name.
+  derive: { sources: [], target: '', newName: '' },
 });
 
 export const reasoner = new ReasoningService(reasoning);

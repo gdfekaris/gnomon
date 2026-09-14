@@ -46,7 +46,7 @@ export async function loadFilings(state: InboxState, brain: BrainService, driver
   }
 }
 
-async function completeText(provider: ProviderDriver, model: ModelInfo, system: string, context: string, signal: AbortSignal): Promise<string> {
+export async function completeText(provider: ProviderDriver, model: ModelInfo, system: string, context: string, signal: AbortSignal): Promise<string> {
   let text = '';
   for await (const ev of provider.complete({ model: model.id, system, messages: [{ role: 'user', content: context }], maxTokens: Math.min(model.maxOutputTokens ?? 4096, 4096), signal })) {
     if (ev.type === 'text') text += ev.text;

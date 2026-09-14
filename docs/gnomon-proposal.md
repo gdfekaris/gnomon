@@ -127,7 +127,7 @@ Frontmatter carries `curated: human | agent-proposed | ratified`, tags, and sour
 
 **Principle sets**: list of sets with ordinal and sub-name; new set, rename, reorder (drag), delete with confirmation and a dangling-reference report; per-set description editor (the `_set.md` body, which is also the set's framing instruction to the model); within a set, drag-reorder of principles.
 
-**Reason**: chat interface; principle-set picker (multi-select chips, last selection remembered per device) above the task presets ("Reason from my principles," "Relate a new text," "Compare sets," free-form); provider/model picker; budget indicator showing how much of the selection fits; citations rendered as links into the brain.
+**Reason**: chat interface; principle-set picker (multi-select chips, last selection remembered per device) above the task presets ("Reason from my principles," "Relate a new text," "Compare sets," free-form); provider/model picker; budget indicator showing how much of the selection fits; citations rendered as links into the brain. A fifth task, "Derive principles from sources": pick one or more filed sources and a target set (or a new one), and the model's candidate principles arrive as proposals on the Proposals screen, to be written as proposed, edited, or declined one by one (Schema §7.12).
 
 **Settings**: git connection (token, repo), AI providers (keys), context budget percentage, privacy disclosure, encryption toggle (phase 4), theme.
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FILING_PROMPT, parseFilingReply } from '@gnomon/core';
+import { DERIVE_PROMPT, FILING_PROMPT, parseFilingReply } from '@gnomon/core';
 import { MOCK_MODEL, MockProvider, demoFilingScript, demoScript } from '../src/index';
 import { collect } from './contract';
 
@@ -64,5 +64,16 @@ describe('MockProvider', () => {
     const parsed = parseFilingReply(demoScript(req));
     expect(parsed.meta).toEqual({ title: 'The only way to make sense', author: 'unknown', tags: ['demo'] });
     expect(parsed.proposals.map((p) => [p.kind, p.target_set])).toEqual([['tag', undefined], ['principle', 'ps-g8xw'], ['link', 'ps-g8xw']]);
+  });
+  it('answers the derive prompt with three grounded principles per passage', () => {
+    const context = '## The target set: Set 1\n\n(no description)\n\n## Principles the set already holds\n\n(none)\n\n## The passages\n\n### Passage: A — B (W, 1)\nslug: `a-b`\n\nFirst sentence here. Second sentence follows. Third one too. Fourth is ignored.\n\n### Passage: C — D\nslug: `c-d`\n\nOnly one sentence that is long enough.';
+    const req = { model: 'mock-reasoner', system: DERIVE_PROMPT, messages: [{ role: 'user' as const, content: context }], maxTokens: 100, signal: new AbortController().signal };
+    const out = JSON.parse(demoScript(req)) as { principles: Array<{ title: string; grounds: string[] }> };
+    expect(out.principles).toHaveLength(6);
+    expect(out.principles.slice(0, 3).every((p) => p.grounds[0] === 'a-b')).toBe(true);
+    expect(out.principles.slice(3).every((p) => p.grounds[0] === 'c-d')).toBe(true);
+    expect(out.principles[0]!.title).toBe('Hold to this: First sentence here');
+    expect(out.principles.slice(3).map((p) => p.title.split(':')[0])).toEqual(['Hold to this', 'Act on it', 'Remember']);
+    expect(new Set(out.principles.map((p) => p.title)).size).toBe(6);
   });
 });

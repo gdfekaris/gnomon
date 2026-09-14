@@ -3,11 +3,15 @@
   // presets, provider and model picker, the budget bar from assemble
   // before sending, a streaming transcript, and citations as links.
   import { hold } from '../lib/press';
-  import { type Task, setLabel } from '@gnomon/core';
-  import { renderAnswer } from '../lib/markdown';
+  import { untrack } from 'svelte';
+  import { type SourceFm, type Task, buildDerivePrompt, setLabel } from '@gnomon/core';
+  import { linkLabel, renderAnswer } from '../lib/markdown';
   import { brain } from '../lib/services/index';
-  import { taskLabel, describeAssemblyError } from '../lib/services/reasoning';
+  import { taskLabel, describeAssemblyError, ReasoningService } from '../lib/services/reasoning';
   import { extractProposal } from '../lib/services/proposals';
+  import { deriveInto, describeDeriveError } from '../lib/services/derive';
+  import { filterSources, sortSources } from '../lib/services/browse';
+  import { route } from '../lib/router.svelte';
   import ProposalForm from '../lib/components/ProposalForm.svelte';
   import { configureReasoner, reasoner, reasoning } from '../lib/stores/reasoning.svelte';
   import { savePrefs, settings } from '../lib/stores/settings.svelte';
@@ -16,7 +20,9 @@
   import { snapshot } from '../lib/stores/snapshot.svelte';
 
   const s = $derived(snapshot.current);
-  const TASKS: Task[] = ['reason', 'relate', 'compare', 'free'];
+  const TASKS: Array<Task | 'derive'> = ['reason', 'relate', 'compare', 'free', 'derive'];
+  const isDerive = $derived(reasoning.task === 'derive');
+  const assemblyTask = $derived((isDerive ? 'reason' : reasoning.task) as Task);
   const PROVIDER_LABELS: Record<string, string> = { mock: 'Demo model (no key)', anthropic: 'Anthropic', openrouter: 'OpenRouter' };
   let selected = $state<string[]>([]);
   let modelsFor = $state<string | null>(null);
@@ -54,9 +60,60 @@
   });
   // The budget bar: preview on every change of inputs, before anything is sent.
   $effect(() => {
-    if (!s || !reasoning.model) { reasoning.preview = null; return; }
-    reasoner.preview(s, reasoning.task, selected, reasoning.input, reasoning.model, settings.prefs.budgetPercent, settings.prefs.setDescriptionPlacement);
+    if (!s || !reasoning.model || isDerive) { reasoning.preview = null; return; }
+    reasoner.preview(s, assemblyTask, selected, reasoning.input, reasoning.model, settings.prefs.budgetPercent, settings.prefs.setDescriptionPlacement);
   });
+
+  // Derive (Task E). `#/reason?task=derive&sources=a,b` arrives with the task and the sources picked, once per hash.
+  let arrivedFor = $state<string | null>(null);
+  $effect(() => {
+    const task = route.query.get('task');
+    const sources = route.query.get('sources') ?? '';
+    const key = `${task}|${sources}`;
+    if (task !== 'derive' || arrivedFor === key) return;
+    untrack(() => {
+      arrivedFor = key;
+      reasoning.task = 'derive';
+      const picked = sources.split(',').filter(Boolean);
+      if (picked.length) reasoning.derive.sources = [...new Set([...reasoning.derive.sources, ...picked])];
+    });
+  });
+  // The target set defaults to the first set; a set that was deleted falls back.
+  $effect(() => {
+    if (!s) return;
+    const slugs = s.sets.map((f) => f.path.split('/')[1]!);
+    untrack(() => { if (reasoning.derive.target !== 'new' && !slugs.includes(reasoning.derive.target)) reasoning.derive.target = slugs[0] ?? 'new'; });
+  });
+  let deriveQuery = $state('');
+  let deriving = $state(false);
+  let deriveError = $state<string | null>(null);
+  const allSources = $derived(s ? s.byType('source') : []);
+  const deriveResults = $derived(sortSources(filterSources(allSources, { q: deriveQuery, tags: [] }), 'newest').slice(0, deriveQuery.trim() ? 50 : 12));
+  const chosen = $derived(reasoning.derive.sources.filter((slug) => s?.files.has(`sources/${slug}/raw.md`)));
+  const togglePick = (slug: string) => { reasoning.derive.sources = chosen.includes(slug) ? chosen.filter((x) => x !== slug) : [...chosen, slug]; };
+  const derivePreview = $derived.by(() => {
+    if (!s || !reasoning.model || !isDerive || chosen.length === 0) return null;
+    const target = reasoning.derive.target === 'new' ? null : reasoning.derive.target;
+    if (target && !s.sets.some((f) => f.path === `principles/${target}/_set.md`)) return null;
+    return buildDerivePrompt(s, chosen, target, ReasoningService.budget(reasoning.model, settings.prefs.budgetPercent));
+  });
+  const canDerive = $derived(!!s && !!reasoning.model && !deriving && chosen.length > 0 && !!derivePreview?.ok);
+  async function derive() {
+    if (!s || !reasoning.model) return;
+    deriving = true;
+    deriveError = null;
+    try {
+      const target = reasoning.derive.target === 'new' ? { newName: reasoning.derive.newName } : { slug: reasoning.derive.target };
+      const r = await deriveInto(brain, reasoner.driver(reasoning.provider), reasoning.model, chosen, target, ReasoningService.budget(reasoning.model, settings.prefs.budgetPercent));
+      const from = chosen.join(',');
+      reasoning.derive = { sources: [], target: r.set, newName: '' };
+      location.hash = `#/proposals?derived=${r.n}&from=${encodeURIComponent(from)}&set=${r.set}`;
+    } catch (e) {
+      deriveError = describeError(e);
+    } finally {
+      deriving = false;
+    }
+  }
 
   const preview = $derived(reasoning.preview);
   const budget = $derived(reasoning.model ? Math.floor((reasoning.model.contextWindow * settings.prefs.budgetPercent) / 100) : 0);
@@ -72,7 +129,7 @@
     if (!s || !reasoning.model) return;
     const input = reasoning.input;
     reasoning.input = '';
-    await reasoner.run(s, reasoning.provider, reasoning.model, reasoning.task, selected, input, settings.prefs.budgetPercent, settings.prefs.setDescriptionPlacement);
+    await reasoner.run(s, reasoning.provider, reasoning.model, assemblyTask, selected, input, settings.prefs.budgetPercent, settings.prefs.setDescriptionPlacement);
     void brain;
   }
 </script>
@@ -80,20 +137,16 @@
 <h2>Reason</h2>
 {#if !s}
   <ConnectionNotice />
-{:else if !s.byType('principle').length}
-  <p class="empty" data-testid="empty-reason">
-    Nothing to reason from yet: your sets have no principles, and reasoning without premises would make the answer the
-    model's, not yours. <a href="#/capture">Capture</a> a passage, file it from the Inbox, ratify the filing, then accept
-    a proposal or <a href="#/sets">write a principle</a> yourself.
-  </p>
 {:else}
   <section class="picker">
-    <div class="chips" data-testid="set-picker">
-      {#each s.sets as set (set.path)}
-        {@const slug = set.path.split('/')[1]!}
-        <button type="button" class="chip" class:on={selected.includes(slug)} aria-pressed={selected.includes(slug)} onclick={() => toggle(slug)} data-testid="chip-{slug}">{setLabel(set.fm)}</button>
-      {/each}
-    </div>
+    {#if !isDerive}
+      <div class="chips" data-testid="set-picker">
+        {#each s.sets as set (set.path)}
+          {@const slug = set.path.split('/')[1]!}
+          <button type="button" class="chip" class:on={selected.includes(slug)} aria-pressed={selected.includes(slug)} onclick={() => toggle(slug)} data-testid="chip-{slug}">{setLabel(set.fm)}</button>
+        {/each}
+      </div>
+    {/if}
     <div class="row">
       <label>Task
         <select bind:value={reasoning.task} data-testid="task">
@@ -112,6 +165,55 @@
       </label>
     </div>
     {#if modelError}<p class="error" role="alert">Could not list models: {modelError}</p>{/if}
+    {#if isDerive}
+      <!-- Derive (Task E): sources in, proposals out; the curator decides each on Proposals. -->
+      <div class="row">
+        <label>Into set
+          <select bind:value={reasoning.derive.target} data-testid="derive-set">
+            {#each s.sets as set (set.path)}<option value={set.path.split('/')[1]}>{setLabel(set.fm)}</option>{/each}
+            <option value="new">New set…</option>
+          </select>
+        </label>
+        {#if reasoning.derive.target === 'new'}
+          <label>Sub-name <small>(optional)</small><input bind:value={reasoning.derive.newName} placeholder="e.g. Work" data-testid="derive-set-name" /></label>
+        {/if}
+      </div>
+      <label>Sources <input type="search" bind:value={deriveQuery} placeholder="Search titles, authors, works, tags" autocomplete="off" data-testid="derive-search" /></label>
+      {#if chosen.length}
+        <p class="chips" data-testid="derive-chosen">
+          {#each chosen as slug (slug)}<span class="chip on">{linkLabel(`sources/${slug}/raw.md`, s)} <button type="button" onclick={() => togglePick(slug)} aria-label="Remove {slug}" data-testid="derive-drop-{slug}">×</button></span>{/each}
+        </p>
+      {/if}
+      <ul class="results" data-testid="derive-results">
+        {#each deriveResults as f (f.path)}
+          {@const slug = f.path.split('/')[1]!}
+          <li><label><input type="checkbox" checked={chosen.includes(slug)} onchange={() => togglePick(slug)} data-testid="derive-pick-{slug}" /> {f.fm.title} <small>· {(f.fm as SourceFm).author}</small></label></li>
+        {:else}
+          <li class="empty">{allSources.length ? 'No source matches.' : 'No sources yet. File a capture first.'}</li>
+        {/each}
+      </ul>
+      <div class="budget" data-testid="budget">
+        <div class="bar"><div class="fill" class:over={!!derivePreview && !derivePreview.ok} style="width: {derivePreview ? (derivePreview.ok ? Math.min(100, Math.round((derivePreview.tokensUsed / Math.max(1, ReasoningService.budget(reasoning.model!, settings.prefs.budgetPercent))) * 100)) : 100) : 0}%"></div></div>
+        {#if !chosen.length}
+          <p class="hint" data-testid="budget-note">Pick at least one source.</p>
+        {:else if derivePreview?.ok}
+          <p class="hint" data-testid="budget-note">{derivePreview.passages} passage{derivePreview.passages === 1 ? '' : 's'} fit{derivePreview.passages === 1 ? 's' : ''} the budget{derivePreview.principlesOmitted ? `; ${derivePreview.principlesOmitted} of the set's principles not shown to the model, for room` : ''}.</p>
+        {:else if derivePreview}
+          <p class="error" data-testid="budget-note">{describeDeriveError(derivePreview)}</p>
+        {/if}
+      </div>
+      <div class="row">
+        <button class="primary" onclick={derive} disabled={!canDerive} use:hold={deriving} data-testid="derive">{deriving ? 'Deriving…' : 'Derive'}</button>
+        {#if deriving}<span role="status" class="hint">One completion, then one commit of the proposals; a few seconds.</span>{/if}
+      </div>
+      {#if deriveError}<p class="error" role="alert" data-testid="derive-error">{deriveError}</p>{/if}
+    {:else if !s.byType('principle').length}
+      <p class="empty" data-testid="empty-reason">
+        Nothing to reason from yet: your sets have no principles, and reasoning without premises would make the answer the
+        model's, not yours. <a href="#/capture">Capture</a> a passage, file it from the Inbox, ratify the filing, then accept
+        a proposal, <a href="#/sets">write a principle</a> yourself, or derive principles from a source with the task above.
+      </p>
+    {:else}
     {#if reasoning.task !== 'compare'}
       <label>{reasoning.task === 'relate' ? 'New text' : reasoning.task === 'free' ? 'Message' : 'Question'}
         <textarea bind:value={reasoning.input} rows={reasoning.task === 'relate' ? 6 : 3} data-testid="input" placeholder={reasoning.task === 'relate' ? 'Paste the text to relate to the selected sets.' : 'What should the principles be applied to?'}></textarea>
@@ -133,6 +235,7 @@
       {#if reasoning.transcript.length}<button class="quiet" onclick={() => reasoner.clear()} disabled={reasoning.streaming}>Clear</button>{/if}
     </div>
     {#if reasoning.error}<p class="error" role="alert">{reasoning.error}</p>{/if}
+    {/if}
   </section>
 
   <section class="transcript" data-testid="transcript">
@@ -170,6 +273,11 @@
   .chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
   .row { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: end; }
   .row label { display: grid; gap: 0.25rem; flex: 1 1 8rem; }
+  input[type='search']::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+  .results { padding-left: 0; list-style: none; margin: 0; }
+  .results li { margin: 0.35rem 0; }
+  .results label { display: flex; gap: 0.5rem; align-items: baseline; }
+  .chip button { min-height: 0; padding: 0 2px; border: 0; box-shadow: none; background: none; color: inherit; font-size: var(--fs); line-height: 1; }
   .transcript article { padding: 0.5rem 0.75rem; margin-bottom: 0.75rem; }
   .transcript .user { background: var(--pattern); padding: 2px; }
   .transcript .user > * { background: var(--paper); padding: 6px 10px; }

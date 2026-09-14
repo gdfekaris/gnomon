@@ -129,8 +129,8 @@ export class ReasoningService {
   }
 }
 
-export function taskLabel(task: Task): string {
-  return { reason: 'Reason from my principles', relate: 'Relate a new text', compare: 'Compare sets', free: 'Free-form' }[task];
+export function taskLabel(task: Task | 'derive'): string {
+  return { reason: 'Reason from my principles', relate: 'Relate a new text', compare: 'Compare sets', free: 'Free-form', derive: 'Derive principles from sources' }[task];
 }
 
 export function describeAssemblyError(r: Exclude<AssemblyResult, { ok: true }>): string {

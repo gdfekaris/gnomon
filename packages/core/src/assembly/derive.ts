@@ -40,10 +40,10 @@ const passageChunk = (f: BrainFile<SourceFm>): string => {
   return `### Passage: ${f.fm.title} — ${f.fm.author}${where ? ` (${where})` : ''}\nslug: \`${slug}\`\n\n${f.body.replace(/\n+$/, '')}`;
 };
 
-/** The user-turn material: the target set and what it holds, then the chosen passages in full. Passages must fit; principles trim first. */
-export function buildDerivePrompt(snapshot: BrainSnapshot, sourceSlugs: string[], targetSet: string, budgetTokens: number): DerivePromptResult {
-  const set = snapshot.sets.find((s) => s.path === `principles/${targetSet}/_set.md`);
-  if (!set) throw new Error(`no set '${targetSet}'`);
+/** The user-turn material: the target set and what it holds, then the chosen passages in full. Passages must fit; principles trim first. `null` is a new, empty set. */
+export function buildDerivePrompt(snapshot: BrainSnapshot, sourceSlugs: string[], targetSet: string | null, budgetTokens: number): DerivePromptResult {
+  const set = targetSet === null ? null : snapshot.sets.find((s) => s.path === `principles/${targetSet}/_set.md`);
+  if (targetSet !== null && !set) throw new Error(`no set '${targetSet}'`);
   const sources = sourceSlugs.map((slug) => {
     const f = snapshot.files.get(`sources/${slug}/raw.md`) as BrainFile<SourceFm> | undefined;
     if (!f || f.fm.type !== 'source') throw new Error(`no source '${slug}'`);
@@ -51,11 +51,11 @@ export function buildDerivePrompt(snapshot: BrainSnapshot, sourceSlugs: string[]
   });
   const systemTokens = estimateTokens(DERIVE_PROMPT);
   const passages = ['## The passages', ...sources.map(passageChunk)].join('\n\n');
-  const head = [`## The target set: ${setLabel(set.fm)}`, set.body.replace(/\n+$/, '') || '(no description)'].join('\n\n');
+  const head = set ? [`## The target set: ${setLabel(set.fm)}`, set.body.replace(/\n+$/, '') || '(no description)'].join('\n\n') : '## The target set: a new set, empty\n\n(no description yet)';
   const fixed = systemTokens + estimateTokens(head) + estimateTokens(passages) + estimateTokens('\n\n## Principles the set already holds\n\n(none)');
   if (fixed > budgetTokens) return { ok: false, error: 'SOURCES_EXCEED_BUDGET', neededTokens: fixed, budgetTokens };
 
-  const principles = snapshot.principlesOf(targetSet) as BrainFile<PrincipleFm>[];
+  const principles = targetSet === null ? [] : (snapshot.principlesOf(targetSet) as BrainFile<PrincipleFm>[]);
   const lines = principles.map((p) => `- ${p.fm.title}${p.body.trim() ? `\n  ${p.body.replace(/\n+$/, '').split('\n').join('\n  ')}` : ''}`);
   let kept = lines.length;
   let used = fixed + lines.reduce((n, l) => n + estimateTokens(l), 0);
@@ -80,7 +80,7 @@ function fail(msg: string): never {
  * title; a rationale; grounds only among the chosen sources; nothing the
  * target set already holds; duplicate titles within the reply dropped.
  */
-export function parseDeriveReply(text: string, snapshot: BrainSnapshot, sourceSlugs: string[], targetSet: string): DeriveEntry[] {
+export function parseDeriveReply(text: string, snapshot: BrainSnapshot, sourceSlugs: string[], targetSet: string | null): DeriveEntry[] {
   let root: unknown;
   try {
     root = extractJson(text);
@@ -95,7 +95,7 @@ export function parseDeriveReply(text: string, snapshot: BrainSnapshot, sourceSl
   if (list.length === 0) fail('the reply proposes no principles');
   if (list.length > DERIVE_MAX) fail(`the reply proposes ${list.length} principles; at most ${DERIVE_MAX}`);
   const chosen = new Set(sourceSlugs);
-  const held = new Set((snapshot.principlesOf(targetSet) as BrainFile<PrincipleFm>[]).map((p) => p.fm.title.trim().toLowerCase()));
+  const held = new Set(targetSet === null ? [] : (snapshot.principlesOf(targetSet) as BrainFile<PrincipleFm>[]).map((p) => p.fm.title.trim().toLowerCase()));
   const seen = new Set<string>();
   const out: DeriveEntry[] = [];
   list.forEach((item, i) => {

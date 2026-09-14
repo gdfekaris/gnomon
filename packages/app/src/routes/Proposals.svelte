@@ -12,6 +12,7 @@
   import { acceptLink, acceptanceRoute, addGround, decide, groundsToAdd, groupProposals, proposalId, writeAsProposed, writtenAs } from '../lib/services/proposals';
   import { session } from '../lib/stores/session.svelte';
   import { snapshot } from '../lib/stores/snapshot.svelte';
+  import { route } from '../lib/router.svelte';
 
   const s = $derived(snapshot.current);
   const groups = $derived(s ? groupProposals(s) : []);
@@ -96,6 +97,10 @@
 {#if !s}
   <ConnectionNotice />
 {:else}
+  {#if route.query.get('derived')}
+    {@const from = (route.query.get('from') ?? '').split(',').filter(Boolean)}
+    <p class="ok" role="status" data-testid="derived"><span>{route.query.get('derived')} proposal{route.query.get('derived') === '1' ? '' : 's'} derived from {#each from as slug, i (slug)}{i ? (i === from.length - 1 ? ' and ' : ', ') : ''}<a href={browseHref(`sources/${slug}/raw.md`)}>{linkLabel(`sources/${slug}/raw.md`, s)}</a>{/each}. Write each as proposed, edit it, or decline it.</span></p>
+  {/if}
   <p class="hint">Suggestions from filing, deriving, and desktop sessions. You decide each one: write a principle as proposed or edit it first, add a ground, decline. Nothing changes until you do.</p>
   {#each groups as g (g.key)}
     <section data-testid="group-{g.key}">

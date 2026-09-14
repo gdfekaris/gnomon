@@ -96,6 +96,14 @@ Node 20+ and Claude Code, and a photo on the phone to attach.
 - [ ] Raise the budget to 90% and pick a small-window model: the budget
       note refuses before anything is sent.
 
+## 6b. Derive principles from a source
+
+- [ ] Open a filed source → "Derive principles from this passage" → Reason
+      opens with it picked; Derive → Proposals shows the batch with the
+      notice; "Write it as proposed" writes one, "Accept and edit" opens
+      another pre-filled with the ground, Decline removes a third; Sets
+      shows the two in accept order.
+
 ## 7. Desktop round trip through Claude Code
 
 - [ ] Clone the brain on the desktop. `npx gnomon-cli status` matches what
