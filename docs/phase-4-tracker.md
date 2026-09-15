@@ -554,7 +554,18 @@ Open at the close of Phase 3 (2026-09-11); none blocks a Phase 4 block.
   there on Save and on Back, and `#/inbox?filing=<slug>` shows that filing
   open on arrival; the edit still makes the file yours, as decided in
   Phase 2.
-- The demo brain accepts `#/settings?demo-omit=a,b` to drop paths. Its
+- Conventions from 2026-09-12 to 09-14, for later screens: Settings has
+  one Look picker (skin and theme together, eight looks, the OS never
+  consulted); `settings.spec.ts` walks all eight and measures contrast
+  on the nudge, the tag chips, and a notice, so a new look must pass it;
+  a search field hides WebKit's own clear glyph (Browse and Reason do);
+  Browse's matching lives in `services/browse.ts` and Reason's source
+  picker reuses it; the Derive task lives in `services/derive.ts` and
+  Task E in AGENTS.md; a link proposal means a ground and accepting it
+  adds the ground; a principle proposal pre-fills its source as a ground
+  with a clean draft and can be written as proposed in one tap.
+- The demo brain accepts `#/settings?demo-omit=a,b` to drop paths and
+  `?demo-fill=n` to add n rounds of four generated sources. Its
   git history is one seed commit, so the fixture's own pending filing
   does not appear in the Inbox's filing list. Proposal ids and timestamps
   use the real clock; tests that assert ids must be date-agnostic.
