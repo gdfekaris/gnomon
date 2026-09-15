@@ -98,7 +98,7 @@ Node 20+ and Claude Code, and a photo on the phone to attach.
 
 ## 6b. Derive principles from a source
 
-- [ ] Open a filed source → "Derive principles from this passage" → Reason
+- [x] Open a filed source → "Derive principles from this passage" → Reason
       opens with it picked; Derive → Proposals shows the batch with the
       notice; "Write it as proposed" writes one, "Accept and edit" opens
       another pre-filled with the ground, Decline removes a third; Sets
