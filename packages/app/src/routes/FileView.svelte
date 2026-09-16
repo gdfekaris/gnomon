@@ -3,7 +3,7 @@
   // No editor in Phase 1; raw.md bodies never get one at all (US-5).
   import { untrack } from 'svelte';
   import ConnectionNotice from '../lib/components/ConnectionNotice.svelte';
-  import { type BrainFile, backlinks, setLabel } from '@gnomon/core';
+  import { type BrainFile, RESERVE_SLUG, backlinks, setLabel } from '@gnomon/core';
   import MarkdownView from '../lib/components/MarkdownView.svelte';
   import AttachmentView from '../lib/components/AttachmentView.svelte';
   import { browseHref, linkLabel } from '../lib/markdown';
@@ -61,6 +61,9 @@
       {:else if k === 'inbox_ref'}
         <dt>filed from</dt>
         <dd data-testid="fm-filed-from"><a href={browseHref(`inbox/${v}.md`)}>{v}</a></dd>
+      {:else if k === 'set' && v === RESERVE_SLUG}
+        <dt>set</dt>
+        <dd data-testid="fm-set">in reserve <small>· held, not in force; <a href="#/sets">add it to a set</a> from Sets</small></dd>
       {:else}
         <dt>{k}</dt>
         <dd>{Array.isArray(v) ? v.join(', ') : String(v)}</dd>

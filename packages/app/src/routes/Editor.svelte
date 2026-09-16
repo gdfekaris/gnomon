@@ -4,13 +4,14 @@
   // on the Sets screen; raw.md bodies and attachments have no editor.
   import { hold } from '../lib/press';
   import { untrack } from 'svelte';
-  import { type BrainFile, type NotesFm, type PrincipleFm, type SourceFm, setLabel } from '@gnomon/core';
+  import { type BrainFile, type NotesFm, type PrincipleFm, type SourceFm, RESERVE_SLUG, setLabel } from '@gnomon/core';
   import ConnectionNotice from '../lib/components/ConnectionNotice.svelte';
   import { brain, describeError } from '../lib/services/index';
   import { appendGroundingLink, createPrincipleIn, driftOf, parseList, saveNotes, savePrinciple, saveSourceMeta, slugOfSource, tagList } from '../lib/services/edit';
   import { browseHref } from '../lib/markdown';
   import { prefillFrom } from '../lib/services/proposals';
   import { type DeletePlan, planDeletePrinciple } from '../lib/services/sets';
+  import { place, reserve } from '../lib/services/reserve';
   import { session } from '../lib/stores/session.svelte';
   import { snapshot } from '../lib/stores/snapshot.svelte';
 
@@ -46,8 +47,14 @@
   const prefill = $derived(from && s ? prefillFrom(s, from, newIn ?? path.split('/')[1] ?? '') : null);
   const source = $derived(newIn && copy && s ? (s.files.get(copy) as BrainFile<PrincipleFm> | undefined) : undefined);
   const setOf = (p: string) => s?.sets.find((x) => x.path === `principles/${p.split('/')[1]}/_set.md`);
-  const otherSets = $derived(kind === 'principle' && !newIn && s ? s.sets.filter((x) => x.path !== `principles/${path.split('/')[1]}/_set.md`) : []);
+  /** "Set 2 — Work", or "the reserve" (schema §7.14), for the folder a path is in */
+  const whereLabel = (p: string) => (p.split('/')[1] === RESERVE_SLUG ? 'the reserve' : setOf(p) ? setLabel(setOf(p)!.fm) : 'its set');
+  const inReserve = $derived(kind === 'principle' && !newIn && path.split('/')[1] === RESERVE_SLUG);
+  const otherSets = $derived(kind === 'principle' && !newIn && !inReserve && s ? s.sets.filter((x) => x.path !== `principles/${path.split('/')[1]}/_set.md`) : []);
   let copyTo = $state('');
+  // Keep in reserve: one tap, two commits (schema §7.14). Dangling references are shown first when there are any.
+  let reservePlan = $state<DeletePlan | null>(null);
+  let placeTo = $state('');
   const copyFile = $derived(copied && s ? s.files.get(copied) : undefined);
   let deletePlan = $state<DeletePlan | null>(null);
 
@@ -122,6 +129,9 @@
     }
   }
   const startCopy = () => { if (copyTo) location.hash = `#/sets/${copyTo}/new-principle?copy=${encodeURIComponent(path)}`; };
+  const doReserve = () => run(async () => { const m = await reserve(brain, path); reservePlan = null; return m.path; });
+  const askReserve = () => { const p = planDeletePrinciple(brain, path); if (p.dangling.length) reservePlan = p; else void doReserve(); };
+  const doPlace = () => run(async () => (await place(brain, path, placeTo)).path);
   const askDeleteOriginal = () => { deletePlan = planDeletePrinciple(brain, path); };
   const deleteOriginal = () => run(async () => { await deletePlan!.commit(); deletePlan = null; return copied; });
   function insertLink() {
@@ -158,18 +168,21 @@
     </div>
   {/if}
   {#if kind === 'principle'}
-    <h2>{newIn ? `New principle in ${setLabel(s.sets.find((x) => x.path === `principles/${newIn}/_set.md`)!.fm)}` : 'Edit principle'}</h2>
+    <h2>{newIn ? (newIn === RESERVE_SLUG ? 'New principle in reserve' : `New principle in ${setLabel(s.sets.find((x) => x.path === `principles/${newIn}/_set.md`)!.fm)}`) : inReserve ? 'Edit principle (in reserve)' : 'Edit principle'}</h2>
+    {#if newIn === RESERVE_SLUG}
+      <p class="hint" data-testid="reserve-hint">Held, not in force: a principle in the reserve is never sent to a model and has no place in any set's order until you add it to one.</p>
+    {/if}
     {#if source}
       <div class="from" role="status" data-testid="from-copy">
-        <p><strong>Copied from {source.fm.title}</strong> in {setLabel(setOf(copy!)?.fm ?? { order: 0 } as never)}.</p>
+        <p><strong>Copied from {source.fm.title}</strong> in {whereLabel(copy!)}.</p>
         <p class="hint">Files never move: adding it here makes a new file, and you then decide about the original. Links that named the original will not follow it; you will be shown which.</p>
       </div>
     {/if}
     {#if copyFile}
       <div class="from" role="status" data-testid="copied">
-        <p><strong>The copy is in place:</strong> <a href={browseHref(copied!)}>{(copyFile.fm as PrincipleFm).title}</a> in {setLabel(setOf(copied!)?.fm ?? { order: 0 } as never)}.</p>
+        <p><strong>The copy is in place:</strong> <a href={browseHref(copied!)}>{(copyFile.fm as PrincipleFm).title}</a> in {whereLabel(copied!)}.</p>
         {#if deletePlan}
-          <p>Delete the original <strong>{deletePlan.label}</strong> from {setLabel(setOf(path)?.fm ?? { order: 0 } as never)}? Git history keeps it.</p>
+          <p>Delete the original <strong>{deletePlan.label}</strong> from {whereLabel(path)}? Git history keeps it.</p>
           {#if deletePlan.dangling.length}
             <p>These references name the original and will dangle:</p>
             <ul data-testid="dangling">{#each deletePlan.dangling as d (d.path + d.ref)}<li><code>{d.path}</code> → {d.ref}</li>{/each}</ul>
@@ -223,7 +236,18 @@
       <label>Tags <small>(comma-separated)</small> <input bind:value={tags} data-testid="edit-tags" /></label>
       <button type="submit" class="primary" disabled={busy || !title.trim()} use:hold={busy} data-testid="edit-save">{busy ? (newIn ? 'Adding…' : 'Saving…') : newIn ? 'Add principle' : 'Save'}</button>
       {#if busy}<span role="status" class="hint" data-testid="saving">One commit to your repository; a few seconds.</span>{/if}
-      {#if kind === 'principle' && !newIn && !otherSets.length}
+      {#if inReserve}
+        <div class="row copy" data-testid="editor-place">
+          <label>Add to a set
+            <select bind:value={placeTo} data-testid="editor-place-set">
+              <option value="">Choose a set…</option>
+              {#each s.sets as x (x.path)}<option value={x.path.split('/')[1]}>{setLabel(x.fm)}</option>{/each}
+            </select>
+          </label>
+          <button type="button" onclick={doPlace} disabled={busy || !placeTo} use:hold={busy} data-testid="editor-place-go">Add</button>
+        </div>
+        <p class="hint">This principle is in reserve: held, not in force. Adding it to a set puts it last in that set's order and takes it out of the reserve (two commits; files never move).</p>
+      {:else if kind === 'principle' && !newIn && !otherSets.length}
         <p class="hint" data-testid="copy-needs-set">To copy this principle to another set, <a href="#/sets">create that set first</a>; a copy control appears here once the brain has more than one set.</p>
       {:else if otherSets.length}
         <div class="row copy" data-testid="copy-to">
@@ -236,6 +260,23 @@
           <button type="button" onclick={startCopy} disabled={busy || !copyTo} data-testid="copy-go">Copy</button>
         </div>
         <p class="hint">A principle belongs to one set. Copying makes a new principle there; you then choose whether to delete this one.</p>
+      {/if}
+      {#if kind === 'principle' && !newIn && !inReserve}
+        {#if reservePlan}
+          <div class="confirm" role="alertdialog" data-testid="reserve-confirm">
+            <p>Keep <strong>{reservePlan.label}</strong> in reserve? It leaves {whereLabel(path)}; these references will name the old path until you edit them:</p>
+            <ul data-testid="dangling">{#each reservePlan.dangling as d (d.path + d.ref)}<li><code>{d.path}</code> → {d.ref}</li>{/each}</ul>
+            <div class="row">
+              <button type="button" class="primary" onclick={doReserve} disabled={busy} use:hold={busy} data-testid="keep-in-reserve-yes">Keep in reserve</button>
+              <button type="button" onclick={() => (reservePlan = null)} disabled={busy}>Not now</button>
+            </div>
+          </div>
+        {:else}
+          <div class="row">
+            <button type="button" onclick={askReserve} disabled={busy} data-testid="keep-in-reserve">Keep in reserve</button>
+          </div>
+          <p class="hint">Takes it out of {whereLabel(path)} without deleting it: held, not in force, listed under "In reserve" on Sets.</p>
+        {/if}
       {/if}
     </form>
   {:else if kind === 'notes'}

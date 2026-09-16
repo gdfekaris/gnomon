@@ -104,6 +104,17 @@ Node 20+ and Claude Code, and a photo on the phone to attach.
       another pre-filled with the ground, Decline removes a third; Sets
       shows the two in accept order.
 
+## 6c. The reserve
+
+- [ ] Sets → on a principle's Delete, "Keep in reserve instead" → the
+      set renumbers, the notice names what left and what dangles, and
+      the principle heads "In reserve"; `Reserve principle:` then
+      `Delete principle:` on github.com. Its row → "Add to…" a set →
+      it lands last there, `Place principle:` then `Delete principle:`.
+      "+ New principle in reserve" writes one that never reaches Reason.
+      The search field finds a principle by a ground's author and
+      collapses a set with no match.
+
 ## 7. Desktop round trip through Claude Code
 
 - [ ] Clone the brain on the desktop. `npx gnomon-cli status` matches what

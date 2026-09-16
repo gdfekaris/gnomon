@@ -33,8 +33,8 @@ export function filterSources(list: Source[], filter: BrowseFilter): Source[] {
   return list.filter((f) => matches(f, ts) && filter.tags.every((t) => (f.fm.tags ?? []).includes(t)));
 }
 
-/** Sources per tag over the whole list, alphabetical by tag. */
-export function tagCounts(list: Source[]): Map<string, number> {
+/** Files per tag over the whole list, alphabetical by tag. Sources on Browse; principles in the reserve. */
+export function tagCounts(list: { fm: { tags?: string[] } }[]): Map<string, number> {
   const counts = new Map<string, number>();
   for (const f of list) for (const t of new Set(f.fm.tags ?? [])) counts.set(t, (counts.get(t) ?? 0) + 1);
   return new Map([...counts].sort(([a], [b]) => cmpCodepoint(a, b)));

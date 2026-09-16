@@ -379,7 +379,7 @@ desktop without an agent: Task E is the desktop form.
 has derived from a real source in their own brain, and the smoke
 checklist gains the step.
 
-## Feature block: the Reserve for principles (2026-09-16)
+## Feature block: the Reserve for principles (2026-09-16) — R1 and R2 built 2026-09-16; the maintainer's own-brain reserve and place left
 
 Asked for by the maintainer: a place for principles that are written and
 held but not in force in any set, to browse, to add to a set, and to
@@ -401,7 +401,7 @@ chip, a search over title, tags, and the authors and titles of the
 grounding sources, tag chips with counts, and pages of fifty. The Sets
 screen gains one search over every principle, sets and reserve alike.
 
-### R1. The format: schema, core, checker, fixture, CLI (M)
+### R1. The format: schema, core, checker, fixture, CLI (M) — done, b68939d
 
 - Schema: §2 layout gains `principles/_reserve/<principle-slug>.md`
   (present only when something is in it; no `_set.md`); §3.3 the reserve
@@ -436,7 +436,7 @@ screen gains one search over every principle, sets and reserve alike.
   unit tests cover the refusal, the sort, the section, and both two-commit
   operations, and CI is green.
 
-### R2. The app: Sets becomes all principles (L)
+### R2. The app: Sets becomes all principles (L) — done
 
 - Sets screen: a search field at the top filtering every principle; a
   set whose principles do not match collapses to its heading and a
@@ -660,6 +660,14 @@ Open at the close of Phase 3 (2026-09-11); none blocks a Phase 4 block.
   above them, and the button reads "File n of m captures" for a subset;
   `processInbox` takes `{ paths }` and files those in inbox order. One
   capture shows no box. The choice is component state, never saved.
+  The reserve (2026-09-16, schema §7.14): `principles/_reserve/` holds
+  principles held but not in force, `set: _reserve`, no `order`; the
+  Sets screen is the view of every principle with one search
+  (`services/reserve.ts` matches on title, tags, slug, and the grounds'
+  titles and authors) and an "In reserve" section (newest first or A–Z,
+  tag chips, pages of fifty); reserving and placing are one tap that
+  runs the two commits in order (`reserve()` and `place()` in
+  `services/reserve.ts`); the demo brain accepts `?reserve-fill=n`.
 - The demo brain accepts `#/settings?demo-omit=a,b` to drop paths and
   `?demo-fill=n` to add n rounds of four generated sources. Its
   git history is one seed commit, so the fixture's own pending filing

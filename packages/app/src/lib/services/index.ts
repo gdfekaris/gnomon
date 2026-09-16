@@ -10,9 +10,9 @@ export { describeError } from './errors';
 
 export const brain = new BrainService(snapshot);
 
-/** `omit` drops paths from the demo brain and `fill` adds generated sources; test affordances (`#/settings?demo-omit=a,b`, `?demo-fill=n`). */
-export async function connectDemo(omit: string[] = [], fill = 0): Promise<void> {
-  const driver = await demoDriver(omit, fill);
+/** `omit` drops paths from the demo brain, `fill` adds generated sources, `reserveFill` generated reserve principles; test affordances (`#/settings?demo-omit=a,b`, `?demo-fill=n`, `?reserve-fill=n`). */
+export async function connectDemo(omit: string[] = [], fill = 0, reserveFill = 0): Promise<void> {
+  const driver = await demoDriver(omit, fill, reserveFill);
   session.driver = driver;
   session.mode = 'demo';
   session.label = 'demo brain';

@@ -53,7 +53,7 @@
       pressed = null;
     }
   }
-  const useDemo = () => run('demo', () => connectDemo((route.query.get('demo-omit') ?? '').split(',').filter(Boolean), Number(route.query.get('demo-fill') ?? 0) || 0));
+  const useDemo = () => run('demo', () => connectDemo((route.query.get('demo-omit') ?? '').split(',').filter(Boolean), Number(route.query.get('demo-fill') ?? 0) || 0, Number(route.query.get('reserve-fill') ?? 0) || 0));
   const useGitHub = () => run('connect', async () => {
     const git = { owner: owner.trim(), name: name.trim(), token: token.trim() };
     await saveGit(git);

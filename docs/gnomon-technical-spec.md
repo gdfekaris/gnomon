@@ -326,6 +326,8 @@ app/src/
 
 Hash routing is used deliberately: GitHub Pages cannot rewrite paths to `index.html`, and hash routes survive refresh and home-screen launch without a 404 fallback hack.
 
+The Sets screen is the view of every principle (Schema §7.14): one search field filters the principles of every set and of the reserve alike, matching on title, tags, slug, and the titles and authors of the grounds through `services/reserve.ts`, which reuses Browse's normalization; a set with no match collapses to its heading and a count. The final section, "In reserve", lists `snapshot.reserve` newest first or A–Z, with tag chips and counts (the top twelve plus "All tags", AND), a count line under a filter, and pages of fifty. A reserve row offers "Add to…" a set; a set principle's Delete confirmation offers "Keep in reserve instead"; the editor offers "Keep in reserve" beside "Copy to another set", and over a reserve principle "Add to a set". Each is one tap that runs the two commits of Schema §7.14 in order through `BrainService`, the second built against the head the first produced. `#/sets/_reserve/new-principle` writes a new principle straight into the reserve.
+
 ### 10.2 State
 
 - `session`: `{ driver: StorageDriver | null, unlocked: boolean }` — rebuilt from IndexedDB at launch.
