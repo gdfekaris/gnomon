@@ -225,7 +225,7 @@
       <ul class="results" data-testid="derive-results">
         {#each deriveResults as f (f.path)}
           {@const slug = f.path.split('/')[1]!}
-          <li><label><input type="checkbox" checked={chosen.includes(slug)} onchange={() => togglePick(slug)} data-testid="derive-pick-{slug}" /> {f.fm.title} <small>· {(f.fm as SourceFm).author}</small></label></li>
+          <li><label><input type="checkbox" checked={chosen.includes(slug)} onchange={() => togglePick(slug)} data-testid="derive-pick-{slug}" /><span>{f.fm.title} <small>· {(f.fm as SourceFm).author}</small></span></label></li>
         {:else}
           <li class="empty">{allSources.length ? 'No source matches.' : 'No sources yet. File a capture first.'}</li>
         {/each}
@@ -319,7 +319,10 @@
   input[type='search']::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
   .results { padding-left: 0; list-style: none; margin: 0; }
   .results li { margin: 0.35rem 0; }
-  .results label { display: flex; gap: 0.5rem; align-items: baseline; }
+  /* The box never shrinks when a title wraps, and the title and author flow as one line of prose beside it. */
+  .results label { display: flex; gap: 0.5rem; align-items: start; }
+  .results label input { flex: 0 0 auto; width: 1.1em; height: 1.1em; margin: 0.15em 0 0; }
+  .results label span { flex: 1 1 auto; min-width: 0; }
   .chip button { min-height: 0; padding: 0 2px; border: 0; box-shadow: none; background: none; color: inherit; font-size: var(--fs); line-height: 1; }
   .transcript article { padding: 0.5rem 0.75rem; margin-bottom: 0.75rem; }
   .transcript .user { background: var(--pattern); padding: 2px; }

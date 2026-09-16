@@ -329,6 +329,7 @@
   .triage > li:first-child { border-top: 0; }
   .triage > li.empty { border-top: 0; }
   .triage .row { display: flex; align-items: center; gap: 0.5rem; margin: 0; }
+  .triage .row input[type='checkbox'] { flex: 0 0 auto; width: 1.1em; height: 1.1em; margin: 0; }
   .what { flex: 1 1 auto; min-width: 0; display: grid; gap: 0.1rem; }
   button.title { min-height: 0; padding: 0; border: 0; box-shadow: none; background: none; color: var(--ink); text-align: left; font-weight: normal; border-radius: 0; white-space: normal; }
   button.title[aria-expanded='true'] { text-decoration: underline; }
