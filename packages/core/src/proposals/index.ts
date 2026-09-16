@@ -2,7 +2,9 @@
 // sequential ids within a UTC day, and a decision that rewrites `status`
 // and `updated` only.
 
-import type { BrainFile, BrainSnapshot, CommitBatch, FileWrite, ProposalFm } from '../schema/types';
+import type { BrainFile, BrainSnapshot, CommitBatch, FileWrite, PrincipleFm, ProposalFm } from '../schema/types';
+import { RESERVE_SLUG } from '../schema/paths';
+import { slugify } from '../sets/index';
 import { ValidationError } from '../schema/issues';
 import { tryParseFile } from '../schema/parse';
 import { serializeFile } from '../schema/serialize';
@@ -96,6 +98,46 @@ export function buildRelate(s: BrainSnapshot, setSlug: string, entries: RelatePa
   });
   const n = entries.length;
   return withIndexWrites(s, { message: `Relate: ${n} proposal${n === 1 ? '' : 's'} for ${setLabel(set.fm)}`, expectedHead: s.head, writes, deletes: [] });
+}
+
+export interface KeepEntry { id: string; title: string; body: string; grounds: string[] }
+
+/**
+ * Schema §7.16: several reserve proposals kept in one commit. Each is flipped
+ * to `accepted` and its principle written into the reserve at a unique slug,
+ * from the draft the app supplies (the same pre-fill a single accept shows).
+ * Message `Keep: {n} proposals in reserve`.
+ */
+export function keepInReserve(s: BrainSnapshot, entries: KeepEntry[], now: string): CommitBatch {
+  if (entries.length === 0) throw new Error('nothing to keep');
+  const writes: FileWrite[] = [];
+  const taken = new Set(s.principlesOf(RESERVE_SLUG).map((f) => f.path));
+  for (const e of entries) {
+    const prev = proposalAt(s, e.id);
+    if (prev.fm.kind !== 'principle' || prev.fm.target_set !== RESERVE_SLUG) throw new Error(`${e.id} is not a principle proposal for the reserve`);
+    if (prev.fm.status !== 'open') throw new Error(`${e.id} is already ${prev.fm.status}`);
+    writes.push({ path: prev.path, text: serializeFile({ ...prev, fm: { ...prev.fm, status: 'accepted', updated: now } }) });
+    let slug = slugify(e.title);
+    for (let n = 2; taken.has(`principles/${RESERVE_SLUG}/${slug}.md`); n++) slug = `${slugify(e.title).slice(0, 60 - `-${n}`.length).replace(/-+$/, '')}-${n}`;
+    const path = `principles/${RESERVE_SLUG}/${slug}.md`;
+    taken.add(path);
+    const fm: PrincipleFm = { type: 'principle', title: e.title, set: RESERVE_SLUG, grounds: e.grounds, curated: 'human', created: now, updated: now };
+    writes.push({ path, text: serializeFile({ path, sha: '', fm, body: e.body, encrypted: false }) });
+  }
+  const n = entries.length;
+  return withIndexWrites(s, { message: `Keep: ${n} proposal${n === 1 ? '' : 's'} in reserve`, expectedHead: s.head, writes, deletes: [] });
+}
+
+/** Schema §7.16: several proposals declined (or accepted) in one commit, `status` and `updated` only. Message `Decline: {n} proposals`. */
+export function decideProposals(s: BrainSnapshot, ids: string[], status: 'accepted' | 'declined', now: string): CommitBatch {
+  if (ids.length === 0) throw new Error('nothing to decide');
+  const writes: FileWrite[] = [...new Set(ids)].map((id) => {
+    const prev = proposalAt(s, id);
+    return { path: prev.path, text: serializeFile({ ...prev, fm: { ...prev.fm, status, updated: now } }) };
+  });
+  const n = writes.length;
+  const verb = status === 'declined' ? 'Decline' : 'Accept';
+  return withIndexWrites(s, { message: `${verb}: ${n} proposal${n === 1 ? '' : 's'}`, expectedHead: s.head, writes, deletes: [] });
 }
 
 export function proposalAt(s: BrainSnapshot, id: string): BrainFile<ProposalFm> {

@@ -540,6 +540,45 @@ its cost stops growing with the brain. Two sub-blocks, format first.
   smoke checklist gains the step, and the maintainer has filed and
   related a source in their own brain.
 
+## Feature block: the Proposals tab redrawn (2026-09-16) — built 2026-09-16; the maintainer's own-brain triage left
+
+Asked for by the maintainer after the leaner filing landed: proposals
+now arrive in two streams with different weights. Reserve proposals
+trickle in with every filing and are triage (keep or drop, no placement
+to weigh); set proposals arrive in a burst from Relate or Derive and
+need context. The tab is redrawn for that, with the maintainer's
+decisions: no proposal actions on the Inbox review panel for now; a
+batch commit for several decisions at once is acceptable history.
+
+- Schema §7.16 "Decide several at once": `Keep: <n> proposals in
+  reserve` (each flipped to accepted and its principle written into the
+  reserve, one commit) and `Decline: <n> proposals`; CLAUDE.md's
+  vocabulary. Core: `keepInReserve(s, entries, now)` and
+  `decideProposals(s, ids, status, now)`; the app composes each entry's
+  draft from the same pre-fill the editor shows.
+- The screen: a search over title, kind, and the titles and authors of
+  the sources behind a proposal. **For your reserve** first: compact
+  rows (title unfolds the rationale, the source in small type, a
+  "Close to: …" badge when the title is near a principle you hold or
+  another open proposal), Keep and Drop per row, pick boxes with "Keep
+  n" and "Drop n" above; no "Accept and edit" there, since the reserve
+  editor is where refining belongs; pages of fifty. **For your sets**
+  below, grouped by set as before, with context on each card: a link
+  names the target and its ground count, an amendment folds the
+  principle's current wording under it, a principle for a set says what
+  the set holds. Decided lists stay folded per group.
+- `services/proposals.ts`: `keepMany`, `declineMany`, `closeTo` (title
+  equality after Browse's normalization, or word overlap of 0.6),
+  `filterProposals`.
+- Flows on both engines: file the fixture's capture and triage its three
+  reserve proposals (keep one, drop one, keep the last two picked as one
+  commit) and see the reserve hold them; a second identical capture's
+  proposals wear the near-duplicate badge; the search narrows both
+  parts; an amendment card unfolds the principle it would change; the
+  existing accept, write-as-proposed, link, derive, and relate flows
+  still pass. Done when green, the smoke checklist step says it, and the
+  maintainer has triaged a filing's proposals in their own brain.
+
 ## Carried from Phase 3
 
 Open at the close of Phase 3 (2026-09-11); none blocks a Phase 4 block.

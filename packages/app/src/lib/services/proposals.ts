@@ -5,7 +5,8 @@
 // the exception in kind: it proposes a ground, and accepting it adds the
 // ground (2026-09-12), the Decide commit then an Edit principle commit.
 
-import { type BrainFile, type BrainSnapshot, type Citation, type PrincipleFm, type ProposalFm, RESERVE_SLUG, backlinks, buildProposal, decideProposal, nextProposalId, nowUtc, renderDualLink, setLabel, updatePrinciple, withIndexWrites } from '@gnomon/core';
+import { type BrainFile, type BrainSnapshot, type Citation, type PrincipleFm, type ProposalFm, type SourceFm, RESERVE_SLUG, backlinks, buildProposal, decideProposal, decideProposals, keepInReserve, nextProposalId, nowUtc, renderDualLink, setLabel, updatePrinciple, withIndexWrites } from '@gnomon/core';
+import { normalize, terms } from './browse';
 import type { BrainService } from './brain';
 import { appendGroundingLink, createPrincipleIn } from './edit';
 
@@ -35,6 +36,76 @@ export async function decide(brain: BrainService, id: string, status: 'accepted'
   const s = brain.snapshot;
   if (!s) throw new Error('no brain is connected');
   await brain.commit(decideProposal(s, id, status, nowUtc()));
+}
+
+// ---------------------------------------------------------------- the reserve triage (schema §7.16)
+
+/** Keep several reserve proposals in one commit: each accepted and its principle written into the reserve from the editor's pre-fill. Returns the principle paths. */
+export async function keepMany(brain: BrainService, ids: string[]): Promise<string[]> {
+  const s = brain.snapshot;
+  if (!s) throw new Error('no brain is connected');
+  const entries = ids.map((id) => {
+    const pre = prefillFrom(s, id, RESERVE_SLUG);
+    if (!pre) throw new Error(`no proposal '${id}'`);
+    return { id, title: pre.title, body: pre.body, grounds: pre.grounds };
+  });
+  const batch = keepInReserve(s, entries, nowUtc());
+  await brain.commit(batch);
+  return batch.writes.map((w) => w.path).filter((p) => p.startsWith(`principles/${RESERVE_SLUG}/`));
+}
+
+/** Decline several proposals in one commit. */
+export async function declineMany(brain: BrainService, ids: string[]): Promise<void> {
+  const s = brain.snapshot;
+  if (!s) throw new Error('no brain is connected');
+  await brain.commit(decideProposals(s, ids, 'declined', nowUtc()));
+}
+
+export interface CloseMatch { path: string; title: string; what: 'principle' | 'proposal' }
+/** Letters and digits only: "give attention, freely" and "Give attention freely" are the same title. */
+const plain = (t: string): string => normalize(t).replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+const words = (t: string): Set<string> => new Set(plain(t).split(' ').filter((w) => w.length > 2));
+function overlap(a: Set<string>, b: Set<string>): number {
+  if (!a.size || !b.size) return 0;
+  let both = 0;
+  for (const w of a) if (b.has(w)) both++;
+  return both / (a.size + b.size - both);
+}
+/**
+ * Principles held (in a set or the reserve) and other open proposals whose title is the same after normalization,
+ * or shares most of its words. Proposals from the same filing are alternatives, not duplicates, and are left out.
+ */
+export function closeTo(s: BrainSnapshot, p: BrainFile<ProposalFm>): CloseMatch[] {
+  const key = plain(p.fm.title);
+  const mine = words(p.fm.title);
+  const near = (title: string) => plain(title) === key || overlap(mine, words(title)) >= 0.6;
+  const out: CloseMatch[] = [];
+  for (const f of s.byType('principle')) if (near(f.fm.title)) out.push({ path: f.path, title: f.fm.title, what: 'principle' });
+  for (const f of s.byType('proposal')) {
+    if (f.path === p.path || f.fm.status !== 'open') continue;
+    if (p.fm.from_source && f.fm.from_source === p.fm.from_source) continue;
+    if (near(f.fm.title)) out.push({ path: f.path, title: f.fm.title, what: 'proposal' });
+  }
+  return out;
+}
+
+/** What a proposal can be found by: its title, kind, id, and the titles and authors of the sources behind it and the principle it targets. */
+export function proposalHaystack(s: BrainSnapshot, p: BrainFile<ProposalFm>): string[] {
+  const out = [p.fm.title, p.fm.kind, proposalId(p.path)];
+  for (const g of [...(p.fm.grounds ?? []), ...(p.fm.from_source ? [p.fm.from_source] : [])]) {
+    const src = s.files.get(`sources/${g}/raw.md`);
+    if (src?.fm.type === 'source') out.push((src.fm as SourceFm).title, (src.fm as SourceFm).author);
+  }
+  if (p.fm.target && p.fm.kind !== 'tag') {
+    const t = s.files.get(`principles/${p.fm.target}.md`);
+    if (t?.fm.type === 'principle') out.push((t.fm as PrincipleFm).title);
+  }
+  return out.map(normalize);
+}
+export function filterProposals(list: BrainFile<ProposalFm>[], q: string, s: BrainSnapshot): BrainFile<ProposalFm>[] {
+  const ts = terms(q);
+  if (ts.length === 0) return list;
+  return list.filter((p) => { const hay = proposalHaystack(s, p); return ts.every((t) => hay.some((h) => h.includes(t))); });
 }
 
 /** What a link proposal still has to add: the principle's path, the sources it names, and those not yet grounds; null when the principle is gone. */

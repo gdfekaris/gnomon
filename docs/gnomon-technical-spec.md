@@ -248,7 +248,7 @@ Implements Schema §7.1–§7.4 (sets) and §7.9 (principles) as pure functions 
 
 ### 7.5 Proposals (`proposals`)
 
-`nextProposalId(snapshot, nowUtc): string` scans `maps/proposals/` for the day's highest `<nnn>` and returns the next (Schema §3.5); a same-id race is caught by `expectedHead` and the caller re-draws. `buildProposal(params): FileWrite` writes a Schema §4.7 file from the template. `decideProposal(snapshot, id, status): CommitBatch` rewrites `status` and `updated` only, message `Decide: {id}`.
+`nextProposalId(snapshot, nowUtc): string` scans `maps/proposals/` for the day's highest `<nnn>` and returns the next (Schema §3.5); a same-id race is caught by `expectedHead` and the caller re-draws. `buildProposal(params): FileWrite` writes a Schema §4.7 file from the template. `decideProposal(snapshot, id, status): CommitBatch` rewrites `status` and `updated` only, message `Decide: {id}`. `decideProposals(snapshot, ids, status)` and `keepInReserve(snapshot, entries)` are the batch forms of Schema §7.16, one commit each: the second writes a reserve principle per entry from the draft the app supplies.
 
 ### 7.6 Filing (`filing`)
 

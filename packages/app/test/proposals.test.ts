@@ -7,7 +7,7 @@ import { MemoryDriver } from '@gnomon/storage';
 import { BrainService, type SnapshotState } from '../src/lib/services/brain';
 import { createPrincipleIn } from '../src/lib/services/edit';
 import { MockProvider, demoScript } from '@gnomon/providers';
-import { acceptLink, acceptanceRoute, addGround, decide, extractProposal, groundsToAdd, groupProposals, prefillFrom, proposalId, saveProposal, writeAsProposed, writtenAs } from '../src/lib/services/proposals';
+import { acceptLink, acceptanceRoute, addGround, closeTo, decide, declineMany, extractProposal, filterProposals, groundsToAdd, groupProposals, keepMany, prefillFrom, proposalId, saveProposal, writeAsProposed, writtenAs } from '../src/lib/services/proposals';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const FIXTURE = join(here, '..', '..', 'core', 'fixtures', 'brain');
@@ -230,5 +230,57 @@ describe('writing a principle proposal as proposed (schema §4.7, 2026-09-14)', 
     gone.fm = { ...gone.fm, target_set: 'ps-zzzz' };
     await expect(writeAsProposed(brain, gone)).rejects.toThrow(/no longer in the brain/);
     expect(brain.snapshot!.head).toBe(head);
+  });
+});
+
+describe('the reserve triage (schema §7.16, tracker 2026-09-16)', () => {
+  const reserveProposal = (id: string, title: string, from = 'weil-attention') => ({
+    path: `maps/proposals/${id}.md`,
+    text: `---\ntype: proposal\nkind: principle\ntitle: ${title}\ntarget_set: _reserve\nfrom_source: ${from}\ngrounds:\n  - ${from}\nstatus: open\ncurated: agent-proposed\ncreated: 2026-09-16T10:00:00Z\nupdated: 2026-09-16T10:00:00Z\n---\nBecause.\n`,
+  });
+  async function withReserveProposals() {
+    const brain = await connected();
+    const s = brain.snapshot!;
+    await brain.commit({ message: 'Add proposal: P-20260916-001', expectedHead: s.head, writes: [reserveProposal('P-20260916-001', 'Give attention freely'), reserveProposal('P-20260916-002', 'Courage before COMFORT'), reserveProposal('P-20260916-003', 'Attention is generous today')], deletes: [] });
+    return brain;
+  }
+  it('keepMany writes the kept principles into the reserve from the pre-fill, one commit; declineMany one commit', async () => {
+    const brain = await withReserveProposals();
+    const paths = await keepMany(brain, ['P-20260916-001', 'P-20260916-002']);
+    expect(paths).toEqual(['principles/_reserve/give-attention-freely.md', 'principles/_reserve/courage-before-comfort.md']);
+    const s = brain.snapshot!;
+    expect(s.reserve.map((p) => p.fm.title)).toEqual(['Courage before COMFORT', 'Give attention freely', 'One thing at a time']); // one commit, one created; ties by path
+    expect(s.files.get(paths[0]!)!.body).toBe('Give attention freely\n\n**Grounding passages:**\n\n- [[sources/weil-attention/raw]] ([raw](../../sources/weil-attention/raw.md))\n\nWritten from [[maps/proposals/P-20260916-001]] ([proposal](../../maps/proposals/P-20260916-001.md)).\n');
+    expect(writtenAs(s, 'maps/proposals/P-20260916-001.md').map((f) => f.path)).toEqual([paths[0]]);
+    await declineMany(brain, ['P-20260916-003']);
+    const statuses = ['001', '002', '003'].map((n) => (brain.snapshot!.files.get(`maps/proposals/P-20260916-${n}.md`)!.fm as ProposalFm).status);
+    expect(statuses).toEqual(['accepted', 'accepted', 'declined']);
+    expect(validateSnapshot(brain.snapshot!).filter((i) => i.level === 'refusal')).toEqual([]);
+  });
+  it('closeTo names a held principle or another open proposal with the same or mostly the same words', async () => {
+    const brain = await withReserveProposals();
+    const s = brain.snapshot!;
+    const at = (id: string) => s.files.get(`maps/proposals/${id}.md`) as BrainFile<ProposalFm>;
+    expect(closeTo(s, at('P-20260916-002')).map((m) => [m.what, m.title])).toEqual([['principle', 'Courage before comfort']]);
+    expect(closeTo(s, at('P-20260916-003'))).toEqual([]); // "attention is generous today" shares one word in four with "attention is generosity"
+    expect(closeTo(s, at('P-20260916-001'))).toEqual([]);
+    // from another filing it is a duplicate; from the same filing it would be an alternative and go unflagged
+    await brain.commit({ message: 'Add proposal: P-20260916-004', expectedHead: s.head, writes: [reserveProposal('P-20260916-004', 'give attention, freely', 'didion-why-i-write'), reserveProposal('P-20260916-005', 'Give attention freely!')], deletes: [] });
+    const s2 = brain.snapshot!;
+    expect(closeTo(s2, s2.files.get('maps/proposals/P-20260916-004.md') as BrainFile<ProposalFm>).map((m) => [m.what, m.title])).toEqual([['proposal', 'Give attention freely'], ['proposal', 'Give attention freely!']]);
+    expect(closeTo(s2, s2.files.get('maps/proposals/P-20260916-005.md') as BrainFile<ProposalFm>).map((m) => m.title)).toEqual(['give attention, freely']);
+  });
+  it('filterProposals finds by title, kind, id, the sources behind a proposal, and the target principle', async () => {
+    const brain = await withReserveProposals();
+    const s = brain.snapshot!;
+    const open = s.byType('proposal').filter((p) => p.fm.status === 'open');
+    const ids = (q: string) => filterProposals(open, q, s).map((p) => proposalId(p.path)).sort();
+    expect(ids('')).toEqual(open.map((p) => proposalId(p.path)).sort());
+    expect(ids('weil')).toEqual(['P-20260916-001', 'P-20260916-002', 'P-20260916-003']);
+    expect(ids('amendment')).toEqual(['P-20260905-003']);
+    expect(ids('hard thing')).toEqual(['P-20260905-003']); // the amendment's target principle
+    expect(ids('aurelius work')).toEqual(['P-20260905-001']);
+    expect(ids('P-20260916-002')).toEqual(['P-20260916-002']);
+    expect(ids('nothing like it')).toEqual([]);
   });
 });

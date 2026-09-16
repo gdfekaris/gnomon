@@ -39,8 +39,9 @@ test('decide three proposals and write a principle from an accepted one', async 
   await page.getByTestId('process').click();
   await expect(page.getByTestId('process-results')).toContainText('filed as unknown-the-only-way-to with 3 proposals');
   await page.goto('/#/proposals');
-  await expect(page.getByTestId('group-_reserve').getByRole('heading', { level: 3 })).toContainText('Reserve · 3 open');
-  await expect(page.getByTestId('group-_reserve').locator('article.proposal .kind')).toHaveText(['principle', 'principle', 'principle']);
+  await expect(page.getByTestId('group-_reserve').getByRole('heading', { level: 3 })).toContainText('For your reserve · 3 open');
+  await expect(page.getByTestId('group-_reserve').getByTestId('reserve-open').locator('li')).toHaveCount(3);
+  await expect(page.getByTestId('group-_reserve').getByTestId('keep')).toHaveCount(3);
   await expect(page.getByTestId('group-sources').getByRole('heading', { level: 3 })).toContainText('0 open');
   await expect(page.getByTestId('group-sources').getByTestId('accept')).toHaveCount(0);
   await page.goto('/#/browse/sources/unknown-the-only-way-to/raw.md');
@@ -97,30 +98,25 @@ test('an accepted principle proposal that was never written offers "Write it" fr
   await expect(page.getByTestId('set-ps-7k2m')).toContainText('Rise to the work');
 });
 
-// A principle proposal from a filing arrives with the capture as a ground, and its draft is only the proposal's
+// A principle proposal for a set arrives with its sources as grounds, and its draft is only the proposal's
 // wording: read it, save it as it is, and the principle has the ground and no instruction text.
 test('accepting a principle proposal pre-fills its source as a ground, and an unedited draft saves clean', async ({ page }) => {
-  await page.goto('/#/inbox');
-  await page.getByTestId('process').click();
-  await expect(page.getByTestId('process-results')).toContainText('filed as unknown-the-only-way-to with 3 proposals');
-  await page.goto('/#/proposals');
-  // A filing's principle proposals target the reserve (schema §7.6): they group under Reserve, not a set.
-  const reserveGroup = page.getByTestId('group-_reserve');
-  await expect(reserveGroup.getByRole('heading', { level: 3 })).toContainText('Reserve');
-  await expect(reserveGroup.getByRole('heading', { level: 3 })).toContainText('3 open');
-  const principle = reserveGroup.locator('article.proposal').filter({ hasText: 'asks of me' });
-  await expect(principle).toContainText('Grounds: unknown-the-only-way-to');
+  await page.goto('/#/reason?task=relate-set&sources=weil-attention');
+  await page.getByTestId('relate-set').click();
+  await expect(page).toHaveURL(/#\/proposals\?related=3/);
+  const set1 = page.getByTestId('group-ps-g8xw');
+  const principle = set1.locator('article.proposal').filter({ hasText: 'Hold to this' });
+  await expect(principle).toContainText('Grounds: weil-attention');
+  await expect(principle.getByTestId('set-context')).toContainText('Set 1 holds 2 principles: Courage before comfort; Attention is generosity.');
   await principle.getByTestId('accept').click();
-  await expect(page).toHaveURL(/#\/sets\/_reserve\/new-principle\?from=/);
-  await expect(page.getByRole('heading', { name: 'New principle in reserve' })).toBeVisible();
-  await expect(page.getByTestId('ground-unknown-the-only-way-to')).toBeVisible();
+  await expect(page).toHaveURL(/#\/sets\/ps-g8xw\/new-principle\?from=/);
+  await expect(page.getByTestId('ground-weil-attention')).toBeVisible();
   await expect(page.getByTestId('edit-body')).not.toHaveValue(/Drafted|Rewrite/);
-  await expect(page.getByTestId('edit-body')).toHaveValue(/\*\*Grounding passages:\*\*\n\n- \[\[sources\/unknown-the-only-way-to\/raw\]\]/);
+  await expect(page.getByTestId('edit-body')).toHaveValue(/\*\*Grounding passages:\*\*\n\n- \[\[sources\/weil-attention\/raw\]\]/);
   await expect(page.getByTestId('from-proposal')).toContainText('Save it as it is, or put it in your own words.');
   await page.getByTestId('edit-save').click();
-  await expect(page).toHaveURL(/#\/browse\/principles\/_reserve\/what-the-only-way-to-make-sense-asks-of-me\.md$/);
-  await expect(page.getByTestId('fm-set')).toContainText('in reserve');
-  await expect(page.getByTestId('frontmatter')).toContainText('unknown-the-only-way-to');
+  await expect(page).toHaveURL(/#\/browse\/principles\/ps-g8xw\/hold-to-this-/);
+  await expect(page.getByTestId('frontmatter')).toContainText('weil-attention');
   await expect(page.getByTestId('fm-curated')).toHaveText('yours');
   await expect(page.locator('main')).not.toContainText('Drafted from a proposal');
   await page.goto('/#/settings');
@@ -151,4 +147,89 @@ test('"Write it as proposed" writes the principle in one tap', async ({ page }) 
   await expect(page.getByTestId('set-ps-7k2m')).toContainText('Rise to the work');
   await page.goto('/#/settings');
   await expect(page.getByTestId('refusal-count')).toHaveText('0 refusals');
+});
+
+// The reserve triage (schema §7.16): a filing's principles kept or dropped, singly or several at once in one
+// commit, the rationale a tap away, and a near-duplicate named when the same text is filed twice.
+test('triage a filing\'s reserve proposals: keep, drop, keep several as one commit, and see a near-duplicate', async ({ page }) => {
+  await page.goto('/#/inbox');
+  await page.getByTestId('process').click();
+  await expect(page.getByTestId('process-results')).toContainText('with 3 proposals');
+  await page.goto('/#/proposals');
+  const reserve = page.getByTestId('group-_reserve');
+  await expect(reserve.getByRole('heading', { level: 3 })).toContainText('For your reserve · 3 open');
+  const rows = reserve.getByTestId('reserve-open').locator('li');
+  await expect(rows).toHaveCount(3);
+  await expect(reserve.getByTestId('close-to')).toHaveCount(0);
+  // the rationale unfolds on the title
+  const first = rows.first();
+  const firstId = (await first.getAttribute('data-testid'))!.slice('proposal-'.length);
+  await expect(page.getByTestId(`rationale-${firstId}`)).toHaveCount(0);
+  await page.getByTestId(`unfold-${firstId}`).click();
+  await expect(page.getByTestId(`rationale-${firstId}`)).toContainText('The demo model suggests a principle');
+  await expect(page.getByTestId(`rationale-${firstId}`)).toContainText('Grounds: unknown-the-only-way-to');
+  // keep one: two rows left, the reserve holds it
+  await first.getByTestId('keep').click();
+  await expect(page.getByTestId('triaged')).toContainText('Kept 1 in the reserve');
+  await expect(rows).toHaveCount(2);
+  await reserve.getByTestId('toggle-decided').click();
+  await expect(reserve.getByTestId('decided-_reserve').getByTestId('status')).toHaveText(['kept']);
+  await expect(reserve.getByTestId('decided-_reserve').getByTestId('written-as')).toHaveText('in the reserve');
+  // drop one
+  await rows.first().getByTestId('drop').click();
+  await expect(page.getByTestId('triaged')).toContainText('Dropped 1');
+  await expect(rows).toHaveCount(1);
+  await expect(reserve.getByTestId('keep-picked')).toHaveCount(0); // one row needs no picks
+
+  // a second capture of the same text: its proposals name the open one and the kept principle as close
+  await page.goto('/#/capture');
+  await page.getByTestId('capture-text').fill('The only way to make sense out of change is to plunge into it, move with it, and join the dance.');
+  await page.getByTestId('capture-save').click();
+  await expect(page.getByTestId('saved')).toBeVisible();
+  await page.goto('/#/inbox');
+  await page.getByTestId('process').click();
+  await expect(page.getByTestId('process-results')).toContainText('with 3 proposals');
+  await page.goto('/#/proposals');
+  await expect(rows).toHaveCount(4);
+  await expect(reserve.getByTestId('close-to').first()).toContainText('Close to:');
+  await expect(reserve.getByTestId('close-to').filter({ hasText: '(principle)' }).first()).toBeVisible();
+  await expect(reserve.getByTestId('close-to').filter({ hasText: '(proposal)' }).first()).toBeVisible();
+
+  // keep two picked as one commit
+  await expect(reserve.getByTestId('keep-picked')).toHaveText('Keep 0');
+  await expect(reserve.getByTestId('keep-picked')).toBeDisabled();
+  await reserve.getByTestId('reserve-pick-all').click();
+  await expect(reserve.getByTestId('keep-picked')).toHaveText('Keep 4');
+  await reserve.getByTestId('reserve-pick-none').click();
+  const ids = await rows.evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')!.slice('proposal-'.length)));
+  await page.getByTestId(`pick-${ids[0]}`).check();
+  await page.getByTestId(`pick-${ids[1]}`).check();
+  await reserve.getByTestId('keep-picked').click();
+  await expect(page.getByTestId('triaged')).toContainText('Kept 2 in the reserve');
+  await expect(rows).toHaveCount(2);
+  await page.goto('/#/sets');
+  await expect(page.getByTestId('reserve-total')).toHaveText('· 4'); // the fixture's one, plus three kept
+  await page.goto('/#/settings');
+  await expect(page.getByTestId('refusal-count')).toHaveText('0 refusals');
+});
+
+test('the search narrows both parts, and an amendment card unfolds the principle it would change', async ({ page }) => {
+  await page.goto('/#/inbox');
+  await page.getByTestId('process').click();
+  await expect(page.getByTestId('process-results')).toContainText('with 3 proposals');
+  await page.goto('/#/proposals');
+  await expect(page.getByTestId('proposals-count')).toHaveCount(0);
+  await page.getByTestId('proposals-search').fill('amendment');
+  await expect(page.getByTestId('proposals-count')).toHaveText('1 of 5 open match');
+  await expect(page.getByTestId('group-_reserve').getByTestId('reserve-open').locator('li.empty')).toHaveText('No reserve proposal matches.');
+  const work = page.getByTestId('group-ps-7k2m');
+  await expect(work.locator('article.proposal')).toHaveCount(1);
+  const amendment = work.getByTestId('proposal-P-20260905-003');
+  await expect(amendment.getByTestId('target-body')).toContainText('Say the hard thing first, as it stands');
+  await amendment.getByTestId('target-body').locator('summary').click();
+  await expect(amendment.getByTestId('target-body')).toContainText('the sentence I am avoiding is the one to write');
+  await page.getByTestId('proposals-search').fill('only way');
+  await expect(page.getByTestId('proposals-count')).toHaveText('3 of 5 open match'); // the filed source's title finds its three
+  await page.getByTestId('proposals-clear').click();
+  await expect(page.getByTestId('proposals-count')).toHaveCount(0);
 });

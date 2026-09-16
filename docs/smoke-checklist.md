@@ -125,6 +125,15 @@ Node 20+ and Claude Code, and a photo on the phone to attach.
       the batch under that set with the notice; accept a link and see the
       ground added; `Relate: n proposals for Set N` on github.com.
 
+## 6e. The Proposals tab
+
+- [ ] After a filing, Proposals opens on "For your reserve": keep one
+      (`Keep: 1 proposal in reserve`), drop one, tick two and "Keep 2"
+      (one commit); a second capture of the same text wears "Close to".
+      After a Relate run, the set's cards say what the target holds and
+      an amendment unfolds the principle as it stands. The search narrows
+      both parts.
+
 ## 7. Desktop round trip through Claude Code
 
 - [ ] Clone the brain on the desktop. `npx gnomon-cli status` matches what

@@ -363,6 +363,10 @@ The app performs each pair as one action and shows the dangling report afterward
 
 The curator picks one or more filed sources and one set; a model (in the app) or a desktop agent reads the set's principles and the passages in full and writes each suggestion as a proposal: `kind: link` with `target` (a principle of the set) and `grounds` (the chosen sources that are evidence for it; accepting adds them to that principle's `grounds`, nothing looser); `kind: amendment` with `target` and `grounds` (the passages that complicate its wording); `kind: principle` with `target_set` = the set and `grounds` (a principle the set lacks). Every proposal carries `target_set`, `curated: agent-proposed`, `status: open`, and no `from_source`; the body is the rationale. Only what the passages support; only the set's own principles as targets; no link to a principle that already lists the passage; nothing the set already holds, restated; at most ten, and none is a fine answer. One commit for the batch, `Relate: <n> proposals for <set label>`, indexes regenerated. The curator decides each (§7.10, §4.7).
 
+### 7.16 Decide several at once
+
+The app may decide several proposals in one commit when the curator picks them together, since one tap is one act: `Keep: <n> proposals in reserve` flips each chosen `principle` proposal with `target_set: _reserve` to `accepted` and writes its principle into the reserve (§7.9 create with `_reserve` as the set, the draft the app shows for a single accept) in the same commit, indexes regenerated; `Decline: <n> proposals` flips each chosen proposal to `declined` and touches nothing else. A single decision stays §7.10. Agents never decide in batches.
+
 ## 8. Prompt assembly context rules
 
 These rules govern which files are included when the app or an agent assembles context for a reasoning task. They are restated in `AGENTS.md`; this is the normative version.

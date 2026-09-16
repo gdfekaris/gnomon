@@ -93,9 +93,13 @@ test('over the fixture the nudge follows the loop: file, review, decide, all cle
   await expect(nudge).toHaveAttribute('data-kind', 'decide');
   await expect(nudge).toContainText('5 open proposals await a decision.');
   await nudge.getByRole('link', { name: 'Decide in Proposals' }).click();
-  for (let i = 0; i < 5; i++) {
+  // the filing's three reserve proposals dropped as one commit, then the fixture's two set proposals declined
+  await page.getByTestId('reserve-pick-all').click();
+  await page.getByTestId('drop-picked').click();
+  await expect(page.getByTestId('drop')).toHaveCount(0);
+  for (let i = 0; i < 2; i++) {
     await page.getByTestId('decline').first().click();
-    await expect(page.getByTestId('decline')).toHaveCount(4 - i);
+    await expect(page.getByTestId('decline')).toHaveCount(1 - i);
   }
 
   // Every app commit regenerates the indexes on the way, so the loop ends clear even though the seed's index was stale.
