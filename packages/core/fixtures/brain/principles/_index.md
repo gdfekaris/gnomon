@@ -14,3 +14,7 @@ type: index
 
 1. [[principles/ps-7k2m/say-the-hard-thing-first]] ([principle](ps-7k2m/say-the-hard-thing-first.md)) — Say the hard thing first — grounds: 2
 2. [[principles/ps-7k2m/write-to-find-out]] ([principle](ps-7k2m/write-to-find-out.md)) — Write to find out — grounds: 0
+
+## In reserve
+
+- [[principles/_reserve/one-thing-at-a-time]] ([principle](_reserve/one-thing-at-a-time.md)) — One thing at a time — grounds: 1

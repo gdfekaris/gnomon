@@ -92,12 +92,13 @@ describe('sets (schema §7.1–§7.4)', () => {
     expect(dangling).toEqual([
       { path: 'maps/proposals/P-20260905-002.md', ref: 'ps-g8xw' },
       { path: 'maps/proposals/P-20260905-002.md', ref: 'ps-g8xw/courage-before-comfort' },
+      { path: 'principles/_reserve/one-thing-at-a-time.md', ref: 'ps-g8xw/attention-is-generosity' },
       { path: 'principles/ps-7k2m/say-the-hard-thing-first.md', ref: 'ps-g8xw/courage-before-comfort' },
     ]);
     expect(validateBatch(s, batch)).toEqual([]);
     const after = applyBatch(s, batch);
     expect(refusals(validateSnapshot(after))).toEqual([]);
-    expect(validateSnapshot(after).map((i) => i.rule).sort()).toEqual(['related.dangling', 'target-set.dangling', 'target.dangling']);
+    expect(validateSnapshot(after).map((i) => i.rule).sort()).toEqual(['related.dangling', 'related.dangling', 'target-set.dangling', 'target.dangling']); // Set 2's and the reserve's related refs
     expect(after.sets.map((f) => [f.fm.order, f.fm.name])).toEqual([[1, 'Work']]);
   });
   it('the last set cannot be deleted', () => {

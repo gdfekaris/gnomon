@@ -88,6 +88,14 @@ honored, the lower `order` governs, and an agent must say it invoked
 precedence rather than quietly picking a side. Renumber by editing the
 `order` fields; never rename or move a file.
 
+**Not ready to apply it?** Keep it in the reserve: write the file under
+`principles/_reserve/` with `set: _reserve` and no `order`. It is listed
+under "In reserve" in the indexes, it is yours to search and return to,
+and it is never sent to a model. To bring it into a set later, copy the
+file into the set's folder with the next `order` and delete the reserve
+copy (two commits; files never move). The app does both in one tap, and
+offers "Keep in reserve" wherever it offers Delete.
+
 ## More than one set
 
 A set is a stance. Keep several when you want to think the same question

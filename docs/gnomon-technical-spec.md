@@ -96,7 +96,7 @@ interface Common { type: FileType; curated: CurationState; created: string; upda
 export interface SourceFm extends Common { type: 'source'; title: string; author: string; work?: string; year?: number; locator?: string; origin?: string; inbox_ref?: string; attachment?: string; }
 export interface NotesFm extends Common { type: 'notes'; source: string; }
 export interface SetFm extends Common { type: 'principle-set'; order: number; name?: string; curated: 'human'; }
-export interface PrincipleFm extends Common { type: 'principle'; title: string; set: string; order: number; grounds: string[]; related?: string[]; curated: 'human'; }
+export interface PrincipleFm extends Common { type: 'principle'; title: string; set: string; order?: number; grounds: string[]; related?: string[]; curated: 'human'; }   // set is '_reserve' and order absent in the reserve (Schema §7.14)
 export interface InboxFm extends Common { type: 'inbox'; note?: string; attachment?: string; status: 'unfiled' | 'filed'; filed_as?: string; curated: 'human'; }
 export interface ProposalFm extends Common {
   type: 'proposal'; kind: 'principle' | 'link' | 'tag' | 'amendment'; title: string;
@@ -123,6 +123,7 @@ export interface BrainSnapshot {
   attachments: Map<string, Attachment>;
   sets: BrainFile<SetFm>[];           // sorted by order
   principlesOf: (setSlug: string) => BrainFile<PrincipleFm>[];   // sorted by order
+  reserve: BrainFile<PrincipleFm>[];  // principles/_reserve/, most recently created first, then by path
   byType: <T extends FileType>(t: T) => BrainFile<Extract<Frontmatter, {type: T}>>[];
 }
 ```
@@ -235,15 +236,15 @@ Payload = `nonce(12 bytes) || ciphertext || tag(16 bytes)` as produced by AES-25
 
 ### 7.2 Index generation (`index`)
 
-`generateIndexes(snapshot): { 'maps/_index.md': string; 'principles/_index.md': string }`. Pure, deterministic: sets by `order`; principles by `order` within each set; sources by `author`, then `work`, then `title`; open proposals by id; tags by name; all comparisons by codepoint. Frontmatter is exactly `type: index` (Schema §4.8), so output depends on nothing but the other files. Every BrainService write that changes any frontmatter-bearing file includes the regenerated indexes in the same commit **only if they differ** from the current blobs; with no timestamp in the header, an unchanged index produces no write.
+`generateIndexes(snapshot): { 'maps/_index.md': string; 'principles/_index.md': string }`. Pure, deterministic: sets by `order`; principles by `order` within each set; then, only when the reserve is not empty, an "In reserve" section by `created` descending then path (Schema §4.8, §7.14); sources by `author`, then `work`, then `title`; open proposals by id; tags by name; all comparisons by codepoint. Frontmatter is exactly `type: index` (Schema §4.8), so output depends on nothing but the other files. Every BrainService write that changes any frontmatter-bearing file includes the regenerated indexes in the same commit **only if they differ** from the current blobs; with no timestamp in the header, an unchanged index produces no write.
 
 ### 7.3 Sets and principles (`sets`)
 
-Implements Schema §7.1–§7.4 (sets) and §7.9 (principles) as pure functions from `(snapshot, params)` to a `CommitBatch`. `deleteSet` and `deletePrinciple` return the batch plus a `dangling: { path, ref }[]` report for the UI, covering `related` refs, proposal `target`/`target_set`, and `notes.md` body links. `reorderPrinciples(setSlug, orderedSlugs)` rewrites `order` on every principle whose position changed and nothing else. `newSetSlug(existing: Set<string>)` uses `crypto.getRandomValues` over the 31-character alphabet; the fixed Set 1 slug `ps-g8xw` comes from the template, never from this function.
+Implements Schema §7.1–§7.4 (sets) and §7.9 (principles) as pure functions from `(snapshot, params)` to a `CommitBatch`. `deleteSet` and `deletePrinciple` return the batch plus a `dangling: { path, ref }[]` report for the UI, covering `related` refs, proposal `target`/`target_set`, and `notes.md` body links. `reorderPrinciples(setSlug, orderedSlugs)` rewrites `order` on every principle whose position changed and nothing else. `createPrinciple` with `setSlug: '_reserve'` writes into the reserve with no `order`. The reserve's two-commit operations (Schema §7.14) are each exposed as their first half, the copy: `reservePrinciple(snapshot, path, now)` and `placePrinciple(snapshot, path, setSlug, now)` return the batch and the new path; the caller commits it, then builds `deletePrinciple` against the refreshed snapshot for the second half, so the second commit's `expectedHead` is the first commit's result. `newSetSlug(existing: Set<string>)` uses `crypto.getRandomValues` over the 31-character alphabet; the fixed Set 1 slug `ps-g8xw` comes from the template, never from this function.
 
 ### 7.4 Validation
 
-`validateSnapshot(snapshot): Issue[]` runs Schema §9 across the whole brain and tags each issue `refusal` or `warning` (order contiguity for sets and for principles within a set, `set`/`source` path agreement, undeclared or missing attachments, filed captures without a matching source, dangling grounds and grounds drift as warnings). `validateWrite(prev: BrainFile | undefined, next: BrainFile)` enforces the per-write rules, notably raw-body immutability for `human`/`ratified` sources and attachment immutability always. BrainService refuses to build a batch that fails `validateWrite`.
+`validateSnapshot(snapshot): Issue[]` runs Schema §9 across the whole brain and tags each issue `refusal` or `warning` (order contiguity for sets and for principles within a set, a reserve principle carrying `order` or a set principle lacking one (`reserve.order`, `field.required`), `set`/`source` path agreement, undeclared or missing attachments, filed captures without a matching source, dangling grounds and grounds drift as warnings). `validateWrite(prev: BrainFile | undefined, next: BrainFile)` enforces the per-write rules, notably raw-body immutability for `human`/`ratified` sources and attachment immutability always. BrainService refuses to build a batch that fails `validateWrite`.
 
 ### 7.5 Proposals (`proposals`)
 
@@ -375,7 +376,7 @@ Launch → Capture screen is the default route, rendered before the snapshot loa
 
 - `gnomon validate` — Schema §9 over the working tree; prints refusals and warnings; nonzero exit on refusals.
 - `gnomon index` — regenerate both index files (same code as the app); writes only if changed.
-- `gnomon status` — counts: unfiled captures, sources by curation state, sets and principles, open proposals; uncommitted changes; a one-line nudge (what to run next). Read-only.
+- `gnomon status` — counts: unfiled captures, sources by curation state, sets and principles (with how many are in the reserve), open proposals; uncommitted changes; a one-line nudge (what to run next). Read-only.
 - `gnomon encrypt` / `gnomon decrypt` — Phase 4; same format as §6.4; passphrase via prompt or `GNOMON_PASSPHRASE`.
 
 AGENTS.md instructs agents to run `npx gnomon-cli validate && npx gnomon-cli index` before the final push of a session. Requires Node 20+; the README says so and names the app-side regeneration as the fallback for users without Node.

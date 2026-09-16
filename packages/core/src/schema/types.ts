@@ -29,8 +29,10 @@ export interface SetFm extends Common { type: 'principle-set'; order: number; na
 export interface PrincipleFm extends Common {
   type: 'principle';
   title: string;
+  /** the set's slug, or `_reserve` for a principle held but not in force (schema §4.5) */
   set: string;
-  order: number;
+  /** precedence within the set; absent in the reserve, where nothing is in force */
+  order?: number;
   grounds: string[];
   related?: string[];
   curated: 'human';
@@ -102,6 +104,8 @@ export interface BrainSnapshot {
   sets: BrainFile<SetFm>[];
   /** sorted by order */
   principlesOf: (setSlug: string) => BrainFile<PrincipleFm>[];
+  /** principles in `principles/_reserve/`, most recently created first, then by path (schema §4.5, §7.14) */
+  reserve: BrainFile<PrincipleFm>[];
   byType: <T extends FileType>(t: T) => BrainFile<Extract<Frontmatter, { type: T }>>[];
 }
 

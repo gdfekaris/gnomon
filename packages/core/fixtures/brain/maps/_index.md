@@ -17,6 +17,10 @@ type: index
 1. [[principles/ps-7k2m/say-the-hard-thing-first]] ([principle](../principles/ps-7k2m/say-the-hard-thing-first.md)) — Say the hard thing first — grounds: 2
 2. [[principles/ps-7k2m/write-to-find-out]] ([principle](../principles/ps-7k2m/write-to-find-out.md)) — Write to find out — grounds: 0
 
+### In reserve
+
+- [[principles/_reserve/one-thing-at-a-time]] ([principle](../principles/_reserve/one-thing-at-a-time.md)) — One thing at a time — grounds: 1
+
 ## Sources
 
 ### Joan Didion
@@ -39,7 +43,7 @@ type: index
 
 ## Tags
 
-- attention — [[sources/weil-attention/raw]] ([raw](../sources/weil-attention/raw.md))
+- attention — [[principles/_reserve/one-thing-at-a-time]] ([file](../principles/_reserve/one-thing-at-a-time.md)), [[sources/weil-attention/raw]] ([raw](../sources/weil-attention/raw.md))
 - solitude — [[sources/aurelius-meditations-4-3/raw]] ([raw](../sources/aurelius-meditations-4-3/raw.md))
 - stoicism — [[principles/ps-g8xw/courage-before-comfort]] ([file](../principles/ps-g8xw/courage-before-comfort.md)), [[sources/aurelius-meditations-4-3/raw]] ([raw](../sources/aurelius-meditations-4-3/raw.md)), [[sources/aurelius-meditations-5-1/raw]] ([raw](../sources/aurelius-meditations-5-1/raw.md))
 - thinking — [[sources/didion-why-i-write/raw]] ([raw](../sources/didion-why-i-write/raw.md))

@@ -379,6 +379,97 @@ desktop without an agent: Task E is the desktop form.
 has derived from a real source in their own brain, and the smoke
 checklist gains the step.
 
+## Feature block: the Reserve for principles (2026-09-16)
+
+Asked for by the maintainer: a place for principles that are written and
+held but not in force in any set, to browse, to add to a set, and to
+remove a principle into instead of deleting it. This reopens alignment
+review 2.2 (no status on principles) by the maintainer's decision: a
+principle now has three states, in a set, in the reserve, or deleted.
+The reserve is a folder, not a field, so every existing rule holds:
+files never move, order is precedence and exists only inside a set,
+agents never create or delete a principle. Two sub-blocks, format first;
+the maintainer looks at the schema wording between them.
+
+**Decisions.** The word is "reserve": folder `principles/_reserve/`,
+section "In reserve", control "Keep in reserve". Reserving and placing
+are one tap that makes two commits, copy then delete, so git history
+shows both halves and a slug collision resolves with `-2` as it does for
+copy-to-set. The reserve has no order field; the app lists it newest
+first (most recently reserved, since the copy is a new file) with an A–Z
+chip, a search over title, tags, and the authors and titles of the
+grounding sources, tag chips with counts, and pages of fifty. The Sets
+screen gains one search over every principle, sets and reserve alike.
+
+### R1. The format: schema, core, checker, fixture, CLI (M)
+
+- Schema: §2 layout gains `principles/_reserve/<principle-slug>.md`
+  (present only when something is in it; no `_set.md`); §3.3 the reserve
+  is one more uniqueness namespace; §4.5 `set` is `_reserve` and `order`
+  is absent there ("order is precedence; nothing in the reserve is in
+  force"); §4.8 both indexes gain "In reserve" when it is not empty; new
+  §7.14 "Reserve and place" with the messages `Reserve principle:
+  <title>` and `Place principle: <title> in <set label>` for the copies
+  and §7.9's `Delete principle:` for the removals; §8 the reserve is
+  never assembled; §9 contiguity applies to sets only, a reserve
+  principle with `order` is a refusal; §10 `_reserve` named. Spec §5
+  (`order?`, `reserve` on the snapshot), §7.2, §7.3, §13. Proposal §5,
+  §6, decision 8 amended. Alignment review 2.2 gains the 2026-09-16 note.
+  AGENTS.md (template and fixture copies): layout line, "Reading a set"
+  says the reserve is never read, the checklist and frontmatter
+  reference; template README's "Writing a principle" mentions it.
+- Core: `PrincipleFm.order?`; `RESERVE_SLUG`; `pathInfo` accepts the
+  folder; parse requires `order` in a set and refuses it in the reserve
+  (`reserve.order`); `BrainSnapshot.reserve` sorted by `created`
+  descending then path; `validateSnapshot` skips the reserve for
+  `principle.no-set` and contiguity; `generateIndexes` writes the
+  section; `sets`: `createPrinciple` accepts `_reserve` (no order),
+  `reservePrinciple(s, path, now)` and `placePrinciple(s, path, setSlug,
+  now)` each return the two batches in order plus the dangling report.
+- `tools/gnomon-check.py` mirrors every rule and the index section; the
+  fixture gains `principles/_reserve/one-thing-at-a-time.md` (a ground, a
+  tag, a `related` ref into Set 1) and its indexes are regenerated; the
+  count assertions across the packages move with it. `gnomon status`
+  reads `principles: 4 in 2 sets, 1 in reserve`.
+- Done when the template and fixture validate clean in both checkers,
+  the TypeScript indexes match the Python ones on a reserve variant, the
+  unit tests cover the refusal, the sort, the section, and both two-commit
+  operations, and CI is green.
+
+### R2. The app: Sets becomes all principles (L)
+
+- Sets screen: a search field at the top filtering every principle; a
+  set whose principles do not match collapses to its heading and a
+  count; a final section **In reserve** (`data-testid="reserve"`) with
+  its count, sort chips Newest and A–Z (reserve only; a set's order is
+  precedence and is never re-sorted), tag chips with counts (top twelve
+  plus "All tags", AND), the count line "12 of 240 in reserve" under a
+  filter, pages of fifty with "Show 50 more". Each reserve row: the
+  title as a link, its tags, "Add to…" (a set select and one tap,
+  `data-testid="place"`), and nothing that deletes. **New principle**
+  under the section writes straight into the reserve (the editor route
+  with `_reserve` as the set).
+- Reserving: the Delete confirmation on a set's principle row offers
+  **Keep in reserve instead** (`data-testid="reserve-instead"`); the
+  principle editor offers **Keep in reserve** beside "Copy to another
+  set". Both are one tap, two commits, with the dangling report shown
+  afterwards as delete shows it. File pages and Browse say "in reserve"
+  in the app's words; the editor over a reserve principle shows no
+  order and offers "Add to a set".
+- `services/sets.ts`: `reserve(brain, path)` and `place(brain, path,
+  setSlug)` run the two commits in order and refresh between them;
+  `services/browse.ts` matching reused for the search (a principle
+  matches on title, tags, and its grounds' titles and authors).
+- Flows on both engines: reserve a principle from Sets and see the set
+  renumbered and the reserve hold it; place it into another set and see
+  it at N+1; write a new one straight into the reserve; search finds it
+  by a ground's author and collapses a set with no match; the demo brain
+  filled to hundreds of reserve principles pages and sorts; the
+  fixture's reserved principle shows on arrival.
+- Done when the flows are green on both engines, the smoke checklist
+  gains the step, and the maintainer has reserved and placed a principle
+  in their own brain.
+
 ## Carried from Phase 3
 
 Open at the close of Phase 3 (2026-09-11); none blocks a Phase 4 block.

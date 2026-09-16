@@ -58,7 +58,7 @@ export function driverContract(name: string, factory: DriverFactory, options: Co
       const d = await fresh();
       const s = await loadSnapshot(d);
       expect(s.head).toBe(await d.head());
-      expect(s.files.size).toBe(24);
+      expect(s.files.size).toBe(25);
       expect(s.attachments.size).toBe(2);
       expect(validateSnapshot(s)).toEqual([]);
     });

@@ -49,7 +49,7 @@ describe('sets service (US-18, US-20)', () => {
     const plan = planDeleteSet(brain, 'ps-g8xw');
     expect(plan.label).toBe('Set 2');
     expect(plan.principleCount).toBe(2);
-    expect(plan.dangling.map((d) => d.ref)).toEqual(['ps-g8xw', 'ps-g8xw/courage-before-comfort', 'ps-g8xw/courage-before-comfort']);
+    expect(plan.dangling.map((d) => d.ref)).toEqual(['ps-g8xw', 'ps-g8xw/courage-before-comfort', 'ps-g8xw/attention-is-generosity', 'ps-g8xw/courage-before-comfort']);
     await plan.commit();
     expect(labels(brain)).toEqual(['Set 1 — Kids', 'Set 2 — Work']);
     expect(validateSnapshot(brain.snapshot!).filter((i) => i.level === 'refusal')).toEqual([]);

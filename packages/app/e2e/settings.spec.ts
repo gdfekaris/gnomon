@@ -6,7 +6,7 @@ test('connect-existing shows refusals and warnings and adds each missing scaffol
   await expect(page.getByText('Connected: demo brain')).toBeVisible();
   const panel = page.getByTestId('validation');
   await expect(panel.getByTestId('refusal-count')).toHaveText('3 refusals');
-  await expect(panel.getByTestId('warning-count')).toHaveText('1 warning');
+  await expect(panel.getByTestId('warning-count')).toHaveText('2 warnings'); // Set 1's and the reserve's grounds on the omitted source
   await expect(panel.getByTestId('refusals')).toContainText('AGENTS.md');
   await expect(panel.getByTestId('refusals')).toContainText('fix by hand');
   await expect(panel.getByTestId('warnings')).toContainText('grounds.dangling');
@@ -21,7 +21,7 @@ test('connect-existing shows refusals and warnings and adds each missing scaffol
   await page.goto('/#/browse/AGENTS.md');
   await expect(page.getByText('No file at')).toBeVisible(); // exempt files are not brain files; they are simply present
   await page.goto('/#/browse');
-  await expect(page.getByText('23 files')).toBeVisible(); // the omitted raw.md is gone; scaffold files are exempt and uncounted
+  await expect(page.getByText('24 files')).toBeVisible(); // the omitted raw.md is gone; scaffold files are exempt and uncounted
 });
 
 test('a clean brain reports valid, and the indexes offer appears when they are stale', async ({ page }) => {

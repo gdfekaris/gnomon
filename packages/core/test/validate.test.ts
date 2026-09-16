@@ -58,7 +58,8 @@ describe('validateSnapshot refusals (schema §9)', () => {
     expect(only(issues, 'order.principles')).toEqual([]);
   });
   it('source.missing-raw', () => {
-    expect(rules(check({ 'sources/weil-attention/raw.md': null }))).toEqual(['grounds.dangling', 'source.missing-raw']);
+    // two principles ground weil-attention: one in Set 1, one in the reserve
+    expect(rules(check({ 'sources/weil-attention/raw.md': null }))).toEqual(['grounds.dangling', 'grounds.dangling', 'source.missing-raw']);
   });
   it('source.unexpected-file', () => {
     expect(rules(check({ 'sources/weil-attention/extra.png': 'x' }))).toEqual(['source.unexpected-file']);
@@ -135,6 +136,7 @@ describe('validateSnapshot warnings (schema §9)', () => {
     });
     expect(issues.map((i) => `${i.path} ${i.rule}`)).toEqual([
       'principles/ order.sets',
+      'principles/_reserve/one-thing-at-a-time.md grounds.dangling',
       'principles/ps-g8xw/attention-is-generosity.md grounds.dangling',
       'sources/weil-attention/notes.md source.missing-raw',
     ]);

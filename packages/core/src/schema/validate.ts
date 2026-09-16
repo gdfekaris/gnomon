@@ -5,7 +5,7 @@
 import type { BrainSnapshot, InboxFm, PrincipleFm, ProposalFm, SourceFm, TreeEntry } from './types';
 import { type Issue, refusal, warning } from './issues';
 import { FIELD_SPECS } from './fields';
-import { pathInfo } from './paths';
+import { RESERVE_SLUG, pathInfo } from './paths';
 import { groundsDrift } from '../links/index';
 
 const TOP_FOLDERS = ['inbox', 'sources', 'principles', 'maps', 'templates'] as const;
@@ -52,13 +52,13 @@ export function validateSnapshot(s: BrainSnapshot): Issue[] {
   }
   for (const slug of setSlugs) {
     const ps = s.principlesOf(slug);
-    if (ps.length && !contiguous(ps.map((f) => f.fm.order))) {
+    if (ps.length && !contiguous(ps.map((f) => f.fm.order ?? 0))) {
       r(`principles/${slug}`, 'order.principles', `principle order values must be 1..${ps.length} with no gaps or repeats`);
     }
   }
   for (const f of s.byType('principle')) {
     const slug = pathInfo(f.path)!.folder!;
-    if (!setSlugs.has(slug)) r(f.path, 'principle.no-set', `folder '${slug}' has no _set.md`);
+    if (slug !== RESERVE_SLUG && !setSlugs.has(slug)) r(f.path, 'principle.no-set', `folder '${slug}' has no _set.md`);
   }
 
   // --- source folders and attachments (refusals)

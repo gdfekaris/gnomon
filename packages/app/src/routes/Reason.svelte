@@ -207,7 +207,7 @@
         {#if deriving}<span role="status" class="hint">One completion, then one commit of the proposals; a few seconds.</span>{/if}
       </div>
       {#if deriveError}<p class="error" role="alert" data-testid="derive-error">{deriveError}</p>{/if}
-    {:else if !s.byType('principle').length}
+    {:else if s.byType('principle').length === s.reserve.length}
       <p class="empty" data-testid="empty-reason">
         Nothing to reason from yet: your sets have no principles, and reasoning without premises would make the answer the
         model's, not yours. <a href="#/capture">Capture</a> a passage, file it from the Inbox, ratify the filing, then accept

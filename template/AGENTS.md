@@ -20,6 +20,7 @@ sources/<slug>/original.<ext>      optional: the attached file — IMMUTABLE
 principles/_index.md               GENERATED: sets and principles. Start here.
 principles/<set-slug>/_set.md      a principle set: its ordinal, name, and framing
 principles/<set-slug>/<slug>.md    one principle, in the curator's words
+principles/_reserve/<slug>.md      a principle held but not in force; never read for reasoning
 maps/_index.md                     GENERATED: everything in the brain
 maps/proposals/P-<date>-<nnn>.md   one suggestion per file, awaiting the curator
 templates/                         skeletons for every file you may create
@@ -65,9 +66,9 @@ files count as part of the brain.
    them. One exception, and only inside a filing commit: you set
    `status: filed` and `filed_as` on the capture you filed. Nothing else in
    that file changes.
-3. **You never create, reword, reorder, or delete a principle**, and never
-   change any `order` field. You may suggest a principle by writing a
-   proposal. The curator writes the file.
+3. **You never create, reword, reorder, or delete a principle**, in a set
+   or in the reserve, and never change any `order` field. You may suggest
+   a principle by writing a proposal. The curator writes the file.
 4. **You never create, rename, reorder, or delete a principle set.**
 5. **You never edit `principles/_index.md` or `maps/_index.md`.** They are
    generated. Run `npx gnomon-cli index`.
@@ -116,6 +117,10 @@ none):
 
 If the selected set has no principles, stop and say so. Reasoning without
 premises would make the answer yours instead of the curator's.
+
+`principles/_reserve/` is the curator's reserve: principles they hold but
+are not applying in any set. Nothing in it is in force. Never read it for
+reasoning, never cite it, and never write to it.
 
 ## Task A — Reason from a set
 
@@ -227,7 +232,8 @@ Refusals (must be fixed):
 - `set` in a principle equals its folder; `source` in notes equals its
   folder.
 - Set `order` values run 1..N with no gaps; principle `order` values run
-  1..N within each set.
+  1..N within each set; a principle in `principles/_reserve/` has no
+  `order`.
 - Slugs, stems, and proposal ids match their character rules.
 - A `raw.md` body or an attachment is byte-identical to its last commit.
 - A source folder holds only `raw.md`, `notes.md`, and its declared
@@ -249,7 +255,8 @@ optional `tags`. Then by type:
   `origin`, `inbox_ref`, `attachment`.
 - `notes`: `source`.
 - `principle-set`: `order`; optional `name`.
-- `principle`: `title`, `set`, `order`, `grounds`; optional `related`.
+- `principle`: `title`, `set`, `grounds`; `order` in a set, absent in the
+  reserve (`set: _reserve`); optional `related`.
 - `inbox`: `status`; optional `note`, `attachment`, `filed_as`.
 - `proposal`: `kind`, `title`, `status`; `target_set` for principle,
   amendment, link; `target` for amendment, link, tag; optional

@@ -118,7 +118,8 @@ async function status(driver: WorkingTreeDriver, snapshot: BrainSnapshot, out: O
   const unfiled = inbox.filter((f) => f.fm.status === 'unfiled').length;
   const sources = snapshot.byType('source');
   const by = (state: string) => sources.filter((f) => f.fm.curated === state).length;
-  const principles = snapshot.byType('principle').length;
+  const reserve = snapshot.reserve.length;
+  const principles = snapshot.byType('principle').length - reserve;
   const open = snapshot.byType('proposal').filter((f) => f.fm.status === 'open').length;
   const refusals = hasRefusals([...validateLayout(await driver.list()), ...validateSnapshot(snapshot)]);
   const stale = indexWrites(snapshot).length > 0;
@@ -126,7 +127,7 @@ async function status(driver: WorkingTreeDriver, snapshot: BrainSnapshot, out: O
 
   out(`inbox:       ${unfiled} unfiled, ${inbox.length - unfiled} filed`);
   out(`sources:     ${sources.length} (${by('ratified')} ratified, ${by('agent-proposed')} awaiting ratification, ${by('human')} by hand)`);
-  out(`principles:  ${principles} in ${snapshot.sets.length} set${snapshot.sets.length === 1 ? '' : 's'}`);
+  out(`principles:  ${principles} in ${snapshot.sets.length} set${snapshot.sets.length === 1 ? '' : 's'}, ${reserve} in reserve`);
   out(`proposals:   ${open} open`);
   out(`indexes:     ${stale ? 'stale' : 'up to date'}`);
   out(driver.isGit ? `git:         ${uncommitted.length ? `${uncommitted.length} uncommitted change${uncommitted.length === 1 ? '' : 's'}` : 'clean'}` : 'git:         not a checkout');

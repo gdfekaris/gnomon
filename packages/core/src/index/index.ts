@@ -50,14 +50,23 @@ function setsSection(s: BrainSnapshot, from: IndexPath, h: string): string[] {
   return out;
 }
 
+/** "In reserve": principles held but not in force, newest first (schema §4.8, §7.14). Nothing when the reserve is empty. */
+function reserveSection(s: BrainSnapshot, from: IndexPath, h: string): string[] {
+  if (s.reserve.length === 0) return [];
+  const out = [`${h} In reserve\n`];
+  for (const p of s.reserve) out.push(`- ${renderDualLink(from, p.path, 'principle')} — ${p.fm.title} — grounds: ${p.fm.grounds.length}`);
+  out.push('');
+  return out;
+}
+
 function finish(lines: string[]): string {
   return lines.join('\n').replace(/\n+$/, '') + '\n';
 }
 
 /** Both generated index files (schema §4.8), deterministic from frontmatter alone. */
 export function generateIndexes(s: BrainSnapshot): Record<IndexPath, string> {
-  const pi = [HEAD, '# Principles\n', ...setsSection(s, 'principles/_index.md', '##')];
-  const mi = [HEAD, '# Index\n', '## Principles\n', ...setsSection(s, 'maps/_index.md', '###')];
+  const pi = [HEAD, '# Principles\n', ...setsSection(s, 'principles/_index.md', '##'), ...reserveSection(s, 'principles/_index.md', '##')];
+  const mi = [HEAD, '# Index\n', '## Principles\n', ...setsSection(s, 'maps/_index.md', '###'), ...reserveSection(s, 'maps/_index.md', '###')];
   const M: IndexPath = 'maps/_index.md';
 
   const sources = s.byType('source').map((f) => ({ f, fm: f.fm as SourceFm, work: f.fm.work || '' }));

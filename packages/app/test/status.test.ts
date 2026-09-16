@@ -12,18 +12,18 @@ const load = async (seed: Map<string, Uint8Array>) => loadSnapshot(await MemoryD
 describe('brainStatus and the nudge (proposal §8, mirrors gnomon status)', () => {
   it('reads the fixture the way the CLI does', async () => {
     const st = brainStatus(await load(readBrainBytes()));
-    expect(st).toEqual({ unfiled: 1, awaitingReview: 1, openProposals: 2, staleIndexes: false, refusals: 0, principles: 4 });
+    expect(st).toEqual({ unfiled: 1, awaitingReview: 1, openProposals: 2, staleIndexes: false, refusals: 0, principles: 4, reserve: 1 });
     expect(nudge(st)).toEqual({ kind: 'file', text: '1 capture awaits filing.', href: '#/inbox', label: 'File in Inbox' });
   });
 
   it('a fresh template brain is all clear', async () => {
     const st = brainStatus(await load(readBrainBytes(TEMPLATE)));
-    expect(st).toEqual({ unfiled: 0, awaitingReview: 0, openProposals: 0, staleIndexes: false, refusals: 0, principles: 0 });
+    expect(st).toEqual({ unfiled: 0, awaitingReview: 0, openProposals: 0, staleIndexes: false, refusals: 0, principles: 0, reserve: 0 });
     expect(nudge(st).kind).toBe('clear');
   });
 
   it('follows the loop in the CLI order and pluralises', () => {
-    const base = { unfiled: 0, awaitingReview: 0, openProposals: 0, staleIndexes: false, refusals: 0, principles: 1 };
+    const base = { unfiled: 0, awaitingReview: 0, openProposals: 0, staleIndexes: false, refusals: 0, principles: 1, reserve: 0 };
     expect(nudge({ ...base, refusals: 2, unfiled: 3 }).kind).toBe('refusals');
     expect(nudge({ ...base, unfiled: 3, awaitingReview: 1 })).toMatchObject({ kind: 'file', text: '3 captures await filing.' });
     expect(nudge({ ...base, awaitingReview: 1, openProposals: 4 })).toMatchObject({ kind: 'review', text: '1 filing awaits your review.', href: '#/inbox' });

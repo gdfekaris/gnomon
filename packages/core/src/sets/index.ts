@@ -4,6 +4,7 @@
 
 import type { BrainFile, BrainSnapshot, CommitBatch, FileWrite, PrincipleFm, SetFm } from '../schema/types';
 import { isSetSlug, randomAlphabet } from '../schema/identifiers';
+import { RESERVE_SLUG } from '../schema/paths';
 import { serializeFile } from '../schema/serialize';
 import { parseLinks } from '../links/index';
 import { setLabel, withIndexWrites } from '../index/index';
@@ -155,13 +156,14 @@ export interface CreatePrincipleParams {
   now: string;
 }
 
-/** Schema §7.9 create: appended at order N+1, `curated: human`, message `Add principle: {title}`. */
+/** Schema §7.9 create: appended at order N+1, `curated: human`, message `Add principle: {title}`. With `setSlug: '_reserve'` the principle is written into the reserve, with no order (§7.14). */
 export function createPrinciple(s: BrainSnapshot, p: CreatePrincipleParams): { batch: CommitBatch; path: string } {
-  setOf(s, p.setSlug);
+  const reserve = p.setSlug === RESERVE_SLUG;
+  if (!reserve) setOf(s, p.setSlug);
   const slug = uniquePrincipleSlug(s, p.setSlug, slugify(p.title));
   const path = `principles/${p.setSlug}/${slug}.md`;
   const fm = withoutUndefined<PrincipleFm>({
-    type: 'principle', title: p.title, set: p.setSlug, order: s.principlesOf(p.setSlug).length + 1,
+    type: 'principle', title: p.title, set: p.setSlug, order: reserve ? undefined : s.principlesOf(p.setSlug).length + 1,
     grounds: p.grounds, related: p.related, tags: p.tags, curated: 'human', created: p.now, updated: p.now,
   });
   const file: BrainFile<PrincipleFm> = { path, sha: '', fm, body: p.body, encrypted: false };
@@ -206,14 +208,61 @@ export function reorderPrinciples(s: BrainSnapshot, setSlug: string, orderedSlug
   return withIndexWrites(s, { message: `Reorder principles: ${setLabel(setOf(s, setSlug).fm)}`, expectedHead: s.head, writes, deletes: [] });
 }
 
-/** Schema §7.9 delete: removes the file, closes the gap in `order`, and reports dangling `related` refs, proposal targets, and body links. */
+/** Schema §7.9 delete: removes the file, closes the gap in `order`, and reports dangling `related` refs, proposal targets, and body links. In the reserve there is no order to close. */
 export function deletePrinciple(s: BrainSnapshot, path: string, now: string): { batch: CommitBatch; dangling: Dangling[] } {
   const target = principleAt(s, path);
   const writes: FileWrite[] = [];
-  for (const other of s.principlesOf(target.fm.set)) {
-    if (other.fm.order > target.fm.order) writes.push(write({ ...other, fm: { ...other.fm, order: other.fm.order - 1 } }, other, now));
+  if (target.fm.set !== RESERVE_SLUG) {
+    for (const other of s.principlesOf(target.fm.set)) {
+      if (other.fm.order! > target.fm.order!) writes.push(write({ ...other, fm: { ...other.fm, order: other.fm.order! - 1 } }, other, now));
+    }
   }
   const dangling = danglingInto(s, new Set([path]), new Set([path]));
   const batch = withIndexWrites(s, { message: `Delete principle: ${target.fm.title}`, expectedHead: s.head, writes, deletes: [path] });
   return { batch, dangling };
+}
+
+// ---------------------------------------------------------------- the reserve (schema §7.14)
+
+/** The copy of `source` that lands at `path`: same title, grounds, related, tags, and body; a new file, so `created` is now. */
+function copyPrinciple(source: BrainFile<PrincipleFm>, path: string, set: string, order: number | undefined, now: string): BrainFile<PrincipleFm> {
+  const fm = withoutUndefined<PrincipleFm>({
+    type: 'principle', title: source.fm.title, set, order, grounds: source.fm.grounds, related: source.fm.related, tags: source.fm.tags,
+    curated: 'human', created: now, updated: now,
+  });
+  return { path, sha: '', fm, body: source.body, encrypted: false };
+}
+
+/**
+ * Reserve, first half: copy a set's principle into the reserve, without an
+ * order, message `Reserve principle: {title}`. The second half is
+ * `deletePrinciple` on the original against the snapshot this commit
+ * produces; the two commits are how a file changes folder (schema §1
+ * rule 1). A slug taken in the reserve gets `-2` as in `createPrinciple`.
+ */
+export function reservePrinciple(s: BrainSnapshot, path: string, now: string): { batch: CommitBatch; path: string } {
+  const source = principleAt(s, path);
+  if (source.fm.set === RESERVE_SLUG) throw new Error(`'${path}' is already in the reserve`);
+  const slug = uniquePrincipleSlug(s, RESERVE_SLUG, path.split('/')[2]!.replace(/\.md$/, ''));
+  const target = `principles/${RESERVE_SLUG}/${slug}.md`;
+  const file = copyPrinciple(source, target, RESERVE_SLUG, undefined, now);
+  const batch: CommitBatch = { message: `Reserve principle: ${source.fm.title}`, expectedHead: s.head, writes: [write(file)], deletes: [] };
+  return { batch: withIndexWrites(s, batch), path: target };
+}
+
+/**
+ * Place, first half: copy a reserve principle into a set at order N+1,
+ * message `Place principle: {title} in {set label}`. The second half is
+ * `deletePrinciple` on the reserve copy. Also accepts a principle already
+ * in a set, which is the copy-to-another-set case with a clearer message.
+ */
+export function placePrinciple(s: BrainSnapshot, path: string, setSlug: string, now: string): { batch: CommitBatch; path: string } {
+  const source = principleAt(s, path);
+  const set = setOf(s, setSlug);
+  if (source.fm.set === setSlug) throw new Error(`'${path}' is already in ${setLabel(set.fm)}`);
+  const slug = uniquePrincipleSlug(s, setSlug, path.split('/')[2]!.replace(/\.md$/, ''));
+  const target = `principles/${setSlug}/${slug}.md`;
+  const file = copyPrinciple(source, target, setSlug, s.principlesOf(setSlug).length + 1, now);
+  const batch: CommitBatch = { message: `Place principle: ${source.fm.title} in ${setLabel(set.fm)}`, expectedHead: s.head, writes: [write(file)], deletes: [] };
+  return { batch: withIndexWrites(s, batch), path: target };
 }

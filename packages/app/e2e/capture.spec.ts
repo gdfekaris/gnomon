@@ -21,7 +21,7 @@ test('captures text with a note into the demo brain', async ({ page }) => {
   await expect(page.getByTestId('unfiled')).toContainText(stem);
   await expect(page.getByTestId('unfiled')).toContainText('from the phone');
   await page.getByRole('link', { name: 'Browse' }).click();
-  await expect(page.getByText('25 files')).toBeVisible();
+  await expect(page.getByText('26 files')).toBeVisible();
 });
 
 test('captures text with a PDF attachment', async ({ page }) => {

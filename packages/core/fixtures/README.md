@@ -22,6 +22,10 @@ What it contains and why:
 - `related` refs across sets in both directions, a tag on a principle
   (the index lists it as `file`, not `raw`), and a `notes.md` body with a
   dual link.
+- One principle in the reserve (`principles/_reserve/one-thing-at-a-time.md`,
+  schema §7.14): `set: _reserve`, no `order`, a ground, a tag shared with a
+  source, and a `related` ref into Set 1, so deleting that set or source
+  reports it as dangling.
 
 Golden brains for Phase 1 are this fixture, `template/`, and the
 maintainer's `~/Desktop/main/geo-brain-2`.

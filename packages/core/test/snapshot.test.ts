@@ -8,12 +8,12 @@ describe('buildSnapshot (spec §5)', () => {
   it('parses every frontmatter file in the fixture with no issues', () => {
     expect(fixture.head).toBe('abc123');
     expect(fixture.issues).toEqual([]);
-    expect(fixture.files.size).toBe(24);
+    expect(fixture.files.size).toBe(25);
   });
   it('byType covers every type', () => {
     expect(fixture.byType('source').length).toBe(4);
     expect(fixture.byType('notes').length).toBe(4);
-    expect(fixture.byType('principle').length).toBe(4);
+    expect(fixture.byType('principle').length).toBe(5); // four in sets, one in the reserve
     expect(fixture.byType('principle-set').length).toBe(2);
     expect(fixture.byType('inbox').length).toBe(4);
     expect(fixture.byType('proposal').length).toBe(4);
@@ -61,7 +61,7 @@ describe('buildSnapshot (spec §5)', () => {
     const texts = new Map([...all].filter(([p]) => p.endsWith('.md')).map(([p, text]) => [p, { text, sha: '' }]));
     texts.set('principles/ps-g8xw/broken.md', { text: '---\ntype: principle\n---\n', sha: '' });
     const s = buildSnapshot({ head: 'h', tree, texts });
-    expect(s.files.size).toBe(24);
+    expect(s.files.size).toBe(25);
     expect(s.issues.filter((i) => i.path === 'inbox/20260906-080000-abc.md').map((i) => i.rule)).toEqual(['file.unreadable']);
     const broken = s.issues.filter((i) => i.path === 'principles/ps-g8xw/broken.md');
     expect(broken.length).toBe(7); // curated, created, updated, title, set, order, grounds

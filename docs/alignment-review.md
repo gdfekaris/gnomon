@@ -109,6 +109,16 @@ analog. Keep any status?
 
 **Decision:** a
 
+**Reopened 2026-09-16 by the maintainer.** With hundreds of principles in
+view, "in force or deleted" left nowhere to keep a principle that is held
+but not currently applied, and pruning a set that outgrows the budget meant
+deleting. Decided: a third place, not a status field. `principles/_reserve/`
+holds such principles with `set: _reserve` and no `order`; it is never
+assembled, agents never touch it, both indexes list it, and a principle
+moves in or out by copy then delete (schema §7.14). Option b's `retired`
+status stays rejected: a reserve principle sits in no set, and the
+contiguous-order rule is untouched.
+
 ### 2.3 · one passage per capture, `original.md`, and §-numbered passages
 
 **Question:** Three template features stand or fall together. (i) A `raw.md`

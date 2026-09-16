@@ -64,7 +64,7 @@ export const REQUIRED: Record<FileType, readonly string[]> = {
   source: ['curated', 'created', 'updated', 'title', 'author'],
   notes: ['curated', 'created', 'updated', 'source'],
   'principle-set': ['curated', 'created', 'updated', 'order'],
-  principle: ['curated', 'created', 'updated', 'title', 'set', 'order', 'grounds'],
+  principle: ['curated', 'created', 'updated', 'title', 'set', 'grounds'], // `order` is required in a set and absent in the reserve (parse)
   inbox: ['curated', 'created', 'updated', 'status'],
   proposal: ['curated', 'created', 'updated', 'kind', 'title', 'status'],
   index: [],

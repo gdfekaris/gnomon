@@ -12,7 +12,10 @@ export interface BrainStatus {
   openProposals: number;
   staleIndexes: boolean;
   refusals: number;
+  /** principles in force, in sets */
   principles: number;
+  /** principles held but not in force (schema §7.14) */
+  reserve: number;
 }
 
 export function brainStatus(s: BrainSnapshot): BrainStatus {
@@ -22,7 +25,8 @@ export function brainStatus(s: BrainSnapshot): BrainStatus {
     openProposals: s.byType('proposal').filter((f) => f.fm.status === 'open').length,
     staleIndexes: indexWrites(s).length > 0,
     refusals: validateSnapshot(s).filter((i) => i.level === 'refusal').length,
-    principles: s.byType('principle').length,
+    principles: s.byType('principle').length - s.reserve.length,
+    reserve: s.reserve.length,
   };
 }
 

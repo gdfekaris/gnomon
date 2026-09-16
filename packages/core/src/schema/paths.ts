@@ -4,6 +4,9 @@
 import type { FileType } from './types';
 import { isInboxStem, isPrincipleSlug, isProposalId, isSetSlug, isSourceSlug } from './identifiers';
 
+/** The folder for principles held but not in force in any set (schema §2, §4.5, §7.14). Reserved by §10; never a set. */
+export const RESERVE_SLUG = '_reserve';
+
 /** Files exempt from frontmatter: AGENTS.md, README.md, templates/*, dot-directories (schema §4). */
 export function isExemptPath(path: string): boolean {
   const parts = path.split('/');
@@ -61,7 +64,7 @@ export function pathIdentifierProblems(info: PathInfo): string[] {
       if (!isSetSlug(info.folder!)) out.push(`set slug '${info.folder}' is malformed`);
       break;
     case 'principle':
-      if (!isSetSlug(info.folder!)) out.push(`set slug '${info.folder}' is malformed`);
+      if (info.folder !== RESERVE_SLUG && !isSetSlug(info.folder!)) out.push(`set slug '${info.folder}' is malformed`);
       if (!isPrincipleSlug(info.name!)) out.push(`principle slug '${info.name}' is malformed`);
       break;
     case 'inbox':

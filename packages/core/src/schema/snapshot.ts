@@ -5,7 +5,7 @@
 
 import type { Attachment, BrainFile, BrainSnapshot, FileType, Frontmatter, PrincipleFm, ReadResult, SetFm, TreeEntry } from './types';
 import { type Issue, refusal } from './issues';
-import { isExemptPath, isFrontmatterPath, pathInfo } from './paths';
+import { RESERVE_SLUG, isExemptPath, isFrontmatterPath, pathInfo } from './paths';
 import { tryParseFile } from './parse';
 
 export interface SnapshotInput {
@@ -20,7 +20,9 @@ export interface SnapshotInput {
 }
 
 const byPath = <T extends { path: string }>(a: T, b: T) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
-const byOrder = <T extends { fm: { order: number }; path: string }>(a: T, b: T) => a.fm.order - b.fm.order || byPath(a, b);
+const byOrder = <T extends { fm: { order?: number }; path: string }>(a: T, b: T) => (a.fm.order ?? 0) - (b.fm.order ?? 0) || byPath(a, b);
+/** The reserve's order: most recently created first, then by path; deterministic from frontmatter alone (schema §4.8). */
+const byNewest = <T extends { fm: { created: string }; path: string }>(a: T, b: T) => (a.fm.created < b.fm.created ? 1 : a.fm.created > b.fm.created ? -1 : 0) || byPath(a, b);
 
 export function buildSnapshot(input: SnapshotInput): BrainSnapshot {
   const files = new Map<string, BrainFile>();
@@ -61,6 +63,7 @@ export function buildSnapshot(input: SnapshotInput): BrainSnapshot {
     principlesBySet.set(slug, list);
   }
   for (const list of principlesBySet.values()) list.sort(byOrder);
+  const reserve = [...(principlesBySet.get(RESERVE_SLUG) ?? [])].sort(byNewest);
 
   return {
     head: input.head,
@@ -69,6 +72,7 @@ export function buildSnapshot(input: SnapshotInput): BrainSnapshot {
     issues,
     sets,
     principlesOf: (setSlug) => principlesBySet.get(setSlug) ?? [],
+    reserve,
     byType: <T extends FileType>(t: T) =>
       (typed.get(t) ?? []) as BrainFile<Extract<Frontmatter, { type: T }>>[],
   };

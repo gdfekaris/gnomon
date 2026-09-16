@@ -50,7 +50,7 @@ describe('connect-existing (schema §7.8, spec §12 step 4)', () => {
       ['templates/raw.md', 'layout.missing'],
       ['sources/weil-attention/notes.md', 'source.missing-raw'],
     ]);
-    expect(r.warnings.map((i) => i.rule)).toEqual(['grounds.dangling']);
+    expect(r.warnings.map((i) => i.rule)).toEqual(['grounds.dangling', 'grounds.dangling']); // Set 1's and the reserve's grounds on the removed source
     expect(r.offers.map((o) => [o.path, o.label, o.batch.message])).toEqual([
       ['AGENTS.md', 'Add AGENTS.md', 'Scaffold: AGENTS.md'],
       ['templates/raw.md', 'Add templates/raw.md', 'Scaffold: templates/raw.md'],

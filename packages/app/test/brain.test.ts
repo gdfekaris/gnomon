@@ -32,7 +32,7 @@ describe('BrainService (spec §4, §10.2)', () => {
     const s = await service.connect(driver);
     expect(service.connected).toBe(true);
     expect(state.current).toBe(s);
-    expect(s.files.size).toBe(24);
+    expect(s.files.size).toBe(25);
     expect(state.loading).toBe(false);
     state.stale = true;
     await service.refresh();

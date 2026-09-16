@@ -5,7 +5,7 @@
 import { parseDocument } from 'yaml';
 import type { BrainFile, FileType, Frontmatter } from './types';
 import { type Issue, ValidationError, refusal } from './issues';
-import { isFrontmatterPath, pathIdentifierProblems, pathInfo } from './paths';
+import { RESERVE_SLUG, isFrontmatterPath, pathIdentifierProblems, pathInfo } from './paths';
 import { DATETIME, FIELD_SPECS, REQUIRED, STATUS_VALUES } from './fields';
 
 /** A frontmatter value the format allows: scalars and lists of strings. */
@@ -98,6 +98,8 @@ export function frontmatterIssues(path: string, fm: Record<string, unknown>): Is
   for (const k of REQUIRED[t]) {
     if (!(k in fm)) r('field.required', `missing required field '${k}'`);
   }
+  // Order is precedence, so a principle in a set has one and a principle in the reserve has none (schema §4.5).
+  if (t === 'principle' && info.folder !== RESERVE_SLUG && !('order' in fm)) r('field.required', "missing required field 'order'");
   for (const [k, v] of Object.entries(fm)) {
     const m = checkValue(k, v, t);
     if (m) r('field.type', m);
@@ -112,6 +114,9 @@ export function frontmatterIssues(path: string, fm: Record<string, unknown>): Is
 
   if (t === 'principle' && fm['set'] !== info.folder) {
     r('path.set-mismatch', `'set' is '${fm['set']}' but the folder is '${info.folder}'`);
+  }
+  if (t === 'principle' && info.folder === RESERVE_SLUG && 'order' in fm) {
+    r('reserve.order', 'a principle in the reserve carries no order; order is precedence and nothing in the reserve is in force');
   }
   if (t === 'notes' && fm['source'] !== info.folder) {
     r('path.source-mismatch', `'source' is '${fm['source']}' but the folder is '${info.folder}'`);

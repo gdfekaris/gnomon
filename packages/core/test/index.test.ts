@@ -78,8 +78,13 @@ const VARIANTS: Record<string, Record<string, string | null>> = {
     'principles/ps-7k2m/_set.md': '---\ntype: principle-set\norder: 2\nname: Work\ntags:\n  - work\ncurated: human\ncreated: 2026-09-05\nupdated: 2026-09-05\n---\n',
     'maps/proposals/P-20260903-001.md': '---\ntype: proposal\nkind: tag\ntitle: Tag it\ntarget: didion-why-i-write\ntags:\n  - work\nstatus: open\ncurated: agent-proposed\ncreated: 2026-09-03\nupdated: 2026-09-03\n---\nx\n',
   },
-  'empty brain with one principle and no sources, proposals, or tags': {
+  'the reserve: a newer principle first, a tie on created broken by path, date-only created (schema §4.8, §7.14)': {
+    'principles/_reserve/zz-newer.md': '---\ntype: principle\ntitle: Newer\nset: _reserve\ngrounds:\n  - weil-attention\ntags:\n  - attention\ncurated: human\ncreated: 2026-09-06\nupdated: 2026-09-06\n---\nx\n\n- [[sources/weil-attention/raw]] ([raw](../../sources/weil-attention/raw.md))\n',
+    'principles/_reserve/aaa-tie.md': '---\ntype: principle\ntitle: Tie\nset: _reserve\ngrounds: []\ncurated: human\ncreated: 2026-09-05T18:00:00Z\nupdated: 2026-09-05T18:00:00Z\n---\nx\n',
+  },
+  'empty brain with one principle and no sources, proposals, or tags, and nothing in the reserve': {
     ...Object.fromEntries([...readBrain(FIXTURE).keys()].filter((p) => /^(sources|inbox|maps\/proposals)\//.test(p) && !p.endsWith('.gitkeep')).map((p) => [p, null])),
+    'principles/_reserve/one-thing-at-a-time.md': null,
     'principles/ps-7k2m/_set.md': null,
     'principles/ps-7k2m/say-the-hard-thing-first.md': null,
     'principles/ps-7k2m/write-to-find-out.md': null,

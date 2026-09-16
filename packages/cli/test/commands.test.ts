@@ -76,7 +76,7 @@ describe('gnomon validate', () => {
     expect(out).toContain('REFUSAL  principles/: set order values must be 1..2 with no gaps or repeats');
     expect(out.some((l) => l.startsWith("WARNING  principles/ps-g8xw/courage-before-comfort.md: related names no principle 'ps-7k2m/nope'"))).toBe(true);
     expect(out.some((l) => l.startsWith('NOTE     maps/_index.md: index is stale'))).toBe(true);
-    expect(out.at(-1)).toBe('24 files, 1 refusals, 1 warnings');
+    expect(out.at(-1)).toBe('25 files, 1 refusals, 1 warnings');
   });
   it('reports a missing scaffold item', async () => {
     const dir = copyOf(TEMPLATE);
@@ -141,7 +141,7 @@ describe('gnomon status', () => {
     expect(out).toEqual([
       'inbox:       1 unfiled, 3 filed',
       'sources:     4 (2 ratified, 1 awaiting ratification, 1 by hand)',
-      'principles:  4 in 2 sets',
+      'principles:  4 in 2 sets, 1 in reserve',
       'proposals:   2 open',
       'indexes:     up to date',
       'git:         not a checkout',
@@ -150,7 +150,7 @@ describe('gnomon status', () => {
   });
   it('the template is all clear', async () => {
     const { out } = await cli('status', TEMPLATE);
-    expect(out).toContain('principles:  0 in 1 set');
+    expect(out).toContain('principles:  0 in 1 set, 0 in reserve');
     expect(out.at(-1)).toBe('next:        all clear; capture something');
   });
   it.skipIf(!gitOk)('reports uncommitted changes in a checkout', async () => {

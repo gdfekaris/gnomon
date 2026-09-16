@@ -7,6 +7,8 @@ September 2026
 
 *Changes from 0.1, keyed to `alignment-review.md`: principles carry an `order` field (2.1); one passage per capture with an optional attached source file (2.3c); proposals are one file each under `maps/proposals/` (3.2); the filing commit marks the inbox item and `filed_commit` is gone (3.1); index frontmatter is `type: index` only (3.3); the template ships a fixed Set 1 slug (3.4); the flat-principles repair is removed and the app never moves a file (3.6); `.gnomon/` is reserved (3.10.6); `captured` is dropped (3.10.8); the desktop CLI is `gnomon-cli` and brains carry no `package.json` (2.6, 3.8); renamed to Gnomon throughout (§4).*
 
+*2026-09-16: the reserve for principles (§2, §3.3, §4.5, §4.8, §7.14, §8, §9, §10), by the maintainer's decision to reopen `alignment-review.md` 2.2: a principle is in a set, in the reserve, or deleted.*
+
 ---
 
 ## 1. Scope and principles
@@ -36,6 +38,8 @@ Three design rules govern every decision below:
 │       └── original.<ext>        # optional: the attached source file — IMMUTABLE
 ├── principles/
 │   ├── _index.md                 # GENERATED: sets and principles; desktop agents start here
+│   ├── _reserve/                 # principles held but not in force in any set; may be absent (§7.14)
+│   │   └── <principle-slug>.md
 │   └── <set-slug>/
 │       ├── _set.md               # principle set descriptor
 │       └── <principle-slug>.md   # one principle
@@ -82,7 +86,7 @@ Agents never create sets and therefore never generate set slugs. A user creating
 
 ### 3.3 Principle slugs
 
-`<principle-slug>` follows the same character rules as source slugs and is derived from the principle's title. Uniqueness is **per set**; two sets may each contain `courage-before-comfort.md`. The fully qualified reference is always `<set-slug>/<principle-slug>`.
+`<principle-slug>` follows the same character rules as source slugs and is derived from the principle's title. Uniqueness is **per set**; two sets may each contain `courage-before-comfort.md`. The reserve (§7.14) is one more such namespace. The fully qualified reference is always `<set-slug>/<principle-slug>`, or `_reserve/<principle-slug>` for a principle in the reserve.
 
 ### 3.4 Inbox stems and attachment filenames
 
@@ -154,17 +158,17 @@ All `.md` files except `AGENTS.md`, `README.md`, `templates/*`, and anything und
 | Field | Required | Notes |
 |---|---|---|
 | `title` | yes | The principle in one line. |
-| `set` | yes | The parent set slug (redundant with the path; used for validation and for detecting misplaced files). |
-| `order` | yes | Positive integer; precedence within the set. Contiguous 1..N across the set's principles. Lower governs on conflict (§8). |
+| `set` | yes | The parent set slug (redundant with the path; used for validation and for detecting misplaced files), or `_reserve` for a principle in the reserve (§7.14). |
+| `order` | yes in a set; absent in the reserve | Positive integer; precedence within the set. Contiguous 1..N across the set's principles. Lower governs on conflict (§8). Order is precedence and nothing in the reserve is in force, so a reserve principle carries none. |
 | `grounds` | yes, may be empty | List of source slugs whose captures ground this principle. |
 | `related` | no | List of fully qualified principle refs (`<set-slug>/<principle-slug>`), in any set. |
 | `curated` | yes | Always `human`. |
 
-**Body:** the principle in the curator's own words, followed by grounding passages as dual links. A principle belongs to exactly one set. Cross-set reuse is expressed with `related`, never by sharing a file.
+**Body:** the principle in the curator's own words, followed by grounding passages as dual links. A principle belongs to exactly one set, or to the reserve, never to two sets. Cross-set reuse is expressed with `related`, never by sharing a file.
 
 **Order is precedence.** When two principles in the same set cannot both be honored, the one with the lower `order` governs, and a model reasoning from the set must say that it invoked precedence rather than silently picking a side. The app maintains contiguity the way it does for sets (§7.9); desktop users edit the integers by hand and `gnomon-cli validate` reports gaps. Agents never change `order`.
 
-There is no status field. A principle in a set is in force. A principle the curator no longer holds is deleted (git history keeps it); a principle not yet held stays in `maps/proposals/` until the curator writes it.
+There is no status field. A principle in a set is in force. A principle the curator holds but is not applying anywhere lives in the reserve (§7.14), where it has no order and is never sent to a model. A principle the curator no longer holds is deleted (git history keeps it); a principle not yet held stays in `maps/proposals/` until the curator writes it.
 
 ### 4.6 `inbox/<stem>.md` — `type: inbox`
 
@@ -213,7 +217,7 @@ type: index
 
 No timestamp, no generator version, no curation state: regeneration must be a pure function of the other files so that two devices regenerating from the same commit produce byte-identical output, and so that a regeneration that changes nothing produces no diff. The first body line is `<!-- GENERATED by Gnomon. Do not edit. Regenerated on every write. -->`.
 
-`principles/_index.md` contains: principle sets by `order`, each with its label and its principles by `order`, one line per principle (title as a dual link, count of `grounds`). It is the one-file entry point for desktop agents (Task A on desktop reads it to find the set folders); it is never part of a prompt (§8 assembles from the files directly).
+`principles/_index.md` contains: principle sets by `order`, each with its label and its principles by `order`, one line per principle (title as a dual link, count of `grounds`); then, only when the reserve is not empty, an "In reserve" section listing its principles most recently created first (by `created`, then path). It is the one-file entry point for desktop agents (Task A on desktop reads it to find the set folders); it is never part of a prompt (§8 assembles from the files directly).
 
 `maps/_index.md` contains, in order: the same sets section; sources grouped by `author` then `work` then `title`, one line per source (title as a dual link, an attachment marker when `original.<ext>` exists, curation state when not `ratified` or `human`); open proposals (id, kind, title, target set); a tag cloud as a list of tag → linked files.
 
@@ -345,11 +349,23 @@ The curator picks one or more filed sources and a target set; a model (in the ap
 
 Encoded in `AGENTS.md`: `git pull` at session start; one commit per action as above; before the final push, run `npx gnomon-cli validate` and fix or report refusals, then `npx gnomon-cli index`; `git push` at session end. Agents never leave the session with unpushed commits they made.
 
+### 7.14 The reserve: keep a principle without applying it
+
+`principles/_reserve/` holds principles the curator has written and holds but is not applying in any set. It is a folder, not a set: it has no `_set.md`, no `order`, no label, and it exists only while something is in it. A reserve principle is an ordinary `type: principle` file with `set: _reserve` and no `order`; its `grounds`, `related`, `tags`, and body are as they would be in a set. The reserve is never assembled into a prompt (§8) and never read by an agent for reasoning; agents never write to it (§10). Both indexes list it (§4.8).
+
+- **Reserve** (take a principle out of a set without deleting it): two commits, since files never move (§1). First, copy the file into `principles/_reserve/<principle-slug>.md` with the same title, grounds, related refs, tags, and body, `set: _reserve`, no `order`, fresh timestamps, and the slug de-collided with `-2`, `-3`, … within the reserve; regenerate indexes; message `Reserve principle: <title>`. Second, the §7.9 delete of the original, which closes the gap in the set's `order` and reports what now dangles (a `related` ref or proposal `target` still naming the old path).
+- **Place** (put a reserve principle into a set): the mirror image. First, copy into `principles/<set-slug>/<principle-slug>.md` at `order` = the set's current count + 1, `set: <set-slug>`, slug de-collided within that set; regenerate indexes; message `Place principle: <title> in <set label>`. Second, the §7.9 delete of the reserve copy, which has no order to close.
+- **Write into the reserve directly:** the §7.9 create with `_reserve` as the set and no `order`; message `Add principle: <title>`.
+
+The app performs each pair as one action and shows the dangling report afterwards, as delete does. Newest first in the app and the index means most recently reserved, since the copy is a new file; the earlier history of the principle is in git.
+
 ## 8. Prompt assembly context rules
 
 These rules govern which files are included when the app or an agent assembles context for a reasoning task. They are restated in `AGENTS.md`; this is the normative version.
 
 **Budget.** A per-task token budget, default 60% of the selected model's context window, user-adjustable in settings.
+
+**The reserve is never assembled.** Only the selected sets, their principles, and those principles' grounds go to the model (§7.14).
 
 **Fill order for Task A (reason from a principle set) and Task B (relate a new text):**
 
@@ -373,7 +389,7 @@ The app validates on every read and refuses to write a file that fails a refusal
 - Every `.md` file outside the §4 exemptions parses as YAML frontmatter plus body and contains every required field for its `type`; `type: index` files contain `type` only.
 - `curated` is one of the three values, is `human` for `principle`, `principle-set`, `inbox`, and is never `ratified` for `proposal`.
 - `set` in a principle equals its folder's slug; `source` in a notes file equals its folder's slug.
-- Set `order` values form the contiguous sequence 1..N; within each set, principle `order` values form the contiguous sequence 1..N.
+- Set `order` values form the contiguous sequence 1..N; within each set, principle `order` values form the contiguous sequence 1..N. A principle in a set carries `order`; a principle in `principles/_reserve/` carries none (§7.14).
 - Slugs, stems, and proposal ids match their character rules (§3).
 - `raw.md` body of a `human` or `ratified` source is byte-identical to its previous committed version on any write that touches the file; `original.<ext>` is byte-identical to its previous committed version always.
 - A file in a source folder other than `raw.md`, `notes.md`, and the declared `original.<ext>` is a refusal; a declared `attachment` that does not exist is a refusal; an inbox attachment whose stem does not match a capture is a refusal.
@@ -390,6 +406,7 @@ The app validates on every read and refuses to write a file that fails a refusal
 
 - Filenames beginning with `_` are reserved for descriptors and generated files.
 - `.gnomon/` is reserved for app metadata; nothing else writes there, and it is never part of a prompt.
+- `principles/_reserve/` is the reserve (§7.14): principle files only, never a `_set.md`, never part of a prompt, never written by an agent.
 - `original` is a reserved basename inside source folders.
 - No file outside `maps/proposals/` may carry `type: proposal`.
 - Agents must never: create, rename, reorder, or delete a set; create, reorder, or delete a principle, or change any `order`; write any `human`-curated file beyond the §4.6 clerical exception; edit either `_index.md`; modify a `raw.md` body or any attachment; delete an inbox capture or attachment; change a proposal's `status` except when recording a decision the curator made in that session; create a branch; leave the session with unpushed commits. The app treats any commit that does one of these as requiring mandatory curator review before its files count as part of the brain.

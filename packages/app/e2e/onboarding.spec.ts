@@ -113,7 +113,7 @@ test('connecting an existing brain shows its validation results and adds what is
   await page.getByTestId('onboard-finish').click();
   await expect(page.getByRole('heading', { name: 'Capture' })).toBeVisible();
   await page.goto('/#/browse');
-  await expect(page.getByText('24 files')).toBeVisible();
+  await expect(page.getByText('25 files')).toBeVisible();
 });
 
 test('a device that lost its token re-onboards to the token step only (spec §10.3)', async ({ page }) => {
