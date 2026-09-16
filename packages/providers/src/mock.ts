@@ -21,19 +21,47 @@ export const MOCK_MODEL: ModelInfo = { id: 'mock-reasoner', label: 'Demo model (
 
 const refsIn = (text: string, prefix: string) => [...text.matchAll(/<!-- ref: ([^\s>]+) -->/g)].map((m) => m[1]!).filter((r) => r.startsWith(prefix));
 
-/** Task C (spec §8.5) for the demo: a well-formed filing reply built from the capture and the first set it was shown. */
+/**
+ * Task C (spec §8.5, schema §7.6) for the demo: a well-formed filing reply
+ * built from the capture. Zero to four principles for the reserve by the
+ * passage's length, one per seven words: a sentence yields none, the
+ * fixture's capture three, so the flows see both ends.
+ */
 export function demoFilingScript(req: CompletionRequest): string {
   const context = req.messages.filter((m) => m.role === 'user').map((m) => m.content).join('\n\n');
   const capture = (context.split(/^## The capture\n/m)[1] ?? '').replace(/^Curator's note: .*\n+/m, '').replace(/^An attachment .*\n+/m, '').trim();
   const firstLine = capture.split('\n').find((l) => l.trim()) ?? 'Untitled capture';
   const title = firstLine.replace(/^#+\s*/, '').split(/\s+/).slice(0, 6).join(' ').replace(/[.,;:!?]+$/, '');
-  const set = /set slug: (ps-[^\s]+)/.exec(context)?.[1];
-  const ref = /- ref `(ps-[^`]+)`/.exec(context)?.[1];
-  const proposals: unknown[] = [{ kind: 'tag', title: 'Tag as a demo filing', rationale: 'Filed by the demo model; retag by hand.' }];
-  if (set) proposals.push({ kind: 'principle', title: `What "${title}" asks of me`, target_set: set, rationale: 'The demo model suggests a principle wherever a capture makes a claim. Decide whether you hold it.' });
-  // A ground for the first principle it was shown (schema §4.7: a link proposal proposes a ground).
-  if (ref) proposals.push({ kind: 'link', title: `Ground ${ref.split('/')[1]} in this passage`, target_set: ref.split('/')[0], target: ref, rationale: 'The demo model offers the capture as evidence for the first principle it was shown. Accepting adds it to the grounds.' });
+  const words = capture.split(/\s+/).filter(Boolean).length;
+  const n = Math.min(4, Math.floor(words / 7));
+  const PREFIXES = ['Act on it', 'Remember', 'Keep to it'];
+  const proposals: unknown[] = [];
+  for (let i = 0; i < n; i++) {
+    const t = i === 0 ? `What "${title}" asks of me` : `${PREFIXES[(i - 1) % PREFIXES.length]!}: ${title}`;
+    proposals.push({ title: t, rationale: `The demo model suggests a principle wherever a capture makes a claim (${i + 1} of ${n} for this one). It goes to the reserve; decide whether you hold it.` });
+  }
   return JSON.stringify({ meta: { title: title || 'Untitled capture', author: 'unknown', tags: ['demo'] }, proposals });
+}
+
+/**
+ * Task F (schema §7.15) for the demo: a link from every passage to the
+ * first principle it was shown, an amendment to the second when there is
+ * one, and a principle for the set from the first passage's first sentence.
+ */
+export function demoRelateSetScript(req: CompletionRequest): string {
+  const context = req.messages.filter((m) => m.role === 'user').map((m) => m.content).join('\n\n');
+  const refs = [...context.matchAll(/^- ref `([^`]+)`/gm)].map((m) => m[1]!);
+  const passages = [...context.matchAll(/^### Passage: (.+?) — [^\n]*\nslug: `([^`]+)`\n\n([\s\S]*?)(?=\n### Passage:|$)/gm)].map((m) => ({ title: m[1]!, slug: m[2]!, body: m[3]! }));
+  const proposals: unknown[] = [];
+  const slugs = passages.map((p) => p.slug);
+  if (refs[0] && slugs.length) proposals.push({ kind: 'link', title: `Ground ${refs[0].split('/')[1]} in ${passages.length === 1 ? 'this passage' : 'these passages'}`, target: refs[0], grounds: slugs, rationale: 'The demo model offers the passages as evidence for the first principle it was shown. Accepting adds them to the grounds.' });
+  if (refs[1] && slugs.length) proposals.push({ kind: 'amendment', title: `Reword ${refs[1].split('/')[1]} in the light of ${passages[0]!.title}`, target: refs[1], grounds: [slugs[0]!], rationale: 'The demo model suggests the passage complicates the second principle it was shown. Reword it if you agree.' });
+  const first = passages[0];
+  if (first) {
+    const sentence = (first.body.replace(/\s+/g, ' ').trim().split(/(?<=[.!?])\s+/)[0] ?? first.title).replace(/[.!?,;:]+$/, '').slice(0, 60);
+    proposals.push({ kind: 'principle', title: `Hold to this: ${sentence}`, grounds: [first.slug], rationale: `The demo model took the first sentence of "${first.title}" as a principle the set lacks. Decide whether you hold it.` });
+  }
+  return JSON.stringify({ proposals });
 }
 
 /** The relate task's four sections (prompts §relate), with the Proposal given as the labeled lines the app saves from. */
@@ -83,10 +111,11 @@ export function demoDeriveScript(req: CompletionRequest): string {
   return JSON.stringify({ principles });
 }
 
-/** The default script: a filing reply for the Task C prompt, a derive reply for Task E, otherwise a cited answer that names precedence. */
+/** The default script: a filing reply for Task C, a derive reply for Task E, a relate-to-set reply for Task F, otherwise a cited answer that names precedence. */
 export function demoScript(req: CompletionRequest): string {
   if (req.system.startsWith('You are filing a capture')) return demoFilingScript(req);
   if (req.system.startsWith('You are deriving principles')) return demoDeriveScript(req);
+  if (req.system.startsWith('You are relating passages')) return demoRelateSetScript(req);
   const context = req.messages.filter((m) => m.role === 'user').map((m) => m.content).join('\n\n');
   const principles = refsIn(context, 'principles/');
   const passages = refsIn(context, 'sources/');

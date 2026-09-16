@@ -138,7 +138,7 @@ export function validateSnapshot(s: BrainSnapshot): Issue[] {
   }
   for (const f of s.byType('proposal')) {
     const fm = f.fm as ProposalFm;
-    if (fm.target_set !== undefined && !setSlugs.has(fm.target_set)) {
+    if (fm.target_set !== undefined && fm.target_set !== RESERVE_SLUG && !setSlugs.has(fm.target_set)) {
       w(f.path, 'target-set.dangling', `target_set names no set '${fm.target_set}'`);
     }
     if (fm.target !== undefined) {

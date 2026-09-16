@@ -42,7 +42,7 @@ describe('inbox service (US-2, US-3)', () => {
     const results = await processInbox(inbox, brain, driver, new MockProvider(), MOCK_MODEL, 19_200);
     expect(results.map((r) => [r.path, r.slug, r.proposals, r.error])).toEqual([
       ['inbox/20260906-070000-2bq.md', 'unknown-the-only-way-to', 3, undefined],
-      [cap.path, 'unknown-a-photographed-page', 3, undefined],
+      [cap.path, 'unknown-a-photographed-page', 0, undefined], // three words: nothing to propose
     ]);
     expect(unfiledCaptures(brain.snapshot!).length).toBe(0);
     expect(validateSnapshot(brain.snapshot!)).toEqual([]);
@@ -55,7 +55,7 @@ describe('inbox service (US-2, US-3)', () => {
     expect(inbox.filings.map((f) => [f.slug, f.state])).toEqual([['unknown-a-photographed-page', 'pending'], ['unknown-the-only-way-to', 'pending']]);
     const review = reviewOf(brain, inbox.filings[0]!.changes);
     // proposal ids carry today's UTC date (the service uses the real clock); the fixture already holds 001 and 002 for the 5th only
-    expect(review.added.map((f) => f.path.replace(/P-\d{8}-/, 'P-<today>-'))).toEqual(['maps/proposals/P-<today>-004.md', 'maps/proposals/P-<today>-005.md', 'maps/proposals/P-<today>-006.md', 'sources/unknown-a-photographed-page/notes.md', 'sources/unknown-a-photographed-page/raw.md']);
+    expect(review.added.map((f) => f.path)).toEqual(['sources/unknown-a-photographed-page/notes.md', 'sources/unknown-a-photographed-page/raw.md']);
     expect(review.attachments).toEqual([{ path: 'sources/unknown-a-photographed-page/original.png', size: 7 }]);
     expect(review.capture!.addedLines).toEqual(['status: filed', 'filed_as: unknown-a-photographed-page']);
   });
@@ -89,7 +89,7 @@ describe('inbox service (US-2, US-3)', () => {
     expect(results).toEqual([{ path: 'inbox/20260906-070000-2bq.md', error: "The model's reply could not be used: reply contains no JSON object. Try again, or pick another model." }]);
     expect(await driver.head()).toBe(head);
     const hallucinated = new MockProvider({ script: () => JSON.stringify({ meta: { title: 'T', author: 'A' }, proposals: [{ kind: 'link', title: 't', target_set: 'ps-g8xw', target: 'ps-g8xw/invented', rationale: 'r' }] }) });
-    expect((await processInbox(inbox, brain, driver, hallucinated, MOCK_MODEL, 19_200))[0]!.error).toContain('not a principle in this brain');
+    expect((await processInbox(inbox, brain, driver, hallucinated, MOCK_MODEL, 19_200))[0]!.error).toContain('only principles for the reserve');
     expect(await driver.head()).toBe(head);
   });
 

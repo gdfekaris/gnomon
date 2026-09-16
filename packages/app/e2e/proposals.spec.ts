@@ -31,19 +31,20 @@ test('decide three proposals and write a principle from an accepted one', async 
   await expect(decided.getByTestId('status')).toHaveText('accepted');
   await expect(decided.getByTestId('written-as')).toHaveText('Rise to the work');
 
-  // decline the amendment, and decide a tag proposal from a fresh demo filing
+  // decline the amendment; then a fresh demo filing raises reserve principles only, its tags on the source
+  // itself (schema §7.6, 2026-09-16): the Sources group keeps only the fixture's decided tag proposal.
   await work.getByTestId('proposal-P-20260905-003').getByTestId('decline').click();
   await expect(work.getByRole('heading', { level: 3 })).toContainText('0 open');
   await page.goto('/#/inbox');
   await page.getByTestId('process').click();
-  await expect(page.getByTestId('process-results')).toContainText('filed as');
+  await expect(page.getByTestId('process-results')).toContainText('filed as unknown-the-only-way-to with 3 proposals');
   await page.goto('/#/proposals');
-  const sources = page.getByTestId('group-sources');
-  await expect(sources.getByRole('heading', { level: 3 })).toContainText('1 open');
-  await sources.getByTestId('accept').click();
-  await expect(page).toHaveURL(/#\/edit\/sources\/unknown-the-only-way-to\/raw\.md\?from=/);
-  await expect(page.getByTestId('from-proposal')).toContainText('(tag)');
-  await expect(page.getByTestId('passage-readonly')).toBeVisible();
+  await expect(page.getByTestId('group-_reserve').getByRole('heading', { level: 3 })).toContainText('Reserve · 3 open');
+  await expect(page.getByTestId('group-_reserve').locator('article.proposal .kind')).toHaveText(['principle', 'principle', 'principle']);
+  await expect(page.getByTestId('group-sources').getByRole('heading', { level: 3 })).toContainText('0 open');
+  await expect(page.getByTestId('group-sources').getByTestId('accept')).toHaveCount(0);
+  await page.goto('/#/browse/sources/unknown-the-only-way-to/raw.md');
+  await expect(page.getByTestId('frontmatter')).toContainText('demo');
   await page.goto('/#/settings');
   await expect(page.getByTestId('refusal-count')).toHaveText('0 refusals');
 });
@@ -98,7 +99,9 @@ test('an accepted principle proposal that was never written offers "Write it" fr
 
 // A link proposal proposes a ground, and accepting it adds the ground: the decision, then the principle edit,
 // then the principle's page saying so. The decided list points at the principle.
-test('accepting a link proposal adds the ground to the principle and shows it', async ({ page }) => {
+// Filing no longer raises link proposals (schema §7.6, 2026-09-16); this flow moves to the Relate task in the
+// next block, where the demo model proposes the same ground.
+test.fixme('accepting a link proposal adds the ground to the principle and shows it', async ({ page }) => {
   await page.goto('/#/inbox');
   await page.getByTestId('process').click();
   await expect(page.getByTestId('process-results')).toContainText('filed as unknown-the-only-way-to with 3 proposals');
@@ -130,17 +133,22 @@ test('accepting a principle proposal pre-fills its source as a ground, and an un
   await page.getByTestId('process').click();
   await expect(page.getByTestId('process-results')).toContainText('filed as unknown-the-only-way-to with 3 proposals');
   await page.goto('/#/proposals');
-  const set1 = page.getByTestId('group-ps-g8xw');
-  const principle = set1.locator('article.proposal').filter({ hasText: 'asks of me' });
+  // A filing's principle proposals target the reserve (schema §7.6): they group under Reserve, not a set.
+  const reserveGroup = page.getByTestId('group-_reserve');
+  await expect(reserveGroup.getByRole('heading', { level: 3 })).toContainText('Reserve');
+  await expect(reserveGroup.getByRole('heading', { level: 3 })).toContainText('3 open');
+  const principle = reserveGroup.locator('article.proposal').filter({ hasText: 'asks of me' });
   await expect(principle).toContainText('Grounds: unknown-the-only-way-to');
   await principle.getByTestId('accept').click();
-  await expect(page).toHaveURL(/#\/sets\/ps-g8xw\/new-principle\?from=/);
+  await expect(page).toHaveURL(/#\/sets\/_reserve\/new-principle\?from=/);
+  await expect(page.getByRole('heading', { name: 'New principle in reserve' })).toBeVisible();
   await expect(page.getByTestId('ground-unknown-the-only-way-to')).toBeVisible();
   await expect(page.getByTestId('edit-body')).not.toHaveValue(/Drafted|Rewrite/);
   await expect(page.getByTestId('edit-body')).toHaveValue(/\*\*Grounding passages:\*\*\n\n- \[\[sources\/unknown-the-only-way-to\/raw\]\]/);
   await expect(page.getByTestId('from-proposal')).toContainText('Save it as it is, or put it in your own words.');
   await page.getByTestId('edit-save').click();
-  await expect(page).toHaveURL(/#\/browse\/principles\/ps-g8xw\/what-the-only-way-to-make-sense-asks-of-me\.md$/);
+  await expect(page).toHaveURL(/#\/browse\/principles\/_reserve\/what-the-only-way-to-make-sense-asks-of-me\.md$/);
+  await expect(page.getByTestId('fm-set')).toContainText('in reserve');
   await expect(page.getByTestId('frontmatter')).toContainText('unknown-the-only-way-to');
   await expect(page.getByTestId('fm-curated')).toHaveText('yours');
   await expect(page.locator('main')).not.toContainText('Drafted from a proposal');

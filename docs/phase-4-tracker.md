@@ -470,6 +470,76 @@ screen gains one search over every principle, sets and reserve alike.
   gains the step, and the maintainer has reserved and placed a principle
   in their own brain.
 
+## Feature block: leaner filing, and Relate sources to a set (2026-09-16)
+
+Asked for by the maintainer: as the brain grows, the proposals a filing
+raises balloon. Filing becomes clerical again and local to the passage:
+tags go into the source's metadata (they already did; the separate tag
+proposal was a duplicate) chosen from the brain's tag vocabulary, and
+the only proposals a filing writes are principles for the reserve, zero
+to four by what the passage alone supports. Links, amendments, and
+principles for a set are no longer guessed at filing time; they come
+from a deliberate act, Task F, "Relate sources to a set": pick sources
+and a set, and the model proposes links (this source as evidence for
+that principle), amendments, and principles for that set, as proposal
+files in one commit. The filing prompt no longer carries the sets, so
+its cost stops growing with the brain. Two sub-blocks, format first.
+
+### P1. The format: filing's contract, Task F in core, the demo model (M)
+
+- Schema §4.7: `target_set` may be `_reserve` for a `principle` proposal;
+  §7.6 step 5 rewritten (tags in `raw.md` frontmatter from the vocabulary;
+  proposals: `kind: principle`, `target_set: _reserve`, `from_source`,
+  `grounds: [slug]`, at most four, often none; no link, amendment, or
+  tag proposal at filing); new §7.15 "Relate sources to a set" with the
+  message `Relate: <n> proposals for <set label>` (link with `target`
+  and `grounds` = the chosen sources, amendment with `target`, principle
+  with `target_set` = the set and `grounds`; no `from_source`; at most
+  ten; nothing looser than a ground). Spec §8.5 and a new §8.7. Proposal
+  US-2 and §6. CLAUDE.md's vocabulary. AGENTS.md Task C step 6 and a new
+  Task F, `.claude/commands/propose.md`, `file-inbox.md`'s list; fixture
+  copies.
+- Core: `FILING_PROMPT` and `buildFilingPrompt` (the tag vocabulary with
+  counts, the note, the capture; no sets, no source list); `parseFilingReply`
+  accepts only `principle` entries, sets `target_set: _reserve`, refuses a
+  fifth (`FILING_MAX = 4`); `validateSnapshot` accepts `_reserve` as a
+  `target_set`; `assembly/relate.ts` (`RELATE_PROMPT`, `buildRelatePrompt`
+  with the set's principles trimmed from the end and the passages in
+  full, `parseRelateReply` refusing a target outside the set, a ground
+  outside the chosen sources, a link whose sources already ground the
+  target, a principle the set holds, more than `RELATE_MAX = 10`);
+  `proposals.buildRelate`. The demo model files with zero to four
+  reserve principles by the passage's length (the fixture's capture
+  yields three) and answers Task F with a link, an amendment when the
+  set has two principles, and a principle.
+- Done when the fixture's unfiled capture files through the demo model
+  with three reserve proposals and no others, the prompt carries no set,
+  every parser refusal has a test, a relate batch validates clean over
+  the fixture, both AGENTS.md copies match, and CI is green.
+
+### P2. The app: the Reserve group, Relate on Reason, the source shortcut (M)
+
+- Proposals: a `principle` proposal with `target_set: _reserve` groups
+  under **Reserve**; "Write it as proposed" writes into the reserve;
+  "Accept and edit" opens `#/sets/_reserve/new-principle?from=<id>`.
+- Reason gains the task **Relate to a set** (`relate-set`): the source
+  picker and target set select as Derive has them (no "New set…": the
+  point is an existing stance), the budget bar, one completion, parse,
+  `buildRelate`, commit, then Proposals with the set's group open and a
+  notice (`data-testid="related"`): "4 proposals for Set 2 — Work from
+  Retire into thyself. Decide each below." A source page gets **Relate
+  this passage to a set** (`data-testid="relate-from"`) beside Derive.
+- Flows on both engines: file the fixture's capture and see three
+  reserve proposals and no link; write one as proposed into the reserve;
+  relate that source to Set 1 and see a link proposal, accept it, and see
+  the ground added; the shortcut lands on Reason with the source picked;
+  a reply naming a principle outside the set is refused beside the
+  button. The link-proposal flows that leaned on the demo filing move to
+  the Relate task.
+- Done when the flows are green, proposal §6 and spec §8 say it, the
+  smoke checklist gains the step, and the maintainer has filed and
+  related a source in their own brain.
+
 ## Carried from Phase 3
 
 Open at the close of Phase 3 (2026-09-11); none blocks a Phase 4 block.

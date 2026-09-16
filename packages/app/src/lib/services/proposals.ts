@@ -5,7 +5,7 @@
 // the exception in kind: it proposes a ground, and accepting it adds the
 // ground (2026-09-12), the Decide commit then an Edit principle commit.
 
-import { type BrainFile, type BrainSnapshot, type Citation, type PrincipleFm, type ProposalFm, backlinks, buildProposal, decideProposal, nextProposalId, nowUtc, renderDualLink, setLabel, updatePrinciple, withIndexWrites } from '@gnomon/core';
+import { type BrainFile, type BrainSnapshot, type Citation, type PrincipleFm, type ProposalFm, RESERVE_SLUG, backlinks, buildProposal, decideProposal, nextProposalId, nowUtc, renderDualLink, setLabel, updatePrinciple, withIndexWrites } from '@gnomon/core';
 import type { BrainService } from './brain';
 import { appendGroundingLink, createPrincipleIn } from './edit';
 
@@ -13,10 +13,11 @@ export interface ProposalGroup { key: string; label: string; open: BrainFile<Pro
 
 export const proposalId = (path: string) => path.slice('maps/proposals/'.length, -3);
 
-/** Proposals grouped by target set in set order; untargeted ones (tags on sources) last. */
+/** Proposals grouped by target set in set order, then the reserve (a filing's principles, schema §7.6), then untargeted ones (tags on sources). */
 export function groupProposals(s: BrainSnapshot): ProposalGroup[] {
   const groups = new Map<string, ProposalGroup>();
   for (const set of s.sets) groups.set(set.path.split('/')[1]!, { key: set.path.split('/')[1]!, label: setLabel(set.fm), open: [], decided: [] });
+  groups.set(RESERVE_SLUG, { key: RESERVE_SLUG, label: 'Reserve', open: [], decided: [] });
   const other: ProposalGroup = { key: 'sources', label: 'Sources', open: [], decided: [] };
   for (const p of s.byType('proposal').sort((a, b) => (a.path < b.path ? 1 : -1))) {
     const g = (p.fm.target_set && groups.get(p.fm.target_set)) || other;
@@ -80,7 +81,7 @@ export async function writeAsProposed(brain: BrainService, p: BrainFile<Proposal
   if (!s) throw new Error('no brain is connected');
   if (p.fm.kind !== 'principle' || !p.fm.target_set) throw new Error('only a principle proposal can be written as proposed');
   const setSlug = p.fm.target_set;
-  if (!s.sets.some((set) => set.path === `principles/${setSlug}/_set.md`)) throw new Error(`the set ${setSlug} is no longer in the brain; decline the proposal instead`);
+  if (setSlug !== RESERVE_SLUG && !s.sets.some((set) => set.path === `principles/${setSlug}/_set.md`)) throw new Error(`the set ${setSlug} is no longer in the brain; decline the proposal instead`);
   const id = proposalId(p.path);
   const pre = prefillFrom(s, id, setSlug);
   if (!pre) throw new Error(`no proposal '${id}'`);

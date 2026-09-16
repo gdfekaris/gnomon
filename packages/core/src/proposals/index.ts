@@ -75,6 +75,29 @@ export function buildDerive(s: BrainSnapshot, targetSet: string, entries: Derive
   return withIndexWrites(s, { message: `Derive: ${n} proposal${n === 1 ? '' : 's'} for ${setLabel(set.fm)}`, expectedHead: s.head, writes, deletes: [] });
 }
 
+export interface RelateParams { kind: 'link' | 'amendment' | 'principle'; title: string; rationale: string; target?: string; grounds: string[] }
+
+/**
+ * Schema §7.15 (Task F): one proposal file per entry for the set, a link or
+ * amendment with its `target`, a principle with `target_set`; every entry
+ * carries `target_set` and `grounds` (the chosen sources) and no
+ * `from_source`; ids sequential within the day, indexes riding along.
+ * Message `Relate: {n} proposals for {set label}`.
+ */
+export function buildRelate(s: BrainSnapshot, setSlug: string, entries: RelateParams[], opts: { now: string }): CommitBatch {
+  const set = s.sets.find((f) => f.path === `principles/${setSlug}/_set.md`);
+  if (!set) throw new Error(`no set '${setSlug}'`);
+  if (entries.length === 0) throw new Error('nothing to propose');
+  const drawn: string[] = [];
+  const writes: FileWrite[] = entries.map((e) => {
+    const id = nextProposalId(s, opts.now, drawn);
+    drawn.push(id);
+    return buildProposal({ id, kind: e.kind, title: e.title, target_set: setSlug, ...(e.target !== undefined ? { target: e.target } : {}), grounds: [...new Set(e.grounds)], rationale: e.rationale, curated: 'agent-proposed', now: opts.now });
+  });
+  const n = entries.length;
+  return withIndexWrites(s, { message: `Relate: ${n} proposal${n === 1 ? '' : 's'} for ${setLabel(set.fm)}`, expectedHead: s.head, writes, deletes: [] });
+}
+
 export function proposalAt(s: BrainSnapshot, id: string): BrainFile<ProposalFm> {
   const f = s.files.get(`maps/proposals/${id}.md`);
   if (!f || f.fm.type !== 'proposal') throw new Error(`no proposal '${id}'`);

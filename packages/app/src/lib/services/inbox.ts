@@ -83,7 +83,7 @@ export async function processInbox(state: InboxState, brain: BrainService, drive
         const prompt = buildFilingPrompt(s, current, budgetTokens);
         if (!prompt.ok) throw new Error(`the capture needs about ${prompt.neededTokens.toLocaleString()} tokens and the budget is ${prompt.budgetTokens.toLocaleString()}`);
         const reply = await completeText(provider, model, prompt.system, prompt.context, signal);
-        const { meta, proposals } = parseFilingReply(reply, s);
+        const { meta, proposals } = parseFilingReply(reply);
         const attachmentBytes = current.fm.attachment ? (await driver.readBytes(`inbox/${current.fm.attachment}`)).bytes : undefined;
         const batch = buildFiling(s, current, meta, proposals, { now: nowUtc(), ...(attachmentBytes ? { attachmentBytes } : {}) });
         await brain.commit(batch);

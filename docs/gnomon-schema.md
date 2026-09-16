@@ -190,7 +190,7 @@ There is no status field. A principle in a set is in force. A principle the cura
 |---|---|---|
 | `kind` | yes | `principle`, `link`, `tag`, `amendment`. |
 | `title` | yes | One line: the suggested principle, link, tags, or change. |
-| `target_set` | yes for `principle`, `amendment`, `link` | Set slug the suggestion belongs to. |
+| `target_set` | yes for `principle`, `amendment`, `link` | Set slug the suggestion belongs to; for a `principle` proposal, `_reserve` means the reserve (§7.14), which is where a filing's proposals go (§7.6). |
 | `target` | yes for `amendment`, `link`, `tag` | The affected principle (`<set-slug>/<principle-slug>`) or source slug. |
 | `from_source` | no | The source slug whose filing prompted this proposal. Absent on a derived proposal (§7.12), whose `grounds` name the sources. |
 | `grounds` | no | Source slugs the suggestion rests on. For `link`, the sources to add to the target principle's `grounds`. For `principle`, the sources the proposed principle rests on; a filing includes its capture, and accepting pre-fills them as the new principle's `grounds`. |
@@ -311,7 +311,7 @@ For each `status: unfiled` inbox capture, whether performed by a desktop agent o
 2. Write `sources/<slug>/raw.md` with that frontmatter, `inbox_ref: <stem>`, `curated: agent-proposed`, and a body that is a byte-identical copy of the inbox body. In the app this copy is made by the app, not by the model.
 3. If the capture has an attachment, copy it byte for byte to `sources/<slug>/original.<ext>` and set `attachment: original.<ext>`.
 4. Write `sources/<slug>/notes.md` from the template, `curated: agent-proposed`.
-5. For each suggestion (a principle this grounds, complicates, or contradicts; a link; tags), write one `maps/proposals/P-<date>-<nnn>.md` (§4.7) with `from_source: <slug>`.
+5. Tags go into `raw.md`'s frontmatter, chosen from the brain's tags in use where one fits. For each principle the passage alone supports, at most four and often none, write one `maps/proposals/P-<date>-<nnn>.md` (§4.7): `kind: principle`, `target_set: _reserve`, `from_source: <slug>`, `grounds: [<slug>]`, the rationale as the body. A filing writes no other kind of proposal: links, amendments, and principles for a set are §7.15, a deliberate act, since judging a passage against every set at filing time is what grows with the brain and guesses most.
 6. Set the inbox capture to `status: filed` and `filed_as: <slug>` (the §4.6 clerical exception).
 7. One commit per capture, message `File: <slug>`.
 
@@ -358,6 +358,10 @@ Encoded in `AGENTS.md`: `git pull` at session start; one commit per action as ab
 - **Write into the reserve directly:** the §7.9 create with `_reserve` as the set and no `order`; message `Add principle: <title>`.
 
 The app performs each pair as one action and shows the dangling report afterwards, as delete does. Newest first in the app and the index means most recently reserved, since the copy is a new file; the earlier history of the principle is in git.
+
+### 7.15 Relate sources to a set (Task F in AGENTS.md)
+
+The curator picks one or more filed sources and one set; a model (in the app) or a desktop agent reads the set's principles and the passages in full and writes each suggestion as a proposal: `kind: link` with `target` (a principle of the set) and `grounds` (the chosen sources that are evidence for it; accepting adds them to that principle's `grounds`, nothing looser); `kind: amendment` with `target` and `grounds` (the passages that complicate its wording); `kind: principle` with `target_set` = the set and `grounds` (a principle the set lacks). Every proposal carries `target_set`, `curated: agent-proposed`, `status: open`, and no `from_source`; the body is the rationale. Only what the passages support; only the set's own principles as targets; no link to a principle that already lists the passage; nothing the set already holds, restated; at most ten, and none is a fine answer. One commit for the batch, `Relate: <n> proposals for <set label>`, indexes regenerated. The curator decides each (§7.10, §4.7).
 
 ## 8. Prompt assembly context rules
 

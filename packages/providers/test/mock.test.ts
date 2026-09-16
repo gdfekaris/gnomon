@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DERIVE_PROMPT, FILING_PROMPT, parseFilingReply } from '@gnomon/core';
+import { DERIVE_PROMPT, FILING_PROMPT, RELATE_PROMPT, parseFilingReply } from '@gnomon/core';
 import { MOCK_MODEL, MockProvider, demoFilingScript, demoScript } from '../src/index';
 import { collect } from './contract';
 
@@ -58,12 +58,22 @@ describe('MockProvider', () => {
   });
 
   it('answers the filing prompt with a reply parseFilingReply accepts', () => {
-    const context = '## Principle sets you may target\n\n### Set 1 — set slug: ps-g8xw\n\n- ref `ps-g8xw/a` — A\n\n## Existing sources (slugs you may cite in grounds)\n\n(none yet)\n\n## The capture\n\nCurator\'s note: from a train.\n\nThe only way to make sense out of change is to plunge into it.\nSecond line.';
+    const context = '## Tags in use\n\n- stoicism (3)\n\n## The capture\n\nCurator\'s note: from a train.\n\nThe only way to make sense out of change is to plunge into it.\nSecond line.';
     const req = { model: 'mock-reasoner', system: FILING_PROMPT, messages: [{ role: 'user' as const, content: context }], maxTokens: 100, signal: new AbortController().signal };
     expect(demoScript(req)).toBe(demoFilingScript(req));
     const parsed = parseFilingReply(demoScript(req));
     expect(parsed.meta).toEqual({ title: 'The only way to make sense', author: 'unknown', tags: ['demo'] });
-    expect(parsed.proposals.map((p) => [p.kind, p.target_set])).toEqual([['tag', undefined], ['principle', 'ps-g8xw'], ['link', 'ps-g8xw']]);
+    // fifteen words: two principles for the reserve, no tag or link proposal (schema §7.6)
+    expect(parsed.proposals.map((p) => [p.kind, p.target_set, p.title])).toEqual([['principle', '_reserve', 'What "The only way to make sense" asks of me'], ['principle', '_reserve', 'Act on it: The only way to make sense']]);
+    const short = { ...req, messages: [{ role: 'user' as const, content: '## Tags in use\n\n(none yet)\n\n## The capture\n\nA photographed page.' }] };
+    expect(parseFilingReply(demoScript(short)).proposals).toEqual([]);
+  });
+  it('answers the relate-to-set prompt with a link, an amendment, and a principle', () => {
+    const context = '## The set: Set 1 — set slug: ps-g8xw\n\n(no description)\n\n## The principles it holds\n\n- ref `ps-g8xw/a` — A\n- ref `ps-g8xw/b` — B\n\n## The passages\n\n### Passage: A — B (W, 1)\nslug: `a-b`\n\nFirst sentence here. Second sentence follows.\n\n### Passage: C — D\nslug: `c-d`\n\nOnly one.';
+    const req = { model: 'mock-reasoner', system: RELATE_PROMPT, messages: [{ role: 'user' as const, content: context }], maxTokens: 100, signal: new AbortController().signal };
+    const out = JSON.parse(demoScript(req)) as { proposals: Array<{ kind: string; target?: string; grounds: string[]; title: string }> };
+    expect(out.proposals.map((p) => [p.kind, p.target, p.grounds])).toEqual([['link', 'ps-g8xw/a', ['a-b', 'c-d']], ['amendment', 'ps-g8xw/b', ['a-b']], ['principle', undefined, ['a-b']]]);
+    expect(out.proposals[2]!.title).toBe('Hold to this: First sentence here');
   });
   it('answers the derive prompt with three grounded principles per passage', () => {
     const context = '## The target set: Set 1\n\n(no description)\n\n## Principles the set already holds\n\n(none)\n\n## The passages\n\n### Passage: A — B (W, 1)\nslug: `a-b`\n\nFirst sentence here. Second sentence follows. Third one too. Fourth is ignored.\n\n### Passage: C — D\nslug: `c-d`\n\nOnly one sentence that is long enough.';

@@ -1,17 +1,22 @@
 // Filing through the app — spec §8.5, schema §7.6 (Task C). The model gets
-// the capture's text and note (never the attachment) plus the sets,
-// principles, and source slugs it may target, and must answer with one
-// strict JSON object: source metadata and proposals. The app validates the
-// reply here, then buildFiling copies the passage itself.
+// the capture's text and note (never the attachment) plus the brain's tag
+// vocabulary, and must answer with one strict JSON object: source metadata
+// and, at most four, principles the passage alone supports, which land as
+// proposals for the reserve (schema §7.14). Nothing about the sets is sent:
+// relating a source to a set is Task F (relate.ts), a deliberate act. The app
+// validates the reply here, then buildFiling copies the passage itself.
 
-import type { BrainFile, BrainSnapshot, InboxFm, PrincipleFm } from '../schema/types';
-import { isSetSlug, isSourceSlug } from '../schema/identifiers';
-import { setLabel } from '../index/index';
+import type { BrainFile, BrainSnapshot, InboxFm } from '../schema/types';
+import { isSourceSlug } from '../schema/identifiers';
+import { RESERVE_SLUG } from '../schema/paths';
 import type { SourceMeta } from '../filing/index';
 import type { ProposalParams } from '../proposals/index';
 import { estimateTokens } from './index';
 
-export const FILING_PROMPT = `You are filing a capture into a Gnomon brain: a curator's collection of passages (sources) and the principles they wrote themselves. Your job is clerical, never editorial. You never retype the passage; the app copies it. You identify the source and suggest proposals for the curator to decide.
+/** The most principles one filing may propose (schema §7.6). Zero is the common case for a short passage. */
+export const FILING_MAX = 4;
+
+export const FILING_PROMPT = `You are filing a capture into a Gnomon brain: a curator's collection of passages (sources) and the principles they wrote themselves. Your job is clerical, never editorial. You never retype the passage; the app copies it. You identify the source, tag it, and name any principle the passage alone supports, for the curator to decide.
 
 Answer with exactly one JSON object and nothing else: no prose, no code fences. Shape:
 
@@ -23,43 +28,38 @@ Answer with exactly one JSON object and nothing else: no prose, no code fences. 
     "year": 1976,
     "locator": "optional: page, section, timestamp, or URL fragment",
     "origin": "optional: URL, ISBN, DOI, or other retrieval handle",
-    "tags": ["optional", "lowercase-hyphenated-slugs"]
+    "tags": ["lowercase-hyphenated-slugs"]
   },
   "proposals": [
-    { "kind": "principle", "title": "a principle this passage could support", "target_set": "ps-xxxx", "rationale": "why" },
-    { "kind": "link", "title": "ground that principle in this passage", "target_set": "ps-xxxx", "target": "ps-xxxx/principle-slug", "rationale": "how this passage is evidence for that principle" },
-    { "kind": "amendment", "title": "suggested rewording", "target_set": "ps-xxxx", "target": "ps-xxxx/principle-slug", "rationale": "why" },
-    { "kind": "tag", "title": "tags to add", "rationale": "why" }
+    { "title": "a principle this passage supports, one line", "rationale": "what in the passage supports it" }
   ]
 }
 
 Rules:
 - The curator's note, when there is one, is authoritative: whatever author, work, year, page, or origin it names goes into "meta" as written, before anything the passage itself suggests. The rest of the note is the curator's reason for keeping the passage; it is not part of the passage.
 - Leave an optional field out rather than guess it. A URL you inferred is a passage that cannot be re-found. "unknown" is a fine author.
-- Only use the set slugs, principle refs, and source slugs listed in the material. Never invent one.
-- Proposals are suggestions. A "principle" proposal is a principle the curator might write; you do not write it. An empty proposals list is fine.
-- A "link" proposal means one thing: add this passage to that principle's grounds, as evidence for it. Use it when the passage supports the principle or bears on it directly. If the passage complicates or contradicts the principle enough that its wording should change, propose an "amendment" instead. Nothing looser than a ground is proposed here.
+- Tags: prefer the brain's existing tags, listed in the material, so that captures on one subject gather under one word; add a new tag only when none of them fits. Two or three tags; none is fine.
+- Proposals are principles the passage alone supports: only what this passage says, nothing imported and nothing generalized past it. Each is one line in the curator's voice, a commitment stated plainly, never a quotation. A sentence-long capture usually supports none or one; a rich passage may support up to ${FILING_MAX}. Never more than ${FILING_MAX}, and an empty list is the right answer more often than not. They go to the curator's reserve, not into any set; the curator places them.
 - Keep titles to one line. Rationales may be any length.`;
 
 export interface FilingPrompt { ok: true; system: string; context: string; tokensUsed: number; }
 export type FilingPromptResult = FilingPrompt | { ok: false; error: 'CAPTURE_EXCEEDS_BUDGET'; neededTokens: number; budgetTokens: number };
 
-/** The user-turn material for filing one capture: sets with principles, source slugs, then the capture. */
-export function buildFilingPrompt(snapshot: BrainSnapshot, capture: BrainFile<InboxFm>, budgetTokens: number): FilingPromptResult {
-  const chunks: string[] = ['## Principle sets you may target'];
-  for (const set of snapshot.sets) {
-    const slug = set.path.split('/')[1]!;
-    chunks.push(`### ${setLabel(set.fm)} — set slug: ${slug}`);
-    const principles = snapshot.principlesOf(slug);
-    if (principles.length === 0) chunks.push('(no principles yet)');
-    for (const p of principles as BrainFile<PrincipleFm>[]) {
-      const body = p.body.replace(/\n+$/, '');
-      chunks.push(`- ref \`${slug}/${p.path.split('/')[2]!.replace(/\.md$/, '')}\` — ${p.fm.title}${body ? `\n  ${body.split('\n').join('\n  ')}` : ''}`);
-    }
+/** The brain's tags with how many files carry each, most used first, then by name. */
+export function tagVocabulary(snapshot: BrainSnapshot): Array<[string, number]> {
+  const counts = new Map<string, number>();
+  for (const f of snapshot.files.values()) {
+    if (f.fm.type === 'index') continue;
+    for (const t of new Set(f.fm.tags ?? [])) counts.set(t, (counts.get(t) ?? 0) + 1);
   }
-  const sources = snapshot.byType('source');
-  chunks.push('## Existing sources (slugs you may cite in grounds)');
-  chunks.push(sources.length ? sources.map((f) => `- \`${f.path.split('/')[1]}\` — ${f.fm.title}, ${f.fm.author}`).join('\n') : '(none yet)');
+  return [...counts].sort(([a, ca], [b, cb]) => cb - ca || (a < b ? -1 : a > b ? 1 : 0));
+}
+
+/** The user-turn material for filing one capture: the tag vocabulary, then the capture with its note. No set is sent. */
+export function buildFilingPrompt(snapshot: BrainSnapshot, capture: BrainFile<InboxFm>, budgetTokens: number): FilingPromptResult {
+  const chunks: string[] = ['## Tags in use'];
+  const tags = tagVocabulary(snapshot);
+  chunks.push(tags.length ? tags.map(([t, n]) => `- ${t} (${n})`).join('\n') : '(none yet)');
   chunks.push('## The capture');
   if (capture.fm.note) chunks.push(`Curator's note: ${capture.fm.note}`);
   if (capture.fm.attachment) chunks.push(`An attachment (${capture.fm.attachment}) is kept beside the capture; it is not shown to you.`);
@@ -75,8 +75,7 @@ export class FilingReplyError extends Error {
 }
 
 const META_KEYS = new Set(['title', 'author', 'work', 'year', 'locator', 'origin', 'tags', 'slug']);
-const PROPOSAL_KEYS = new Set(['kind', 'title', 'target_set', 'target', 'grounds', 'rationale']);
-const KINDS = new Set(['principle', 'link', 'tag', 'amendment']);
+const PROPOSAL_KEYS = new Set(['kind', 'title', 'rationale']);
 const TAG = /^[a-z0-9][a-z0-9-]*$/;
 
 function fail(msg: string): never {
@@ -108,10 +107,12 @@ export function extractJson(text: string): unknown {
 
 /**
  * Validate a model's filing reply into SourceMeta and ProposalParams.
- * Strict: unknown keys, wrong types, and missing conditional fields are
- * refused. With a snapshot, target sets, principles, and grounds must exist.
+ * Strict: unknown keys, wrong types, and a bad tag or slug are refused;
+ * proposals are principles only, at most FILING_MAX, each a one-line title
+ * with a rationale, and every one targets the reserve. buildFiling adds the
+ * new source as its ground.
  */
-export function parseFilingReply(text: string, snapshot?: BrainSnapshot): { meta: SourceMeta; proposals: ProposalParams[] } {
+export function parseFilingReply(text: string): { meta: SourceMeta; proposals: ProposalParams[] } {
   const root = extractJson(text);
   if (!root || typeof root !== 'object' || Array.isArray(root)) fail('reply must be a JSON object');
   const r = root as Record<string, unknown>;
@@ -146,47 +147,23 @@ export function parseFilingReply(text: string, snapshot?: BrainSnapshot): { meta
 
   const p = r['proposals'] ?? [];
   if (!Array.isArray(p)) fail("'proposals' must be a list");
-  const sets = snapshot ? new Set(snapshot.sets.map((s) => s.path.split('/')[1]!)) : null;
-  const principles = snapshot ? new Set(snapshot.byType('principle').map((f) => f.path.slice('principles/'.length, -3))) : null;
-  const sources = snapshot ? new Set(snapshot.byType('source').map((f) => f.path.split('/')[1]!)) : null;
-
-  const proposals: ProposalParams[] = p.map((item, i) => {
+  if (p.length > FILING_MAX) fail(`the reply proposes ${p.length} principles; a filing proposes at most ${FILING_MAX}`);
+  const seen = new Set<string>();
+  const proposals: ProposalParams[] = [];
+  p.forEach((item, i) => {
     const where = `proposals[${i}]`;
     if (!item || typeof item !== 'object' || Array.isArray(item)) fail(`${where}: must be an object`);
     const o = item as Record<string, unknown>;
-    for (const k of Object.keys(o)) if (!PROPOSAL_KEYS.has(k)) fail(`${where}: unknown key '${k}'`);
-    const kind = str(o, 'kind', where, true)!;
-    if (!KINDS.has(kind)) fail(`${where}: kind must be principle, link, tag, or amendment`);
-    const out: ProposalParams = { kind: kind as ProposalParams['kind'], title: str(o, 'title', where, true)!, rationale: str(o, 'rationale', where, true)! };
-    const targetSet = str(o, 'target_set', where);
-    const target = str(o, 'target', where);
-    if (kind === 'principle' || kind === 'amendment' || kind === 'link') {
-      if (!targetSet) fail(`${where}: kind '${kind}' requires target_set`);
-      if (!isSetSlug(targetSet)) fail(`${where}: target_set '${targetSet}' is not a set slug`);
-      if (sets && !sets.has(targetSet)) fail(`${where}: target_set '${targetSet}' is not a set in this brain`);
-      out.target_set = targetSet;
-    }
-    if (kind === 'amendment' || kind === 'link') {
-      if (!target) fail(`${where}: kind '${kind}' requires target`);
-      if (!/^ps-[^/]+\/[^/]+$/.test(target)) fail(`${where}: target '${target}' must be <set-slug>/<principle-slug>`);
-      if (principles && !principles.has(target)) fail(`${where}: target '${target}' is not a principle in this brain`);
-      if (!target.startsWith(`${targetSet}/`)) fail(`${where}: target '${target}' is not in target_set '${targetSet}'`);
-      out.target = target;
-    }
-    if (kind === 'tag' && target !== undefined) {
-      if (!isSourceSlug(target)) fail(`${where}: target '${target}' is not a source slug`);
-      out.target = target;
-    }
-    if (o['grounds'] !== undefined && o['grounds'] !== null) {
-      const g = o['grounds'];
-      if (!Array.isArray(g) || !g.every((x) => typeof x === 'string')) fail(`${where}: grounds must be a list of source slugs`);
-      for (const x of g as string[]) {
-        if (!isSourceSlug(x)) fail(`${where}: grounds entry '${x}' is not a source slug`);
-        if (sources && !sources.has(x)) fail(`${where}: grounds entry '${x}' is not a source in this brain`);
-      }
-      if (g.length) out.grounds = [...new Set(g as string[])];
-    }
-    return out;
+    const kind = str(o, 'kind', where);
+    if (kind !== undefined && kind !== 'principle') fail(`${where}: kind '${kind}' is not proposed at filing; only principles for the reserve are`);
+    for (const k of Object.keys(o)) if (!PROPOSAL_KEYS.has(k)) fail(`${where}: unknown key '${k}'; a filing proposes principles for the reserve and nothing else`);
+    const title = str(o, 'title', where, true)!;
+    if (/[\r\n]/.test(title)) fail(`${where}: 'title' must be one line`);
+    const rationale = str(o, 'rationale', where, true)!;
+    const key = title.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    proposals.push({ kind: 'principle', title, target_set: RESERVE_SLUG, rationale });
   });
   return { meta, proposals };
 }

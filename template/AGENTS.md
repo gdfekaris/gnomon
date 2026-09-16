@@ -155,7 +155,9 @@ For each `inbox/<stem>.md` with `status: unfiled`, one commit each:
    `year`, `locator`, `origin`, `tags` the capture itself supports. Leave
    a field out rather than guess it; a URL you inferred is a passage that
    cannot be re-found. Delete the line for any optional field you leave
-   blank.
+   blank. For `tags`, prefer the tags already in use (`maps/_index.md`
+   lists them) so one subject gathers under one word; add a new tag only
+   when none fits.
 2. Choose a slug: author surname plus a short title fragment, lowercase
    letters, digits, hyphens, 3–60 characters, e.g. `didion-why-i-write`.
    If the folder exists, append `-2`, `-3`.
@@ -164,17 +166,17 @@ For each `inbox/<stem>.md` with `status: unfiled`, one commit each:
 4. If the capture has an attachment, copy it byte for byte to
    `sources/<slug>/original.<ext>` and set `attachment: original.<ext>`.
 5. Create `sources/<slug>/notes.md` from `templates/notes.md`, empty body.
-6. For each suggestion, write one `maps/proposals/P-<YYYYMMDD>-<nnn>.md`
-   from `templates/proposal.md`: `<nnn>` is one more than today's highest
-   existing number, zero-padded to three digits. Suggest a ground: a
-   principle this capture is evidence for (`kind: link`, with `target`
-   and the capture's slug in `grounds`; accepting it adds the source to
-   that principle's `grounds`, nothing looser); a change to a principle's
-   wording where the capture complicates or contradicts it
-   (`kind: amendment`, with `target`); a principle it might support
-   (`kind: principle`, with `target_set`); or tags (`kind: tag`, with
-   `target: <slug>`). Set `from_source: <slug>`. The body is your
-   rationale.
+6. For each principle the passage alone supports, at most four and often
+   none, write one `maps/proposals/P-<YYYYMMDD>-<nnn>.md` from
+   `templates/proposal.md`: `<nnn>` is one more than today's highest
+   existing number, zero-padded to three digits; `kind: principle`,
+   `target_set: _reserve` (the curator's reserve; you never pick a set),
+   `from_source: <slug>`, `grounds:` naming the slug; the title one line
+   in the curator's voice, a commitment stated plainly, never a
+   quotation; the body your rationale. Only what this passage says,
+   nothing imported and nothing generalized past it. A filing writes no
+   other kind of proposal: links, amendments, and principles for a set
+   are Task F, which the curator asks for.
 7. In the capture, set `status: filed` and `filed_as: <slug>`. Change
    nothing else.
 8. Commit: `File: <slug>`.
@@ -208,6 +210,27 @@ principle file and never propose an order: the curator writes each
 principle by accepting its proposal, in the order they choose. One
 commit for the batch: `Derive: <n> proposals for <set label>`. Then
 `npx gnomon-cli validate && npx gnomon-cli index` before the push.
+
+## Task F — Relate sources to a set
+
+Given one or more filed sources and one set: read each `raw.md` in
+full, load the set as above, then write each way the passages bear on
+the set as a proposal file (Task C step 6 format), all with
+`target_set: <set-slug>`, `grounds:` naming the chosen source slugs
+each rests on (at least one), and no `from_source`: a passage that is
+evidence for a principle (`kind: link`, with `target`; accepting adds
+the passage to that principle's `grounds`, nothing looser); a passage
+that complicates or contradicts a principle enough that its wording
+should change (`kind: amendment`, with `target`, the change in the
+title); a principle the set lacks that the passages support
+(`kind: principle`, one line in the curator's voice).
+
+Rules: only what the passages support; only the set's own principles as
+targets; no link to a principle that already lists the passage among its
+grounds; nothing the set already holds, restated; at most ten, and none
+is a fine answer. One commit for the batch: `Relate: <n> proposals for
+<set label>`. Then `npx gnomon-cli validate && npx gnomon-cli index`
+before the push.
 
 ## Recording proposal decisions
 
