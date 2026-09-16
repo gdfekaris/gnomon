@@ -233,3 +233,27 @@ test('the search narrows both parts, and an amendment card unfolds the principle
   await page.getByTestId('proposals-clear').click();
   await expect(page.getByTestId('proposals-count')).toHaveCount(0);
 });
+
+// A real model writes long one-line principles; the title in a triage row is a button, and buttons never shrink
+// by the app's own rule, so a long title once ran out of the box. It wraps, and the page stays as wide as the screen.
+test('a long reserve proposal title wraps inside its row and never widens the page', async ({ page }) => {
+  await page.goto('/#/capture');
+  await page.getByTestId('capture-text').fill('Antidisestablishmentarianism counterrevolutionaries incomprehensibilities uncharacteristically internationalization electroencephalographically, and so on for a while longer.');
+  await page.getByTestId('capture-save').click();
+  await expect(page.getByTestId('saved')).toBeVisible();
+  await page.goto('/#/inbox');
+  await page.getByTestId('pick-20260906-070000-2bq').uncheck();
+  await page.getByTestId('process').click();
+  await expect(page.getByTestId('process-results')).toContainText('with 1 proposal');
+  await page.goto('/#/proposals');
+  const row = page.getByTestId('group-_reserve').getByTestId('reserve-open').locator('li').first();
+  const title = row.locator('button.title');
+  await expect(title).toContainText('Antidisestablishmentarianism');
+  const box = (await title.boundingBox())!;
+  const rowBox = (await row.boundingBox())!;
+  expect(box.x + box.width).toBeLessThanOrEqual(rowBox.x + rowBox.width + 1);
+  expect(box.height).toBeGreaterThan(30); // more than one line
+  await expect(row.getByTestId('keep')).toBeVisible();
+  const width = await page.evaluate(() => ({ screen: document.documentElement.clientWidth, page: document.documentElement.scrollWidth }));
+  expect(width.page).toBe(width.screen);
+});
