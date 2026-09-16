@@ -1,5 +1,11 @@
 import { expect, test } from '@playwright/test';
 
+/** Sets start collapsed on the Sets screen and stay open for the session: open one only if it is shut. */
+const openSet = async (page: import('@playwright/test').Page, id: string) => {
+  const t = page.getByTestId(id).getByTestId('set-toggle');
+  if ((await t.getAttribute('aria-expanded')) !== 'true') await t.click();
+};
+
 test.beforeEach(async ({ page }) => {
   await page.goto('/#/settings');
   await page.getByTestId('use-demo').click();
@@ -76,6 +82,7 @@ test('an accepted principle proposal that was never written offers "Write it" fr
   // An untouched draft is left without a question.
   await page.getByTestId('edit-back').click();
   await expect(page).toHaveURL(/#\/sets$/);
+  await openSet(page, 'set-ps-7k2m');
   await expect(page.getByTestId('set-ps-7k2m')).not.toContainText('Rise to the work');
 
   await page.goto('/#/proposals');
@@ -95,6 +102,7 @@ test('an accepted principle proposal that was never written offers "Write it" fr
   await expect(decided.getByTestId('written-as')).toHaveText('Rise to the work');
   await expect(decided.getByTestId('write-it')).toHaveCount(0);
   await page.goto('/#/sets');
+  await openSet(page, 'set-ps-7k2m');
   await expect(page.getByTestId('set-ps-7k2m')).toContainText('Rise to the work');
 });
 
@@ -144,6 +152,7 @@ test('"Write it as proposed" writes the principle in one tap', async ({ page }) 
   await expect(page.getByTestId('fm-curated')).toHaveText('yours');
   await expect(page.getByTestId('file-body')).toContainText('Grounding passages');
   await page.goto('/#/sets');
+  await openSet(page, 'set-ps-7k2m');
   await expect(page.getByTestId('set-ps-7k2m')).toContainText('Rise to the work');
   await page.goto('/#/settings');
   await expect(page.getByTestId('refusal-count')).toHaveText('0 refusals');

@@ -48,6 +48,7 @@ test('relate one source to Set 1 from its page, then accept the link proposal an
   await principle.getByTestId('write-as-proposed').click();
   await expect(set1.getByRole('heading', { level: 3 })).toContainText('1 open');
   await page.goto('/#/sets');
+  await page.getByTestId('set-ps-g8xw').getByTestId('set-toggle').click();
   await expect(page.getByTestId('principles-ps-g8xw').locator('li a.title')).toHaveCount(3);
   await page.goto('/#/settings');
   await expect(page.getByTestId('refusal-count')).toHaveText('0 refusals');

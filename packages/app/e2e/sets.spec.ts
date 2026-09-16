@@ -8,6 +8,8 @@ test.beforeEach(async ({ page }) => {
 });
 
 const labels = (page: import('@playwright/test').Page) => page.getByTestId('set-label').allTextContents();
+const openSet = (page: import('@playwright/test').Page, id: string) => page.getByTestId(id).getByTestId('set-toggle').click();
+
 
 test('create Set 3, rename it, reorder principles, delete Set 1, and the survivors renumber with links intact', async ({ page }) => {
   await expect(page.getByTestId('sets').locator('li.set')).toHaveCount(2);
@@ -21,6 +23,7 @@ test('create Set 3, rename it, reorder principles, delete Set 1, and the survivo
   await set3.getByTestId('rename-save').click();
   await expect.poll(() => labels(page)).toEqual(['Set 1', 'Set 2 — Work', 'Set 3 — Kids']);
 
+  await openSet(page, 'set-ps-7k2m');
   const work = page.getByTestId('principles-ps-7k2m');
   await expect(work.locator('li a')).toHaveText(['Say the hard thing first', 'Write to find out']);
   // Each row carries its precedence number, and the numbers follow a reorder.
@@ -68,6 +71,7 @@ test('reorder sets with the buttons and edit a set description', async ({ page }
 test('the last set cannot be deleted and an empty new set says so', async ({ page }) => {
   await page.getByTestId('new-set').click();
   await expect.poll(() => labels(page)).toEqual(['Set 1', 'Set 2 — Work', 'Set 3']);
+  await page.getByTestId('sets').locator('li.set').nth(2).getByTestId('set-toggle').click();
   await expect(page.getByTestId('sets').locator('li.set').nth(2)).toContainText('No principles yet');
   for (const slug of ['ps-g8xw', 'ps-7k2m']) {
     await page.getByTestId(`set-${slug}`).getByTestId('set-delete').click();
@@ -76,4 +80,50 @@ test('the last set cannot be deleted and an empty new set says so', async ({ pag
   }
   await expect(page.getByTestId('sets').locator('li.set')).toHaveCount(1);
   await expect(page.getByTestId('set-delete')).toBeDisabled();
+});
+
+// Every set and the reserve start collapsed, with a count; a tap opens one for the session, and a search opens
+// the sets that match and shuts the rest, restoring what was open when it is cleared (maintainer, 2026-09-16).
+test('sets start collapsed with counts, open on a tap for the session, and follow the search', async ({ page }) => {
+  const set1 = page.getByTestId('set-ps-g8xw');
+  const work = page.getByTestId('set-ps-7k2m');
+  const reserve = page.getByTestId('reserve');
+  for (const s of [set1, work, reserve]) await expect(s.getByTestId('set-toggle')).toHaveAttribute('aria-expanded', 'false');
+  await expect(set1.getByTestId('set-count')).toHaveText('· 2 principles');
+  await expect(page.getByTestId('principles-ps-g8xw')).toHaveCount(0);
+  await expect(reserve.getByTestId('reserve-list')).toHaveCount(0);
+  await expect(reserve.getByTestId('reserve-total')).toHaveText('· 1');
+  // the controls stay on the heading, collapsed or not
+  await expect(set1.getByTestId('set-rename')).toBeVisible();
+
+  await openSet(page, 'set-ps-g8xw');
+  await expect(set1.getByTestId('set-toggle')).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByTestId('principles-ps-g8xw').locator('li a.title')).toHaveText(['Courage before comfort', 'Attention is generosity']);
+  await expect(set1.getByTestId('set-file')).toBeVisible();
+  await expect(work.getByTestId('set-toggle')).toHaveAttribute('aria-expanded', 'false');
+  await openSet(page, 'reserve');
+  await expect(reserve.getByTestId('reserve-list').locator('li')).toHaveCount(1);
+
+  // a trip away and back keeps them open; a reload starts collapsed
+  await page.getByTestId('principles-ps-g8xw').locator('li a.title').first().click();
+  await expect(page.getByRole('heading', { name: 'Courage before comfort' })).toBeVisible();
+  await page.goto('/#/sets');
+  await expect(set1.getByTestId('set-toggle')).toHaveAttribute('aria-expanded', 'true');
+  await expect(reserve.getByTestId('set-toggle')).toHaveAttribute('aria-expanded', 'true');
+
+  // the search opens matches and shuts the rest, then hands back what was open
+  await page.getByTestId('principles-search').fill('didion');
+  await expect(work.getByTestId('set-toggle')).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByTestId('principles-ps-7k2m').locator('li a.title')).toHaveText(['Say the hard thing first']);
+  await expect(set1.getByTestId('set-toggle')).toHaveAttribute('aria-expanded', 'false');
+  await expect(set1.getByTestId('no-match')).toHaveText('No principle in this set matches.');
+  await expect(page.getByTestId('principles-ps-g8xw')).toHaveCount(0);
+  await expect(reserve.getByTestId('reserve-list').locator('li.empty')).toHaveText('No reserve principle matches.');
+  await page.getByTestId('principles-clear').click();
+  await expect(set1.getByTestId('set-toggle')).toHaveAttribute('aria-expanded', 'true');
+  await expect(work.getByTestId('set-toggle')).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByTestId('principles-ps-g8xw').locator('li a.title')).toHaveCount(2);
+
+  await page.reload();
+  await expect(set1.getByTestId('set-toggle')).toHaveAttribute('aria-expanded', 'false');
 });

@@ -10,10 +10,13 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByText('Connected: demo brain')).toBeVisible();
   await page.goto('/#/sets');
 });
+// Sets and the reserve start collapsed; a tap on the heading opens one for the session.
+const openSet = (page: import('@playwright/test').Page, id: string) => page.getByTestId(id).getByTestId('set-toggle').click();
 
 test('the fixture\'s reserved principle shows on arrival, with its tag and no order', async ({ page }) => {
   const reserve = page.getByTestId('reserve');
   await expect(reserve.getByTestId('reserve-total')).toHaveText('· 1');
+  await openSet(page, 'reserve');
   const row = reserve.getByTestId('reserve-one-thing-at-a-time');
   await expect(row).toContainText('One thing at a time');
   await expect(row).toContainText('attention');
@@ -29,6 +32,9 @@ test('the fixture\'s reserved principle shows on arrival, with its tag and no or
 test('keep a set\'s principle in reserve instead of deleting it, then add the reserved one to another set', async ({ page }) => {
   // Reserve, from the Delete confirmation: the set renumbers and the reserve holds it first.
   const set1 = page.getByTestId('set-ps-g8xw');
+  await openSet(page, 'set-ps-g8xw');
+  await openSet(page, 'set-ps-7k2m');
+  await openSet(page, 'reserve');
   await set1.getByTestId('principles-ps-g8xw').locator('li').first().getByTestId('principle-delete').click();
   const confirm = page.getByTestId('delete-confirm');
   await expect(confirm).toContainText('Delete the principle Courage before comfort?');
@@ -65,6 +71,7 @@ test('keep a set\'s principle in reserve instead of deleting it, then add the re
 });
 
 test('write a new principle straight into the reserve', async ({ page }) => {
+  await openSet(page, 'reserve');
   await page.getByTestId('new-principle-reserve').click();
   await expect(page.getByRole('heading', { name: 'New principle in reserve' })).toBeVisible();
   await expect(page.getByTestId('reserve-hint')).toContainText('never sent to a model');
@@ -84,6 +91,9 @@ test('write a new principle straight into the reserve', async ({ page }) => {
 });
 
 test('one search over every principle: a ground\'s author finds it, and a set with no match collapses', async ({ page }) => {
+  await openSet(page, 'set-ps-g8xw');
+  await openSet(page, 'set-ps-7k2m');
+  await openSet(page, 'reserve');
   const search = page.getByTestId('principles-search');
   await search.fill('weil');
   await expect(page.getByTestId('set-ps-g8xw').getByTestId('set-match-count')).toHaveText('· 1 of 2');
@@ -130,6 +140,7 @@ test('the editor keeps a principle in reserve after showing what will dangle, an
   await expect(page).toHaveURL(/#\/browse\/principles\/ps-7k2m\/courage-before-comfort\.md$/);
   await expect(page.getByTestId('frontmatter')).toContainText('3');
   await page.goto('/#/sets');
+  await openSet(page, 'set-ps-7k2m');
   await expect(page.getByTestId('principles-ps-7k2m').locator('li a.title')).toHaveText(['Say the hard thing first', 'Write to find out', 'Courage before comfort']);
   await expect(page.getByTestId('reserve-total')).toHaveText('· 1');
   // An amendment proposal targets this one, so the confirmation names it; then it goes.
@@ -158,6 +169,8 @@ test('a reserve of hundreds pages, sorts, and filters by tag', async ({ page }) 
   await page.goto('/#/sets');
   const reserve = page.getByTestId('reserve');
   await expect(reserve.getByTestId('reserve-total')).toHaveText('· 301');
+  await openSet(page, 'reserve');
+  await openSet(page, 'set-ps-7k2m');
   const rows = reserve.getByTestId('reserve-list').locator('li');
   await expect(rows).toHaveCount(50);
   // newest first: the last generated principle has the latest created date

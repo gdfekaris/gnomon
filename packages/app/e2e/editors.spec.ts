@@ -9,6 +9,7 @@ test.beforeEach(async ({ page }) => {
 
 test('write a principle from the editor with a grounding link from the picker', async ({ page }) => {
   await page.goto('/#/sets');
+  await page.getByTestId('set-ps-7k2m').getByTestId('set-toggle').click();
   await page.getByTestId('set-ps-7k2m').getByTestId('new-principle').click();
   await expect(page.getByRole('heading', { name: 'New principle in Set 2 — Work' })).toBeVisible();
   await page.getByTestId('edit-title').fill('Rise to the work');
@@ -102,8 +103,10 @@ test('copy a principle to another set, then delete the original', async ({ page 
   await expect(page).toHaveURL(/#\/browse\/principles\/ps-7k2m\/courage-before-comfort\.md$/);
 
   await page.goto('/#/sets');
+  await page.getByTestId('set-ps-g8xw').getByTestId('set-toggle').click();
   await expect(page.getByTestId('set-ps-g8xw')).not.toContainText('Courage before comfort');
   const work = page.getByTestId('set-ps-7k2m');
+  await work.getByTestId('set-toggle').click();
   await expect(work).toContainText('Courage before comfort');
   await expect(work.locator('li').last()).toContainText('Courage before comfort');
   await page.goto('/#/settings');

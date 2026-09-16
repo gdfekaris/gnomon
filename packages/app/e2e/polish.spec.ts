@@ -25,6 +25,7 @@ test('a fresh brain shows empty states and the nudge on every screen; loading an
   await expect(nudge).toHaveCount(0); // Browse is for reading sources; the nudge lives on Capture
   await expect(page.getByTestId('no-sources')).toContainText('No sources yet');
   await page.goto('/#/sets');
+  await page.getByTestId('set-ps-g8xw').getByTestId('set-toggle').click();
   await expect(page.getByTestId('principles-ps-g8xw')).toContainText('No principles yet');
   await page.goto('/#/reason');
   await expect(page.getByTestId('empty-reason')).toContainText('Nothing to reason from yet');

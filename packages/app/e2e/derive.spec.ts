@@ -43,6 +43,7 @@ test('derive principles from one source into Set 1, then write, edit, and declin
   await expect(set1.getByRole('heading', { level: 3 })).toContainText('0 open');
 
   await page.goto('/#/sets');
+  await page.getByTestId('set-ps-g8xw').getByTestId('set-toggle').click();
   const set = page.getByTestId('set-ps-g8xw');
   await expect(set).toContainText(firstTitle);
   await expect(set).toContainText('Attention, given freely, is the rarest gift');

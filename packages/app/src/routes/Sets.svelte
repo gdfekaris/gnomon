@@ -16,8 +16,13 @@
   import { browseHref } from '../lib/markdown';
   import ConnectionNotice from '../lib/components/ConnectionNotice.svelte';
   import { snapshot } from '../lib/stores/snapshot.svelte';
+  import { setsView } from '../lib/stores/sets.svelte';
 
   const s = $derived(snapshot.current);
+  // Every set and the reserve start collapsed (maintainer, 2026-09-16); a tap on the heading opens one, for the
+  // session. While a search is on, a set with a match is open and one without stays shut, whatever was tapped.
+  const toggleOpen = (key: string) => (setsView.open = setsView.open.includes(key) ? setsView.open.filter((k) => k !== key) : [...setsView.open, key]);
+  const isOpen = (key: string, matches: number) => (searching ? matches > 0 : setsView.open.includes(key));
   let busy = $state(false);
   /** which control is doing the work, so it alone stays pressed while the rest are disabled */
   let pressed = $state<string | null>(null);
@@ -73,7 +78,8 @@
   const create = () => run('new-set', async () => { await newSet(brain, { name: newName.trim() }); newName = ''; });
   const startRename = (slug: string, current: string | undefined) => { renaming = slug; renameValue = current ?? ''; };
   const saveRename = (slug: string) => run(`rename:${slug}`, async () => { await renameSet(brain, slug, renameValue); renaming = null; });
-  const startDescribe = (slug: string, body: string) => { describing = slug; describeValue = body; };
+  // Describing a set opens it, so the framing is in view when it is saved.
+  const startDescribe = (slug: string, body: string) => { describing = slug; describeValue = body; if (!setsView.open.includes(slug)) setsView.open = [...setsView.open, slug]; };
   const saveDescribe = (slug: string) => run(`describe:${slug}`, async () => { await describeSet(brain, slug, describeValue); describing = null; });
   const askDeleteSet = (slug: string) => { moved = null; plan = { ...planDeleteSet(brain, slug), kind: 'set' }; };
   const askDeletePrinciple = (path: string) => { moved = null; plan = { ...planDeletePrinciple(brain, path), kind: 'principle', path, inReserve: slugOf(path) === RESERVE_SLUG }; };
@@ -163,6 +169,7 @@
       {@const slug = slugOf(set.path)}
       {@const principles = s.principlesOf(slug)}
       {@const visible = searching ? filterPrinciples(principles, { q, tags: [] }, s) : principles}
+      {@const opened = isOpen(slug, visible.length)}
       <li
         class="set"
         data-testid="set-{slug}"
@@ -177,7 +184,18 @@
             <button onclick={() => saveRename(slug)} disabled={busy} use:hold={pressed === `rename:${slug}`} data-testid="rename-save">Save</button>
             <button onclick={() => (renaming = null)}>Cancel</button>
           {:else}
-            <h3><a href={browseHref(set.path)} data-testid="set-label">{setLabel(set.fm)}</a>{#if searching} <small data-testid="set-match-count">· {visible.length} of {principles.length}</small>{/if}</h3>
+            <h3>
+              <button type="button" class="toggle" onclick={() => toggleOpen(slug)} aria-expanded={opened} data-testid="set-toggle">
+                <span class="caret" aria-hidden="true">{opened ? '▾' : '▸'}</span>
+                <span data-testid="set-label">{setLabel(set.fm)}</span>
+                {#if searching}
+                  <small data-testid="set-match-count">· {visible.length} of {principles.length}</small>
+                  {#if visible.length === 0}<small data-testid="no-match">No principle in this set matches.</small>{/if}
+                {:else}
+                  <small data-testid="set-count">· {principles.length} principle{principles.length === 1 ? '' : 's'}</small>
+                {/if}
+              </button>
+            </h3>
             <span class="controls">
               <button onclick={() => nudgeSet(slug, -1)} disabled={busy || i === 0} use:hold={pressed === `set:${slug}:-1`} aria-label="Move set up" data-testid="set-up">↑</button>
               <button onclick={() => nudgeSet(slug, 1)} disabled={busy || i === s.sets.length - 1} use:hold={pressed === `set:${slug}:1`} aria-label="Move set down" data-testid="set-down">↓</button>
@@ -194,12 +212,10 @@
           </label>
           <button onclick={() => saveDescribe(slug)} disabled={busy} use:hold={pressed === `describe:${slug}`} data-testid="describe-save">Save</button>
           <button onclick={() => (describing = null)}>Cancel</button>
-        {:else if set.body && !searching}
+        {:else if set.body && opened && !searching}
           <p class="framing">{set.body}</p>
         {/if}
-        {#if searching && visible.length === 0}
-          <p class="hint no-match" data-testid="no-match">No principle in this set matches.</p>
-        {:else}
+        {#if opened}
           <ol class="principles" data-testid="principles-{slug}">
             {#each visible as p, j (p.path)}
               <li
@@ -222,7 +238,7 @@
               <li class="empty">No principles yet. Write one below, accept a proposal, or add one from the reserve.</li>
             {/each}
           </ol>
-          {#if !searching}<p><a href="#/sets/{slug}/new-principle" data-testid="new-principle">+ New principle</a></p>{/if}
+          {#if !searching}<p class="foot"><a href="#/sets/{slug}/new-principle" data-testid="new-principle">+ New principle</a> <a href={browseHref(set.path)} class="quiet-link" data-testid="set-file"><small>set file</small></a></p>{/if}
         {/if}
       </li>
     {/each}
@@ -233,16 +249,22 @@
     <button type="submit" disabled={busy} use:hold={pressed === 'new-set'} data-testid="new-set">Create Set {s.sets.length + 1}</button>
   </form>
 
+  {@const reserveOpen = isOpen(RESERVE_SLUG, reserveFiltered.length + (searching ? 1 : 0))}
   <section class="reserve" data-testid="reserve">
     <div class="head">
-      <h3>In reserve <small data-testid="reserve-total">· {reserveAll.length}</small></h3>
-      {#if reserveAll.length > 1}
+      <h3>
+        <button type="button" class="toggle" onclick={() => toggleOpen(RESERVE_SLUG)} aria-expanded={reserveOpen} data-testid="set-toggle">
+          <span class="caret" aria-hidden="true">{reserveOpen ? '▾' : '▸'}</span> In reserve <small data-testid="reserve-total">· {reserveAll.length}</small>
+        </button>
+      </h3>
+      {#if reserveOpen && reserveAll.length > 1}
         <span class="controls" role="group" aria-label="Sort the reserve">
           <button type="button" class="chip" class:on={sort === 'newest'} aria-pressed={sort === 'newest'} onclick={() => (sort = 'newest')} data-testid="reserve-sort-newest">Newest</button>
           <button type="button" class="chip" class:on={sort === 'az'} aria-pressed={sort === 'az'} onclick={() => (sort = 'az')} data-testid="reserve-sort-az">A–Z</button>
         </span>
       {/if}
     </div>
+    {#if reserveOpen}
     <p class="hint">Principles you hold but are not applying in any set. Nothing here is sent to a model; there is no order because nothing here is in force.</p>
     {#if counts.size}
       <div class="tags" data-testid="reserve-tags">
@@ -275,6 +297,7 @@
     </ol>
     {#if left}<button type="button" onclick={() => (shown += PAGE)} data-testid="reserve-more">{moreLabel(left)}</button>{/if}
     <p><a href="#/sets/{RESERVE_SLUG}/new-principle" data-testid="new-principle-reserve">+ New principle in reserve</a></p>
+    {/if}
   </section>
   {#if error}<p class="error" role="alert">{error}</p>{/if}
 {/if}
@@ -288,7 +311,12 @@
   .set, .reserve { border: var(--bw) solid var(--edge); box-shadow: var(--raise); padding: 0.75rem; margin-bottom: 0.75rem; }
   .reserve { margin-top: 1rem; }
   .head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
-  .head h3 { margin: 0; }
+  .head h3 { margin: 0; min-width: 0; flex: 1 1 auto; }
+  /* The heading is the tap that opens a set: a plain button, text left, no chrome. */
+  .head h3 .toggle { min-height: 0; min-width: 0; width: 100%; padding: 0.2rem 0; border: 0; box-shadow: none; background: none; color: var(--ink); text-align: left; font: inherit; border-radius: 0; white-space: normal; display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: baseline; }
+  .head h3 .toggle:active { background: none; color: var(--ink); transform: none; }
+  .caret { flex: 0 0 auto; color: var(--muted); }
+  .foot { display: flex; gap: 0.75rem; align-items: baseline; margin: 0.5rem 0 0; }
   .controls { display: inline-flex; gap: 0.25rem; flex-wrap: nowrap; flex: 0 0 auto; align-items: center; }
   .controls button, .controls select { min-height: 0; padding: 0.25rem 0.5rem; font-size: var(--fs-small); border-radius: calc(var(--radius) - 2px); }
   .controls select { max-width: 9rem; }
@@ -302,7 +330,6 @@
   .title { flex: 1 1 auto; min-width: 0; }
   .rtags { display: block; }
   .framing { color: var(--muted); font-size: var(--fs-small); white-space: pre-wrap; margin: 0.5rem 0; }
-  .no-match { margin: 0.5rem 0 0; }
   .confirm { flex-direction: column; align-items: stretch; }
   .confirm p { margin: 0 0 6px; }
   .row { display: flex; gap: 0.5rem; flex-wrap: wrap; }

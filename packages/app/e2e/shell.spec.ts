@@ -12,8 +12,8 @@ test('the shell loads the demo brain and lists its contents', async ({ page }) =
   await expect(page.getByTestId('sources')).toContainText('awaiting review');
   await expect(page.getByText('25 files')).toBeVisible();
   await page.getByRole('link', { name: 'Sets' }).click();
-  await expect(page.getByRole('heading', { name: 'Set 1', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Set 2 — Work' })).toBeVisible();
+  await expect(page.getByTestId('set-label')).toHaveText(['Set 1', 'Set 2 — Work']); // collapsed on arrival, labels in view
+  await page.getByTestId('set-ps-7k2m').getByTestId('set-toggle').click();
   await expect(page.getByTestId('set-ps-7k2m')).toContainText('Say the hard thing first');
   await page.getByRole('link', { name: 'Proposals' }).click();
   await expect(page.getByTestId('proposal-P-20260905-003')).toBeVisible();
