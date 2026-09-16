@@ -4,12 +4,13 @@
   // before sending, a streaming transcript, and citations as links.
   import { hold } from '../lib/press';
   import { untrack } from 'svelte';
-  import { type SourceFm, type Task, buildDerivePrompt, setLabel } from '@gnomon/core';
+  import { type SourceFm, type Task, buildDerivePrompt, buildRelatePrompt, setLabel } from '@gnomon/core';
   import { linkLabel, renderAnswer } from '../lib/markdown';
   import { brain } from '../lib/services/index';
   import { taskLabel, describeAssemblyError, ReasoningService } from '../lib/services/reasoning';
   import { extractProposal } from '../lib/services/proposals';
   import { deriveInto, describeDeriveError } from '../lib/services/derive';
+  import { relateInto } from '../lib/services/relate';
   import { filterSources, sortSources } from '../lib/services/browse';
   import { route } from '../lib/router.svelte';
   import ProposalForm from '../lib/components/ProposalForm.svelte';
@@ -20,8 +21,10 @@
   import { snapshot } from '../lib/stores/snapshot.svelte';
 
   const s = $derived(snapshot.current);
-  const TASKS: Array<Task | 'derive'> = ['reason', 'relate', 'compare', 'free', 'derive'];
-  const isDerive = $derived(reasoning.task === 'derive');
+  const TASKS: Array<Task | 'derive' | 'relate-set'> = ['reason', 'relate', 'compare', 'free', 'derive', 'relate-set'];
+  // Derive (Task E) and Relate sources to a set (Task F) share the source picker and the set select.
+  const isDerive = $derived(reasoning.task === 'derive' || reasoning.task === 'relate-set');
+  const isRelateSet = $derived(reasoning.task === 'relate-set');
   const assemblyTask = $derived((isDerive ? 'reason' : reasoning.task) as Task);
   const PROVIDER_LABELS: Record<string, string> = { mock: 'Demo model (no key)', anthropic: 'Anthropic', openrouter: 'OpenRouter' };
   let selected = $state<string[]>([]);
@@ -64,16 +67,16 @@
     reasoner.preview(s, assemblyTask, selected, reasoning.input, reasoning.model, settings.prefs.budgetPercent, settings.prefs.setDescriptionPlacement);
   });
 
-  // Derive (Task E). `#/reason?task=derive&sources=a,b` arrives with the task and the sources picked, once per hash.
+  // Derive and Relate to a set. `#/reason?task=derive&sources=a,b` (or `task=relate-set`) arrives with the task and the sources picked, once per hash.
   let arrivedFor = $state<string | null>(null);
   $effect(() => {
     const task = route.query.get('task');
     const sources = route.query.get('sources') ?? '';
     const key = `${task}|${sources}`;
-    if (task !== 'derive' || arrivedFor === key) return;
+    if ((task !== 'derive' && task !== 'relate-set') || arrivedFor === key) return;
     untrack(() => {
       arrivedFor = key;
-      reasoning.task = 'derive';
+      reasoning.task = task;
       const picked = sources.split(',').filter(Boolean);
       if (picked.length) reasoning.derive.sources = [...new Set([...reasoning.derive.sources, ...picked])];
     });
@@ -91,13 +94,39 @@
   const deriveResults = $derived(sortSources(filterSources(allSources, { q: deriveQuery, tags: [] }), 'newest').slice(0, deriveQuery.trim() ? 50 : 12));
   const chosen = $derived(reasoning.derive.sources.filter((slug) => s?.files.has(`sources/${slug}/raw.md`)));
   const togglePick = (slug: string) => { reasoning.derive.sources = chosen.includes(slug) ? chosen.filter((x) => x !== slug) : [...chosen, slug]; };
+  // Relate to a set needs an existing set: 'new' falls back to the first one.
+  const relateTarget = $derived(reasoning.derive.target !== 'new' ? reasoning.derive.target : (s?.sets[0]?.path.split('/')[1] ?? ''));
   const derivePreview = $derived.by(() => {
     if (!s || !reasoning.model || !isDerive || chosen.length === 0) return null;
+    const budget = ReasoningService.budget(reasoning.model, settings.prefs.budgetPercent);
+    if (isRelateSet) return s.sets.some((f) => f.path === `principles/${relateTarget}/_set.md`) ? buildRelatePrompt(s, chosen, relateTarget, budget) : null;
     const target = reasoning.derive.target === 'new' ? null : reasoning.derive.target;
     if (target && !s.sets.some((f) => f.path === `principles/${target}/_set.md`)) return null;
-    return buildDerivePrompt(s, chosen, target, ReasoningService.budget(reasoning.model, settings.prefs.budgetPercent));
+    return buildDerivePrompt(s, chosen, target, budget);
   });
   const canDerive = $derived(!!s && !!reasoning.model && !deriving && chosen.length > 0 && !!derivePreview?.ok);
+  let relatedNone = $state<string | null>(null);
+  async function relateSet() {
+    if (!s || !reasoning.model) return;
+    deriving = true;
+    deriveError = null;
+    relatedNone = null;
+    try {
+      const set = s.sets.find((f) => f.path === `principles/${relateTarget}/_set.md`);
+      const r = await relateInto(brain, reasoner.driver(reasoning.provider), reasoning.model, chosen, relateTarget, ReasoningService.budget(reasoning.model, settings.prefs.budgetPercent));
+      const from = chosen.join(',');
+      if (r.n === 0) {
+        relatedNone = `Nothing proposed: the model found nothing in ${chosen.map((slug) => linkLabel(`sources/${slug}/raw.md`, s!)).join(' and ')} that bears on ${set ? setLabel(set.fm) : 'the set'}.`;
+        return;
+      }
+      reasoning.derive = { sources: [], target: r.set, newName: '' };
+      location.hash = `#/proposals?related=${r.n}&from=${encodeURIComponent(from)}&set=${r.set}`;
+    } catch (e) {
+      deriveError = describeError(e);
+    } finally {
+      deriving = false;
+    }
+  }
   async function derive() {
     if (!s || !reasoning.model) return;
     deriving = true;
@@ -166,15 +195,24 @@
     </div>
     {#if modelError}<p class="error" role="alert">Could not list models: {modelError}</p>{/if}
     {#if isDerive}
-      <!-- Derive (Task E): sources in, proposals out; the curator decides each on Proposals. -->
+      <!-- Derive (Task E) and Relate to a set (Task F): sources in, proposals out; the curator decides each on Proposals. -->
+      {#if isRelateSet}
+        <p class="hint" data-testid="relate-set-hint">Pick filed sources and a set: the model proposes grounds, amendments, and principles the set lacks, as proposals under that set. Nothing changes until you decide each.</p>
+      {/if}
       <div class="row">
-        <label>Into set
-          <select bind:value={reasoning.derive.target} data-testid="derive-set">
-            {#each s.sets as set (set.path)}<option value={set.path.split('/')[1]}>{setLabel(set.fm)}</option>{/each}
-            <option value="new">New set…</option>
-          </select>
+        <label>{isRelateSet ? 'To set' : 'Into set'}
+          {#if isRelateSet}
+            <select value={relateTarget} onchange={(e) => (reasoning.derive.target = (e.currentTarget as HTMLSelectElement).value)} data-testid="relate-set-target">
+              {#each s.sets as set (set.path)}<option value={set.path.split('/')[1]}>{setLabel(set.fm)}</option>{/each}
+            </select>
+          {:else}
+            <select bind:value={reasoning.derive.target} data-testid="derive-set">
+              {#each s.sets as set (set.path)}<option value={set.path.split('/')[1]}>{setLabel(set.fm)}</option>{/each}
+              <option value="new">New set…</option>
+            </select>
+          {/if}
         </label>
-        {#if reasoning.derive.target === 'new'}
+        {#if reasoning.derive.target === 'new' && !isRelateSet}
           <label>Sub-name <small>(optional)</small><input bind:value={reasoning.derive.newName} placeholder="e.g. Work" data-testid="derive-set-name" /></label>
         {/if}
       </div>
@@ -203,9 +241,14 @@
         {/if}
       </div>
       <div class="row">
-        <button class="primary" onclick={derive} disabled={!canDerive} use:hold={deriving} data-testid="derive">{deriving ? 'Deriving…' : 'Derive'}</button>
+        {#if isRelateSet}
+          <button class="primary" onclick={relateSet} disabled={!canDerive} use:hold={deriving} data-testid="relate-set">{deriving ? 'Relating…' : 'Relate'}</button>
+        {:else}
+          <button class="primary" onclick={derive} disabled={!canDerive} use:hold={deriving} data-testid="derive">{deriving ? 'Deriving…' : 'Derive'}</button>
+        {/if}
         {#if deriving}<span role="status" class="hint">One completion, then one commit of the proposals; a few seconds.</span>{/if}
       </div>
+      {#if relatedNone}<p class="hint" role="status" data-testid="related-none">{relatedNone}</p>{/if}
       {#if deriveError}<p class="error" role="alert" data-testid="derive-error">{deriveError}</p>{/if}
     {:else if s.byType('principle').length === s.reserve.length}
       <p class="empty" data-testid="empty-reason">

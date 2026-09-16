@@ -470,7 +470,7 @@ screen gains one search over every principle, sets and reserve alike.
   gains the step, and the maintainer has reserved and placed a principle
   in their own brain.
 
-## Feature block: leaner filing, and Relate sources to a set (2026-09-16)
+## Feature block: leaner filing, and Relate sources to a set (2026-09-16) — P1 and P2 built 2026-09-16; the maintainer's own-brain filing and relate left
 
 Asked for by the maintainer: as the brain grows, the proposals a filing
 raises balloon. Filing becomes clerical again and local to the passage:
@@ -485,7 +485,7 @@ that principle), amendments, and principles for that set, as proposal
 files in one commit. The filing prompt no longer carries the sets, so
 its cost stops growing with the brain. Two sub-blocks, format first.
 
-### P1. The format: filing's contract, Task F in core, the demo model (M)
+### P1. The format: filing's contract, Task F in core, the demo model (M) — done, 64b4c5f
 
 - Schema §4.7: `target_set` may be `_reserve` for a `principle` proposal;
   §7.6 step 5 rewritten (tags in `raw.md` frontmatter from the vocabulary;
@@ -517,7 +517,7 @@ its cost stops growing with the brain. Two sub-blocks, format first.
   every parser refusal has a test, a relate batch validates clean over
   the fixture, both AGENTS.md copies match, and CI is green.
 
-### P2. The app: the Reserve group, Relate on Reason, the source shortcut (M)
+### P2. The app: the Reserve group, Relate on Reason, the source shortcut (M) — done
 
 - Proposals: a `principle` proposal with `target_set: _reserve` groups
   under **Reserve**; "Write it as proposed" writes into the reserve;

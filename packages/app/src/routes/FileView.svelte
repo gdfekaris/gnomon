@@ -81,7 +81,7 @@
     <p><a href="#/edit/{path}" data-testid="edit-link">Edit</a></p>
   {:else if fm['type'] === 'source'}
     <p><a href="#/edit/{path}" data-testid="edit-link">Edit metadata</a> <small>· the passage text is immutable; corrections go in <a href={browseHref(path.replace(/raw\.md$/, 'notes.md'))}>notes</a></small></p>
-    <p><a href="#/reason?task=derive&sources={path.split('/')[1]}" data-testid="derive-from">Derive principles from this passage</a></p>
+    <p><a href="#/reason?task=derive&sources={path.split('/')[1]}" data-testid="derive-from">Derive principles from this passage</a> · <a href="#/reason?task=relate-set&sources={path.split('/')[1]}" data-testid="relate-from">Relate this passage to a set</a></p>
   {/if}
   {#if file.body}
     <MarkdownView body={file.body} {path} {anchor} />

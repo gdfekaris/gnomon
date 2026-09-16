@@ -115,6 +115,16 @@ Node 20+ and Claude Code, and a photo on the phone to attach.
       The search field finds a principle by a ground's author and
       collapses a set with no match.
 
+## 6d. Leaner filing, and Relate sources to a set
+
+- [ ] File a capture → the review shows its tags on the source and the
+      proposals are principles for the Reserve group only, none for a
+      short capture; "Write it as proposed" on one lands it in the
+      reserve. Open a filed source → "Relate this passage to a set" →
+      Reason with it picked and a set chosen → Relate → Proposals shows
+      the batch under that set with the notice; accept a link and see the
+      ground added; `Relate: n proposals for Set N` on github.com.
+
 ## 7. Desktop round trip through Claude Code
 
 - [ ] Clone the brain on the desktop. `npx gnomon-cli status` matches what

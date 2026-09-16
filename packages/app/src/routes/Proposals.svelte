@@ -4,7 +4,7 @@
   // one Decide: commit each; accepting a principle or amendment opens the
   // editor pre-filled. The curator writes the principle; the app never does.
   import { hold } from '../lib/press';
-  import type { BrainFile, ProposalFm } from '@gnomon/core';
+  import { type BrainFile, type ProposalFm, setLabel } from '@gnomon/core';
   import MarkdownView from '../lib/components/MarkdownView.svelte';
   import { browseHref, linkLabel } from '../lib/markdown';
   import ConnectionNotice from '../lib/components/ConnectionNotice.svelte';
@@ -97,6 +97,11 @@
 {#if !s}
   <ConnectionNotice />
 {:else}
+  {#if route.query.get('related')}
+    {@const from = (route.query.get('from') ?? '').split(',').filter(Boolean)}
+    {@const set = s.sets.find((f) => f.path === `principles/${route.query.get('set')}/_set.md`)}
+    <p class="ok" role="status" data-testid="related"><span>{route.query.get('related')} proposal{route.query.get('related') === '1' ? '' : 's'} for {set ? setLabel(set.fm) : 'the set'} from {#each from as slug, i (slug)}{i ? (i === from.length - 1 ? ' and ' : ', ') : ''}<a href={browseHref(`sources/${slug}/raw.md`)}>{linkLabel(`sources/${slug}/raw.md`, s)}</a>{/each}. Decide each below.</span></p>
+  {/if}
   {#if route.query.get('derived')}
     {@const from = (route.query.get('from') ?? '').split(',').filter(Boolean)}
     <p class="ok" role="status" data-testid="derived"><span>{route.query.get('derived')} proposal{route.query.get('derived') === '1' ? '' : 's'} derived from {#each from as slug, i (slug)}{i ? (i === from.length - 1 ? ' and ' : ', ') : ''}<a href={browseHref(`sources/${slug}/raw.md`)}>{linkLabel(`sources/${slug}/raw.md`, s)}</a>{/each}. Write each as proposed, edit it, or decline it.</span></p>
