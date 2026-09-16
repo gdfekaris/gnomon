@@ -60,6 +60,28 @@ describe('inbox service (US-2, US-3)', () => {
     expect(review.capture!.addedLines).toEqual(['status: filed', 'filed_as: unknown-a-photographed-page']);
   });
 
+  it('files only the chosen captures, in inbox order, and leaves the rest unfiled', async () => {
+    const { brain, driver, inbox } = await connected();
+    const second = buildCapture({ body: 'Second capture.\n', now: '2026-09-07T10:00:00Z', expectedHead: brain.head! });
+    await brain.commit(second.batch);
+    const third = buildCapture({ body: 'Third capture.\n', now: '2026-09-07T11:00:00Z', expectedHead: brain.head! });
+    await brain.commit(third.batch);
+    expect(unfiledCaptures(brain.snapshot!).map((c) => c.path)).toEqual(['inbox/20260906-070000-2bq.md', second.path, third.path]);
+
+    const results = await processInbox(inbox, brain, driver, new MockProvider(), MOCK_MODEL, 19_200, { paths: [third.path, 'inbox/20260906-070000-2bq.md', 'inbox/not-there.md'] });
+    expect(results.map((r) => [r.path, r.slug, r.error])).toEqual([
+      ['inbox/20260906-070000-2bq.md', 'unknown-the-only-way-to', undefined],
+      [third.path, 'unknown-third-capture', undefined],
+    ]);
+    expect(unfiledCaptures(brain.snapshot!).map((c) => c.path)).toEqual([second.path]);
+    expect((await driver.history({ limit: 2 })).map((c) => c.message)).toEqual(['File: unknown-third-capture', 'File: unknown-the-only-way-to']);
+    expect(validateSnapshot(brain.snapshot!)).toEqual([]);
+
+    // an empty choice files nothing
+    expect(await processInbox(inbox, brain, driver, new MockProvider(), MOCK_MODEL, 19_200, { paths: [] })).toEqual([]);
+    expect(unfiledCaptures(brain.snapshot!).map((c) => c.path)).toEqual([second.path]);
+  });
+
   it('a bad reply stops that capture only, with no commit', async () => {
     const { brain, driver, inbox } = await connected();
     const head = await driver.head();

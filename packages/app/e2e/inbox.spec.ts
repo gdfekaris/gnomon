@@ -53,6 +53,58 @@ test('file a capture with the demo model, review it, ratify it; file another and
   await expect(page.getByTestId('refusal-count')).toHaveText('0 refusals');
 });
 
+// With several captures waiting, filing them all at once is slow and lands a pile of proposals; the curator
+// picks the ones to file now. One capture shows no pick box, so the short path reads as it always did.
+test('with several unfiled captures, the curator picks which to file and the rest keep waiting', async ({ page }) => {
+  await expect(page.getByTestId('unfiled').locator('li')).toHaveCount(1);
+  await expect(page.getByTestId('unfiled').locator('input[type=checkbox]')).toHaveCount(0);
+  await expect(page.getByTestId('pick-all')).toHaveCount(0);
+  await expect(page.getByTestId('process')).toHaveText('Process inbox with AI');
+
+  // Each capture goes Capture → Inbox so every goto changes the hash: a goto to the hash already shown
+  // reloads the page in WebKit, and a reload re-seeds the demo brain.
+  let waiting = 1;
+  for (const text of ['Second capture, filed now.', 'Third capture, filed now.']) {
+    await page.goto('/#/capture');
+    await page.getByTestId('capture-text').fill(text);
+    await page.getByTestId('capture-save').click();
+    await expect(page.getByTestId('saved')).toBeVisible();
+    await expect(page.getByTestId('capture-text')).toHaveValue('');
+    await page.goto('/#/inbox');
+    await expect(page.getByTestId('unfiled').locator('li')).toHaveCount(++waiting);
+  }
+  const boxes = page.getByTestId('unfiled').locator('input[type=checkbox]');
+  await expect(boxes).toHaveCount(3);
+  for (let i = 0; i < 3; i++) await expect(boxes.nth(i)).toBeChecked();
+  await expect(page.getByTestId('process')).toHaveText('Process inbox with AI');
+
+  // None empties the choice and holds the button; All restores it
+  await page.getByTestId('pick-none').click();
+  await expect(page.getByTestId('process')).toBeDisabled();
+  await expect(page.getByTestId('pick-none')).toBeDisabled();
+  await page.getByTestId('pick-all').click();
+  await expect(page.getByTestId('process')).toBeEnabled();
+  await expect(page.getByTestId('pick-all')).toBeDisabled();
+
+  // leave the fixture's capture waiting, file the two new ones
+  await page.getByTestId('pick-20260906-070000-2bq').uncheck();
+  await expect(page.getByTestId('process')).toHaveText('File 2 of 3 captures');
+  await page.getByTestId('process').click();
+  const results = page.getByTestId('process-results');
+  await expect(results.locator('li')).toHaveCount(2);
+  await expect(results).toContainText('filed as unknown-second-capture-filed');
+  await expect(results).toContainText('filed as unknown-third-capture-filed');
+  await expect(results).not.toContainText('unknown-the-only-way-to');
+  await expect(page.getByTestId('unfiled').locator('li')).toHaveCount(1);
+  await expect(page.getByTestId('unfiled')).toContainText('20260906-070000-2bq');
+  await expect(page.getByTestId('unfiled').locator('input[type=checkbox]')).toHaveCount(0);
+  await expect(page.getByTestId('process')).toHaveText('Process inbox with AI');
+  await expect(page.getByTestId('filing-unknown-second-capture-filed-now').getByTestId('state')).toHaveText('awaiting review');
+  await expect(page.getByTestId('filing-unknown-third-capture-filed-now').getByTestId('state')).toHaveText('awaiting review');
+  await page.goto('/#/settings');
+  await expect(page.getByTestId('refusal-count')).toHaveText('0 refusals');
+});
+
 test('a ratified filing offers no Reject: the revert would be refused, so the review says what it is instead', async ({ page }) => {
   await page.getByTestId('process').click();
   await expect(page.getByTestId('process-results')).toContainText('filed as');

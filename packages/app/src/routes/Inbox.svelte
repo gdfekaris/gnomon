@@ -22,6 +22,13 @@
   let { filing = undefined }: { filing?: string | undefined } = $props();
   const s = $derived(snapshot.current);
   const captures = $derived(s ? unfiledCaptures(s) : []);
+  // Which captures the button files. Every unfiled capture is ticked until unticked here, so one capture
+  // reads exactly as before; with several, the curator can file the two that matter now and leave the
+  // rest waiting. Component state only: a reload ticks everything again, and nothing is saved on the device.
+  let unticked = $state<string[]>([]);
+  const chosen = $derived(captures.filter((c) => !unticked.includes(c.path)));
+  const stemOf = (path: string) => path.slice('inbox/'.length, -3);
+  const togglePick = (path: string) => (unticked = unticked.includes(path) ? unticked.filter((p) => p !== path) : [...unticked, path]);
   const PROVIDER_LABELS: Record<string, string> = { mock: 'Demo model (no key)', anthropic: 'Anthropic', openrouter: 'OpenRouter' };
   let models = $state<ModelInfo[]>([]);
   let model = $state<ModelInfo | null>(null);
@@ -70,7 +77,7 @@
     busy = 'process';
     error = null;
     try {
-      await processInbox(inbox, brain, session.driver, reasoner.driver(reasoning.provider), model, ReasoningService.budget(model, settings.prefs.budgetPercent));
+      await processInbox(inbox, brain, session.driver, reasoner.driver(reasoning.provider), model, ReasoningService.budget(model, settings.prefs.budgetPercent), { paths: chosen.map((c) => c.path) });
       await loadFilings(inbox, brain, session.driver);
     } catch (e) {
       error = describeError(e);
@@ -133,9 +140,18 @@
 {:else}
   <section>
     <h3>Unfiled captures</h3>
+    {#if captures.length > 1}
+      <p class="hint pick-all">
+        Tick the ones to file now.
+        <button type="button" class="link" onclick={() => (unticked = [])} disabled={!unticked.length} data-testid="pick-all">All</button>
+        <button type="button" class="link" onclick={() => (unticked = captures.map((c) => c.path))} disabled={!chosen.length} data-testid="pick-none">None</button>
+      </p>
+    {/if}
     <ul data-testid="unfiled">
       {#each captures as c (c.path)}
-        <li><a href={browseHref(c.path)}><code>{c.path.slice('inbox/'.length, -3)}</code></a>{#if c.fm.attachment}{' · attachment'}{/if}{#if c.fm.note}{` — ${c.fm.note}`}{/if}</li>
+        <li>
+          {#if captures.length > 1}<input type="checkbox" checked={!unticked.includes(c.path)} onchange={() => togglePick(c.path)} aria-label="File {stemOf(c.path)}" data-testid="pick-{stemOf(c.path)}" /> {/if}<a href={browseHref(c.path)}><code>{stemOf(c.path)}</code></a>{#if c.fm.attachment}{' · attachment'}{/if}{#if c.fm.note}{` — ${c.fm.note}`}{/if}
+        </li>
       {:else}
         <li class="empty">Nothing waiting.</li>
       {/each}
@@ -151,7 +167,9 @@
           {#each models as m (m.id)}<option value={m}>{m.label}</option>{/each}
         </select>
       </label>
-      <button class="primary" onclick={process} disabled={busy !== null || !captures.length || !model} use:hold={busy === 'process'} data-testid="process">{busy === 'process' ? 'Processing…' : 'Process inbox with AI'}</button>
+      <button class="primary" onclick={process} disabled={busy !== null || !chosen.length || !model} use:hold={busy === 'process'} data-testid="process">
+        {#if busy === 'process'}Processing…{:else if chosen.length && chosen.length < captures.length}File {chosen.length} of {captures.length} captures{:else}Process inbox with AI{/if}
+      </button>
     </div>
     {#if inbox.processing}<p class="queued" role="status">Filing {inbox.processing.done + 1} of {inbox.processing.total}…</p>{/if}
     {#if inbox.results.length}
@@ -263,4 +281,7 @@
   .added .edit { margin: 0 0 0.5rem; }
   .attachment { margin: 0; }
   ul[data-testid='unfiled'] { padding-left: 0.25rem; list-style: none; }
+  ul[data-testid='unfiled'] li { margin-bottom: 0.25rem; }
+  .pick-all { margin: 0 0 0.25rem; }
+  .pick-all button { padding: 4px 6px; }
 </style>

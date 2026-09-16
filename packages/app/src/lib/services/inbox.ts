@@ -54,14 +54,22 @@ export async function completeText(provider: ProviderDriver, model: ModelInfo, s
   return text;
 }
 
+export interface ProcessOptions {
+  /** The captures to file, by inbox path; every unfiled capture when absent. Unknown or filed paths are skipped. */
+  paths?: string[];
+  signal?: AbortSignal;
+}
+
 /**
- * Task C for every unfiled capture (spec §8.5): the model proposes metadata
- * and proposals from the text and note; the app copies the passage and the
- * attachment itself and commits one batch per capture. A bad reply stops
- * that capture only; the rest go on.
+ * Task C for the chosen unfiled captures, every one by default (spec §8.5):
+ * the model proposes metadata and proposals from the text and note; the app
+ * copies the passage and the attachment itself and commits one batch per
+ * capture, in inbox order. A bad reply stops that capture only; the rest go on.
  */
-export async function processInbox(state: InboxState, brain: BrainService, driver: StorageDriver, provider: ProviderDriver, model: ModelInfo, budgetTokens: number, signal: AbortSignal = new AbortController().signal): Promise<ProcessResult[]> {
-  const captures = unfiledCaptures(snap(brain));
+export async function processInbox(state: InboxState, brain: BrainService, driver: StorageDriver, provider: ProviderDriver, model: ModelInfo, budgetTokens: number, opts: ProcessOptions = {}): Promise<ProcessResult[]> {
+  const signal = opts.signal ?? new AbortController().signal;
+  const chosen = opts.paths ? new Set(opts.paths) : null;
+  const captures = unfiledCaptures(snap(brain)).filter((c) => !chosen || chosen.has(c.path));
   state.processing = { done: 0, total: captures.length };
   state.results = [];
   state.error = null;

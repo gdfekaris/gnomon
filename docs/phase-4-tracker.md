@@ -563,7 +563,12 @@ Open at the close of Phase 3 (2026-09-11); none blocks a Phase 4 block.
   picker reuses it; the Derive task lives in `services/derive.ts` and
   Task E in AGENTS.md; a link proposal means a ground and accepting it
   adds the ground; a principle proposal pre-fills its source as a ground
-  with a clean draft and can be written as proposed in one tap.
+  with a clean draft and can be written as proposed in one tap. The Inbox
+  (2026-09-15) files a chosen subset: with two or more unfiled captures
+  each row carries a pick box, all ticked by default, "All" and "None"
+  above them, and the button reads "File n of m captures" for a subset;
+  `processInbox` takes `{ paths }` and files those in inbox order. One
+  capture shows no box. The choice is component state, never saved.
 - The demo brain accepts `#/settings?demo-omit=a,b` to drop paths and
   `?demo-fill=n` to add n rounds of four generated sources. Its
   git history is one seed commit, so the fixture's own pending filing
