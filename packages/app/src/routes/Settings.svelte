@@ -11,6 +11,20 @@
   import { type Prefs, settings, saveGit, savePrefs, saveProviderKeys } from '../lib/stores/settings.svelte';
   import { snapshot } from '../lib/stores/snapshot.svelte';
   import { UPDATE_CHECK_TEXT, applyUpdate, checkForUpdate, pwa } from '../lib/stores/pwa.svelte';
+  import { KDF_PRESETS, timeDerivation } from '@gnomon/core';
+
+  // Spec §20.3: how long Argon2id takes on this device, so the default parameters can be chosen from a phone's number.
+  let kdf = $state<{ busy: boolean; text: string | null }>({ busy: false, text: null });
+  async function measureKdf() {
+    kdf = { busy: true, text: null };
+    try {
+      const interactive = await timeDerivation(KDF_PRESETS.interactive);
+      const moderate = await timeDerivation(KDF_PRESETS.moderate);
+      kdf = { busy: false, text: `interactive ${(interactive / 1000).toFixed(2)} s, moderate ${(moderate / 1000).toFixed(2)} s` };
+    } catch (e) {
+      kdf = { busy: false, text: `failed: ${describeError(e)}` };
+    }
+  }
 
   // Diagnostics for the live human test: what the device kept and how the app is running.
   const standalone = typeof matchMedia !== 'undefined' && (matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true);
@@ -178,6 +192,10 @@
       Brain: {#if session.driver}{session.label}, {snapshot.current ? `at ${snapshot.current.head.slice(0, 7)}` : 'no snapshot'}{#if snapshot.error}, last load failed: {snapshot.error}{/if}{:else}none connected{/if}.
     </li>
     <li>Service worker {swState}.</li>
+    <li>
+      Key derivation on this device: <button type="button" class="small" onclick={measureKdf} disabled={kdf.busy} use:hold={kdf.busy} data-testid="kdf-measure">{kdf.busy ? 'Measuring…' : 'Measure'}</button>
+      {#if kdf.text}<span role="status" data-testid="kdf-timing">{kdf.text}</span>{/if}
+    </li>
   </ul>
 </section>
 

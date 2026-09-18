@@ -49,6 +49,22 @@ commands, and any UI.
   the check without touching a file, the remembered key round-trips
   through a fake key store and a cleared store means "locked", and the
   derivation time on the maintainer's phone is written here.
+  **Built 2026-09-17**, everything but the phone number: `core/crypto/
+  passphrase.ts` (Argon2id through a lazy `import()` of
+  `libsodium-wrappers-sumo` 0.8.4, pinned; NFKC on the passphrase;
+  `newEncryptionConfig`, `deriveVerified`, `unlockWithPassphrase`,
+  `parseEncryptionConfig`, `timeDerivation`) and `storage/keyring.ts`
+  (`PassphraseKeyring` over a `KeyStore`: unlock, restore, lock, forget;
+  the raw key is AES-GCM-wrapped under a non-extractable device key,
+  since a non-extractable key cannot be wrapped after import; a failing
+  store is recorded, never thrown). Settings → About has "Key derivation
+  on this device: Measure", which runs both presets; the built-app flow
+  proves the WASM loads under the CSP on both engines. **To tick:** the
+  maintainer taps Measure on the phone and the numbers go here; if
+  moderate is over about 2 s, `KDF_PRESETS.interactive` becomes the
+  default for new configs (one constant). Note for block 4: esbuild
+  leaves the dynamic libsodium import unbundled in the CLI (310 KB), so
+  `gnomon encrypt`/`decrypt` will need it bundled or declared.
 - [ ] **2. Enable, disable, change passphrase** (M) — spec §6.4 "Enabling
   encryption on an existing brain". In `core`: `planEncrypt(snapshot,
   key, config)` (every eligible body rewritten as ciphertext plus

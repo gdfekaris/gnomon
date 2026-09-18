@@ -58,6 +58,8 @@ Three design rules govern every decision below:
 
 A brain is valid when `AGENTS.md`, the five top-level folders (`inbox`, `sources`, `principles`, `maps`, `templates`), and at least one principle set exist. `maps/proposals/` is created by whoever writes the first proposal and is not required for validity. The app's connect-time validator (US-15) checks exactly this list and offers to add anything missing; it never moves or rewrites existing content.
 
+`.gnomon/encryption.json` is optional: present only on an encrypted brain (Technical Specification §6.4), never itself encrypted, and, like everything under a dot-directory, outside validation, the indexes, and every prompt.
+
 A brain contains no `package.json`, lockfile, or `node_modules/`. Desktop tooling is the published `gnomon-cli` package, run as `npx gnomon-cli <command>` (or `gnomon <command>` once installed); the brain itself stays plain markdown plus attachments.
 
 ## 3. Identifiers

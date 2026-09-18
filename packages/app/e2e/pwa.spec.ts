@@ -1,5 +1,13 @@
 import { expect, test } from '@playwright/test';
 
+// The Argon2id WASM (libsodium, a lazy chunk) must load under the built app's CSP ('wasm-unsafe-eval'): the
+// Settings → About measurement runs both presets and reports seconds.
+test('key derivation runs in the built app and reports both presets', async ({ page }) => {
+  await page.goto('/#/settings');
+  await page.getByTestId('kdf-measure').click();
+  await expect(page.getByTestId('kdf-timing')).toHaveText(/^interactive \d+\.\d\d s, moderate \d+\.\d\d s$/, { timeout: 60_000 });
+});
+
 // Runs against the production preview (spec §11): manifest, icons, and a
 // registered service worker that precaches the shell and nothing else.
 test('the built app serves a manifest with icons and registers a service worker', async ({ page }) => {

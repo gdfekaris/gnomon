@@ -19,6 +19,7 @@
     "validate:reference": "python3 tools/gnomon-check.py template && python3 tools/gnomon-check.py packages/core/fixtures/brain"
   },
   "devDependencies": {
+    "@types/libsodium-wrappers-sumo": "0.8.2",
     "@types/node": "^26.4.1",
     "typescript": "~5.9.3",
     "vitest": "^5.0.0"
