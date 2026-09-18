@@ -51,7 +51,7 @@ for p,(fm,body) in files.items():
             if f'sources/{g}/raw.md' not in files: ref('warning',p,f'grounds -> missing source {g}')
         linked={m for m in re.findall(r'\[\[sources/([a-z0-9-]+)/raw',body)}
         gset=set(fm.get('grounds') or [])
-        if linked!=gset: ref('warning',p,f'grounds drift: body {sorted(linked)} vs grounds {sorted(gset)}')
+        if linked!=gset and not body.startswith('<!-- gnomon-enc v1 -->'): ref('warning',p,f'grounds drift: body {sorted(linked)} vs grounds {sorted(gset)}')
         for r in fm.get('related') or []:
             if f'principles/{r}.md' not in files: ref('warning',p,f'related -> missing {r}')
 # source folders hold only allowed files

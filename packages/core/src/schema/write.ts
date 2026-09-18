@@ -9,6 +9,7 @@ import { isFrontmatterPath } from './paths';
 import { tryParseFile } from './parse';
 import { serializeFile } from './serialize';
 import { buildSnapshot } from './snapshot';
+import { isEncryptedBody } from '../crypto/body';
 
 /** Curation transitions a write may make (schema §5). Everything else is a refusal. */
 const TRANSITIONS: Record<CurationState, readonly CurationState[]> = {
@@ -39,8 +40,11 @@ export function validateWrite(prev: BrainFile | undefined, next: BrainFile): Iss
     r('curated.transition', `curated cannot go from '${prev.fm.curated}' to '${next.fm.curated}'`);
   }
 
+  // Encrypting or decrypting a brain rewrites every body between plaintext and ciphertext (spec §6.4); those
+  // bytes are not comparable without the key, so the body rules stand aside when either side carries the marker.
+  const bodyComparable = !isEncryptedBody(prev.body) && !isEncryptedBody(next.body);
   if (next.fm.type === 'source') {
-    if (prev.body !== next.body) r('raw.immutable', 'a raw.md body is immutable in every state; corrections go in notes.md');
+    if (bodyComparable && prev.body !== next.body) r('raw.immutable', 'a raw.md body is immutable in every state; corrections go in notes.md');
     const pa = (prev.fm as { attachment?: string }).attachment;
     const na = next.fm.attachment;
     if (pa !== na) r('attachment.immutable', 'a source attachment cannot be added, removed, or renamed after filing');
@@ -48,7 +52,7 @@ export function validateWrite(prev: BrainFile | undefined, next: BrainFile): Iss
 
   if (next.fm.type === 'inbox') {
     const pf = prev.fm as InboxFm;
-    if (prev.body !== next.body) r('inbox.immutable', 'a capture body is never edited');
+    if (bodyComparable && prev.body !== next.body) r('inbox.immutable', 'a capture body is never edited');
     if (pf.attachment !== next.fm.attachment) r('inbox.immutable', "a capture's attachment is never changed");
     if (pf.note !== next.fm.note) r('inbox.immutable', "a capture's note is never changed");
   }

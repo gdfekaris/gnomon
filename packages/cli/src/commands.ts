@@ -6,7 +6,7 @@ import { existsSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   type BrainSnapshot, type Issue, INDEX_PATHS, hasRefusals, indexWrites, isFrontmatterPath, parseFile, validateLayout,
-  validateSnapshot, validateWrite,
+  validateSnapshot, validateWrite, ENCRYPTION_CONFIG_PATH, encryptedBodyCount,
 } from '@gnomon/core';
 import { loadSnapshot } from '@gnomon/storage';
 import { WorkingTreeDriver } from './worktree';
@@ -94,6 +94,8 @@ async function validate(driver: WorkingTreeDriver, snapshot: BrainSnapshot, out:
   const issues = [...validateLayout(await driver.list()), ...validateSnapshot(snapshot), ...writeRules(driver, snapshot)];
   report(issues, out);
   for (const w of indexWrites(snapshot)) out(`NOTE     ${w.path}: index is stale; run gnomon index`);
+  const encrypted = encryptedBodyCount(snapshot);
+  if (encrypted) out(`NOTE     ${encrypted} bod${encrypted === 1 ? 'y is' : 'ies are'} encrypted: the link and grounds rules were not checked on them; the frontmatter rules were`);
   if (!driver.isGit) out('NOTE     not a git checkout: the byte-identical-to-last-commit rules were skipped');
   const refusals = issues.filter((i) => i.level === 'refusal').length;
   out(`${snapshot.files.size} files, ${refusals} refusals, ${issues.length - refusals} warnings`);
@@ -121,14 +123,18 @@ async function status(driver: WorkingTreeDriver, snapshot: BrainSnapshot, out: O
   const reserve = snapshot.reserve.length;
   const principles = snapshot.byType('principle').length - reserve;
   const open = snapshot.byType('proposal').filter((f) => f.fm.status === 'open').length;
-  const refusals = hasRefusals([...validateLayout(await driver.list()), ...validateSnapshot(snapshot)]);
+  const tree = await driver.list();
+  const refusals = hasRefusals([...validateLayout(tree), ...validateSnapshot(snapshot)]);
   const stale = indexWrites(snapshot).length > 0;
+  const encryptedOn = tree.some((e) => e.path === ENCRYPTION_CONFIG_PATH);
+  const encrypted = encryptedBodyCount(snapshot);
   const uncommitted = driver.uncommitted();
 
   out(`inbox:       ${unfiled} unfiled, ${inbox.length - unfiled} filed`);
   out(`sources:     ${sources.length} (${by('ratified')} ratified, ${by('agent-proposed')} awaiting ratification, ${by('human')} by hand)`);
   out(`principles:  ${principles} in ${snapshot.sets.length} set${snapshot.sets.length === 1 ? '' : 's'}, ${reserve} in reserve`);
   out(`proposals:   ${open} open`);
+  out(`encryption:  ${encryptedOn ? `on, ${encrypted} bod${encrypted === 1 ? 'y' : 'ies'} encrypted` : 'off'}`);
   out(`indexes:     ${stale ? 'stale' : 'up to date'}`);
   out(driver.isGit ? `git:         ${uncommitted.length ? `${uncommitted.length} uncommitted change${uncommitted.length === 1 ? '' : 's'}` : 'clean'}` : 'git:         not a checkout');
 

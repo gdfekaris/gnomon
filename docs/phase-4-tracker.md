@@ -65,7 +65,7 @@ commands, and any UI.
   default for new configs (one constant). Note for block 4: esbuild
   leaves the dynamic libsodium import unbundled in the CLI (310 KB), so
   `gnomon encrypt`/`decrypt` will need it bundled or declared.
-- [ ] **2. Enable, disable, change passphrase** (M) — spec §6.4 "Enabling
+- [x] **2. Enable, disable, change passphrase** (M) — done 2026-09-17. — spec §6.4 "Enabling
   encryption on an existing brain". In `core`: `planEncrypt(snapshot,
   key, config)` (every eligible body rewritten as ciphertext plus
   `.gnomon/encryption.json`, one batch), `planDecrypt`, `planRekey`

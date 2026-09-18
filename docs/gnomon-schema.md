@@ -369,6 +369,10 @@ The curator picks one or more filed sources and one set; a model (in the app) or
 
 The app may decide several proposals in one commit when the curator picks them together, since one tap is one act: `Keep: <n> proposals in reserve` flips each chosen `principle` proposal with `target_set: _reserve` to `accepted` and writes its principle into the reserve (§7.9 create with `_reserve` as the set, the draft the app shows for a single accept) in the same commit, indexes regenerated; `Decline: <n> proposals` flips each chosen proposal to `declined` and touches nothing else. A single decision stays §7.10. Agents never decide in batches.
 
+### 7.17 Encrypt, decrypt, change passphrase
+
+The app (Technical Specification §6.4) rewrites every eligible body as ciphertext and adds `.gnomon/encryption.json` in one commit, `Encrypt: <n> files`; the reverse, `Decrypt: <n> files`, removes the file; a passphrase change re-encrypts every body under the new key and rewrites the salt and check, `Change passphrase`. Frontmatter never changes in these commits, so the indexes do not either. Agents never make them.
+
 ## 8. Prompt assembly context rules
 
 These rules govern which files are included when the app or an agent assembles context for a reasoning task. They are restated in `AGENTS.md`; this is the normative version.
@@ -411,6 +415,8 @@ The app validates on every read and refuses to write a file that fails a refusal
 - Every slug in `grounds` names an existing `sources/<slug>/raw.md`; every ref in `related`, `target`, and `target_set` names an existing principle, source, or set.
 - A principle body's dual links to sources and its `grounds` list disagree in either direction. The app editor offers a one-tap sync; frontmatter remains authoritative.
 - A source's `inbox_ref` names a stem that no longer exists (the curator cleared it), or names a capture whose `filed_as` differs.
+
+On an encrypted brain read without its key, the frontmatter rules run as usual and the body rules (dual links, grounds drift, the byte-identical `raw.md` body) stand aside for every body that carries the marker; `gnomon validate` says so in one note.
 
 ## 10. Reserved and forbidden
 

@@ -143,6 +143,7 @@ describe('gnomon status', () => {
       'sources:     4 (2 ratified, 1 awaiting ratification, 1 by hand)',
       'principles:  4 in 2 sets, 1 in reserve',
       'proposals:   2 open',
+      'encryption:  off',
       'indexes:     up to date',
       'git:         not a checkout',
       'next:        1 capture awaits filing; run /file-inbox',
@@ -170,4 +171,27 @@ describe('gnomon --version', () => {
     expect(out).toEqual([`gnomon-cli ${VERSION}`]);
     expect(VERSION).toMatch(/^\d+\.\d+\.\d+(-dev)?$/);
   });
+});
+
+describe('an encrypted brain without its key (spec §6.4, Phase 4 block 2)', () => {
+  it('validate is clean with one note, and status says encryption is on', async () => {
+    const { KDF_PRESETS, newEncryptionConfig, planEncrypt } = await import('@gnomon/core');
+    const { loadSnapshot } = await import('@gnomon/storage');
+    const { WorkingTreeDriver } = await import('../src/worktree');
+    const dir = copyOf(FIXTURE);
+    const driver = new WorkingTreeDriver(dir);
+    const snapshot = await loadSnapshot(driver);
+    const { config, key } = await newEncryptionConfig('open sesame', KDF_PRESETS.interactive);
+    await driver.commit(await planEncrypt(snapshot, key, config));
+    expect(readFileSync(join(dir, 'sources/weil-attention/raw.md'), 'utf8')).toContain('<!-- gnomon-enc v1 -->');
+    expect(readFileSync(join(dir, 'sources/weil-attention/raw.md'), 'utf8')).not.toContain('attention is');
+
+    const v = await cli('validate', dir);
+    expect(v.code).toBe(0);
+    expect(v.out).toContain('NOTE     23 bodies are encrypted: the link and grounds rules were not checked on them; the frontmatter rules were');
+    expect(v.out.at(-1)).toBe('25 files, 0 refusals, 0 warnings');
+    const st = await cli('status', dir);
+    expect(st.out).toContain('encryption:  on, 23 bodies encrypted');
+    expect(st.out).toContain('indexes:     up to date');
+  }, 60_000);
 });

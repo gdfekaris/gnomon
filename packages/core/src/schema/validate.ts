@@ -7,6 +7,7 @@ import { type Issue, refusal, warning } from './issues';
 import { FIELD_SPECS } from './fields';
 import { RESERVE_SLUG, pathInfo } from './paths';
 import { groundsDrift } from '../links/index';
+import { isEncryptedBody } from '../crypto/body';
 
 const TOP_FOLDERS = ['inbox', 'sources', 'principles', 'maps', 'templates'] as const;
 const TEMPLATE_FILES = ['raw', 'notes', 'principle', 'set', 'inbox', 'proposal'].map((n) => `templates/${n}.md`);
@@ -131,6 +132,7 @@ export function validateSnapshot(s: BrainSnapshot): Issue[] {
     for (const ref of fm.related ?? []) {
       if (!principlePaths.has(`principles/${ref}.md`)) w(f.path, 'related.dangling', `related names no principle '${ref}'`);
     }
+    if (isEncryptedBody(f.body)) continue; // no key here: the body's links cannot be read (spec §6.4); the CLI says so once
     const { inBodyOnly, inGroundsOnly } = groundsDrift(f);
     if (inBodyOnly.length || inGroundsOnly.length) {
       w(f.path, 'grounds.drift', `body links and grounds disagree: body only [${inBodyOnly.join(', ')}], grounds only [${inGroundsOnly.join(', ')}]`);
