@@ -793,6 +793,23 @@ Open at the close of Phase 3 (2026-09-11); none blocks a Phase 4 block.
   tag chips, pages of fifty); reserving and placing are one tap that
   runs the two commits in order (`reserve()` and `place()` in
   `services/reserve.ts`); the demo brain accepts `?reserve-fill=n`.
+- From the 2026-09-15 to 09-18 sessions, for whoever resumes: filing
+  raises reserve principles only (`target_set: _reserve`, at most four,
+  tags on the source from the brain's vocabulary), links and amendments
+  come from the Relate task (`services/relate.ts`, Task F, `/propose`);
+  the Proposals tab is a reserve triage list plus set cards with one
+  search, and several decisions at once are one commit (`Keep:`,
+  `Decline:`, schema §7.16); the Sets tab is every principle with one
+  search, sets and the reserve collapsed until tapped (`stores/sets.
+  svelte.ts` remembers the session's open ones; a search opens matches
+  and shuts the rest); reserve and place are one tap, two commits. A
+  button inside `.content` never shrinks: the one exception is the
+  triage row's title, which may wrap. Playwright runs alone, from
+  `packages/app`, with `-c` given as an absolute path, never in
+  parallel with another shell call. Phase 4: block 1 is built and waits
+  for the phone's Measure numbers (Settings → About); block 2 is done;
+  block 3 starts with the driver stack in `services/index.ts` and must
+  commit the plan batches through the plain driver, then refresh.
 - The demo brain accepts `#/settings?demo-omit=a,b` to drop paths and
   `?demo-fill=n` to add n rounds of four generated sources. Its
   git history is one seed commit, so the fixture's own pending filing
