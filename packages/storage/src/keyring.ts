@@ -57,10 +57,22 @@ export class PassphraseKeyring implements Keyring {
 
   /** Derive from the passphrase and prove it against the config's check, then hold the key; with `remember`, wrap it for this device too. */
   async unlock(passphrase: string, config: EncryptionConfig, remember = false): Promise<void> {
-    const raw = await deriveVerified(passphrase, config);
+    await this.adopt(await deriveVerified(passphrase, config), remember);
+  }
+
+  /**
+   * Hold a key whose raw bytes the caller already derived (enabling encryption
+   * or changing the passphrase derives once and seals the check from the same
+   * bytes), with `remember` wrapping them for this device; the bytes are
+   * zeroed either way. Without `remember`, a key this device remembered
+   * before is forgotten, so the store never holds a key that no longer opens
+   * the brain.
+   */
+  async adopt(raw: Uint8Array<ArrayBuffer>, remember = false): Promise<void> {
     try {
       this.held = await importBodyKey(raw.slice());
       if (remember) await this.remember(raw);
+      else await this.forgetStored();
     } finally {
       raw.fill(0);
     }
@@ -91,6 +103,10 @@ export class PassphraseKeyring implements Keyring {
   /** Drop the key and forget it on this device. */
   async forget(): Promise<void> {
     this.lock();
+    await this.forgetStored();
+  }
+
+  private async forgetStored(): Promise<void> {
     if (!this.store) return;
     try {
       await this.store.del(WRAPPED_KEY);

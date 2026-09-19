@@ -134,6 +134,24 @@ Node 20+ and Claude Code, and a photo on the phone to attach.
       an amendment unfolds the principle as it stands. The search narrows
       both parts.
 
+## 6f. Encryption
+
+- [ ] Settings → Encryption → Encrypt this brain: the button stays off until
+      the passphrases match and the sentence is typed back; encrypt with
+      Remember off. On github.com the commit is `Encrypt: n files`, a
+      `raw.md` shows the marker line and base64 under cleartext frontmatter,
+      and `.gnomon/encryption.json` exists. The app reads every passage.
+- [ ] Relaunch from the Home Screen: the unlock sheet; a wrong passphrase
+      is refused beside the field; the right one lands on Capture. Capture,
+      file, ratify: the review reads in the clear and the capture shows
+      "Now filed as". Settings → About says "Encryption on, unlocked".
+- [ ] Change the passphrase, relaunch, unlock with the new one and Remember
+      on; relaunch again: no sheet. Lock now: the sheet. Forget on this
+      device, relaunch: the sheet. Turn encryption off: `Decrypt: n files`,
+      the file is gone, github.com shows the passages again.
+- [ ] Note the Measure line under About (block 1) and how long the unlock
+      took.
+
 ## 7. Desktop round trip through Claude Code
 
 - [ ] Clone the brain on the desktop. `npx gnomon-cli status` matches what

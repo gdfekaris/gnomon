@@ -37,6 +37,36 @@ export class BrainService {
     this.state.error = null;
   }
 
+  /** Swap the driver stack under a live session (encryption turned on or off) and reload through the new one. */
+  async replaceDriver(driver: StorageDriver): Promise<BrainSnapshot> {
+    this.driver = driver;
+    return this.refresh();
+  }
+
+  /** Drop the loaded brain from memory while keeping the connection: what locking an encrypted brain means for this process. */
+  clearSnapshot(error: string | null = null): void {
+    this.state.current = null;
+    this.state.stale = false;
+    this.state.error = error;
+  }
+
+  /**
+   * Commit a batch whose writes are stored bytes rather than brain files (the
+   * encrypt, decrypt, and rekey plans of spec §6.4) through the driver given,
+   * which is the plain one under the encrypting wrapper. Nothing is applied
+   * locally: the caller swaps the stack and refreshes. A moved head marks the
+   * snapshot stale as an ordinary commit would.
+   */
+  async commitStored(batch: CommitBatch, via: StorageDriver): Promise<{ sha: string }> {
+    if (!this.state.current) throw new Error('no brain is connected');
+    try {
+      return await via.commit(batch);
+    } catch (e) {
+      if (e instanceof HeadMovedError) this.state.stale = true;
+      throw e;
+    }
+  }
+
   /** Reload the snapshot from the driver's head. Clears `stale`. */
   async refresh(): Promise<BrainSnapshot> {
     if (!this.driver) throw new Error('no brain is connected');

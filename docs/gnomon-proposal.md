@@ -129,7 +129,7 @@ Frontmatter carries `curated: human | agent-proposed | ratified`, tags, and sour
 
 **Reason**: chat interface; principle-set picker (multi-select chips, last selection remembered per device) above the task presets ("Reason from my principles," "Relate a new text," "Compare sets," free-form); provider/model picker; budget indicator showing how much of the selection fits; citations rendered as links into the brain. A fifth task, "Derive principles from sources": pick one or more filed sources and a target set (or a new one), and the model's candidate principles arrive as proposals on the Proposals screen, to be written as proposed, edited, or declined one by one (Schema §7.12). A sixth, "Relate to a set": pick filed sources and an existing set, and the model proposes links (a passage as evidence for a principle), amendments, and principles the set lacks, as proposals under that set (Schema §7.15); this is the deliberate act that filing no longer guesses at.
 
-**Settings**: git connection (token, repo), AI providers (keys), context budget percentage, privacy disclosure, encryption toggle (phase 4), theme.
+**Settings**: git connection (token, repo), AI providers (keys), context budget percentage, privacy disclosure, encryption (enable with the no-recovery sentence typed back, lock now, forget on this device, change passphrase, turn off; the disclosure of what stays cleartext), theme. An encrypted brain shows an unlock sheet on launch, with "Remember on this device" and its limit.
 
 **Onboarding**: token walkthrough with annotated steps, create-from-template or connect-existing (with validation results and offers to add missing scaffold), privacy explainer.
 

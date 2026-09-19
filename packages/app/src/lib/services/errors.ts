@@ -14,7 +14,7 @@ export function describeError(e: unknown): string {
   if (e instanceof HeadMovedError) return 'Your repository changed since this screen loaded. Refresh and try again.';
   if (e instanceof RevertConflictError) return `Later changes touched ${e.paths.join(', ')}, so this cannot be undone automatically.`;
   if (e instanceof AttachmentTooLargeError) return `That file is ${mb(e.size)} MB; the limit is ${mb(e.limit)} MB. Remove or replace the file.`;
-  if (e instanceof LockedError) return 'This brain is encrypted and locked on this device. Unlock it in Settings.';
+  if (e instanceof LockedError) return 'This brain is encrypted and locked on this device. Enter its passphrase to unlock it.';
   if (e instanceof DecryptError) return 'That passphrase does not unlock this brain.';
   // GitHub
   if (e instanceof AuthError) return 'GitHub rejected the token. Check it in Settings: it must be a fine-grained token with Contents read and write on this repository, and not expired.';

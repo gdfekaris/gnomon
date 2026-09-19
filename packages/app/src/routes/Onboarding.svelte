@@ -9,6 +9,8 @@
   import { hold } from '../lib/press';
   import { GitHubDriver } from '@gnomon/storage';
   import ValidationPanel from '../lib/components/ValidationPanel.svelte';
+  import EncryptForm from '../lib/components/EncryptForm.svelte';
+  import { DISCLOSURE } from '../lib/services/encryption';
   import { SCAFFOLD } from '../lib/scaffold';
   import pkg from '../../package.json';
   import { connectDemo, connectGitHub, describeError } from '../lib/services/index';
@@ -31,6 +33,9 @@
   let created = $state<string | null>(null);
   let swapToken = $state('');
   let swapped = $state(false);
+  // Spec §12 step 5: encryption is offered on the privacy step, before the brain holds anything.
+  let encrypting = $state(false);
+  let encrypted = $state<number | null>(null);
 
   const flow = $derived<Step[]>(intent === 'create' ? ['token', 'check', 'privacy', 'swap', 'install'] : ['token', 'check', 'privacy', 'install']);
   const position = $derived(flow.indexOf(step));
@@ -267,7 +272,19 @@
     </li>
     <li><strong>Nobody else.</strong> Gnomon has no server. Your token and keys stay in this browser on this device.</li>
   </ul>
-  <p class="hint">A later release adds client-side encryption of passage text, so that GitHub holds only ciphertext.</p>
+  {#if encrypted !== null}
+    <p class="ok" role="status" data-testid="onboard-encrypted">Encryption is on: {encrypted} file{encrypted === 1 ? '' : 's'} encrypted. GitHub holds ciphertext from here on.</p>
+  {:else if session.encryption.enabled}
+    <p class="hint" data-testid="onboard-encrypted">This brain is encrypted: GitHub holds ciphertext for its text, and the passphrase unlocks it on each device.</p>
+  {:else if session.driver}
+    <p class="hint">
+      Optional: <button class="link" onclick={() => (encrypting = !encrypting)} data-testid="onboard-encrypt">{encrypting ? 'not now' : 'encrypt this brain now'}</button>, before it holds anything,
+      so GitHub stores only ciphertext. {DISCLOSURE} You can turn it on or off later in Settings.
+    </p>
+    {#if encrypting}
+      <EncryptForm mode="enable" ondone={(n) => { encrypted = n; encrypting = false; }} />
+    {/if}
+  {/if}
   <div class="actions"><button onclick={next} data-testid="onboard-next">Continue</button></div>
 {:else if step === 'swap'}
   <h2>Narrow the token <small>(optional)</small></h2>

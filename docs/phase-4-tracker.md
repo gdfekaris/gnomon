@@ -79,7 +79,7 @@ commands, and any UI.
   old, a head that moved mid-operation is refused with nothing written,
   `gnomon validate` over an encrypted copy of the fixture is clean with
   the note, and the driver contract still passes wrapped.
-- [ ] **3. The app: unlock, toggle, disclosure** (L) — US-17, US-16, spec
+- [x] **3. The app: unlock, toggle, disclosure** (L) — done 2026-09-19, notes below the block. — US-17, US-16, spec
   §12 step 5, §14 (`LockedError` → unlock sheet), proposal §7. Session
   composition: when `.gnomon/encryption.json` exists the driver stack is
   `EncryptingDriver(GitHubDriver, PassphraseKeyring)`; the unlock sheet
@@ -101,6 +101,37 @@ commands, and any UI.
   review readable, change the passphrase, and disable; and a flow over
   the fake GitHub shows the stored blob is ciphertext and the app shows
   plaintext.
+  **Built 2026-09-19.** `services/encryption.ts` (framework-free): `composeStack`
+  reads `.gnomon/encryption.json` through the plain driver and returns the
+  wrapper over a `PassphraseKeyring` when it exists, restoring a remembered
+  key and proving it against the check first (a key for another brain or an
+  earlier passphrase is forgotten, so it reads as locked, never as damage);
+  `enableEncryption`, `disableEncryption`, `changePassphrase` each derive
+  once (`newConfig`), commit the plan through the plain driver by
+  `BrainService.commitStored` (never the wrapper, which would seal the
+  ciphertext again), then `replaceDriver` and refresh; `unlockBrain`,
+  `lockBrain` (`clearSnapshot`: the plaintext leaves memory), `forgetOnDevice`.
+  `services/index.ts` holds the stack and the glue; `session.encryption` is
+  the reactive `{ enabled, locked, storeError }`. The key store is idb-keyval
+  directly, not the settings mirror: a non-extractable `CryptoKey` cannot go
+  through localStorage. `PassphraseKeyring.adopt(raw, remember)` joined the
+  keyring for the enable and rekey flows; without `remember` it forgets what
+  the device held. UI: `UnlockSheet` under the stale banner whenever enabled
+  and locked; `EncryptForm` (enable or rekey; the sentence typed back on
+  enable; eight characters minimum) used by Settings → Encryption (enable,
+  lock now, forget on this device, change passphrase, turn off after a
+  confirmation, the disclosure verbatim) and by onboarding's privacy step;
+  Settings → About says on/off, locked/unlocked, and the last key-store
+  failure. `#/…?kdf=fast|interactive` picks the Argon2id parameters for the
+  flows and tests (`KDF_FAST`, never a default); a real brain gets
+  `KDF_PRESETS.moderate` until the phone numbers say otherwise (block 1).
+  **Review view decision:** no recomputation. The wrapper keeps a body's
+  ciphertext when its plaintext is unchanged, and a filing changes only two
+  frontmatter lines on the capture, so the compare patch already shows
+  those two lines in the clear; added files render from the decrypted
+  snapshot. The flow asserts it (`capture-filed`, no raw lines). Flows in
+  `e2e/encryption.spec.ts` over the fake GitHub (which survives a reload)
+  and the demo brain, on all four projects.
 - [ ] **4. `gnomon encrypt` / `gnomon decrypt`** (M) — spec §6.4 "Desktop
   interop", §13. In `packages/cli`: passphrase from `GNOMON_PASSPHRASE` or
   a prompt; `decrypt` rewrites eligible bodies in the working tree as
@@ -807,9 +838,11 @@ Open at the close of Phase 3 (2026-09-11); none blocks a Phase 4 block.
   triage row's title, which may wrap. Playwright runs alone, from
   `packages/app`, with `-c` given as an absolute path, never in
   parallel with another shell call. Phase 4: block 1 is built and waits
-  for the phone's Measure numbers (Settings → About); block 2 is done;
-  block 3 starts with the driver stack in `services/index.ts` and must
-  commit the plan batches through the plain driver, then refresh.
+  for the phone's Measure numbers (Settings → About); blocks 2 and 3 are
+  done (2026-09-19; the stack lives in `services/index.ts`, the flows in
+  `services/encryption.ts`, the plan batches go through the plain driver by
+  `commitStored`); block 4, `gnomon encrypt` / `gnomon decrypt`, is next,
+  and esbuild leaves the dynamic libsodium import unbundled in the CLI.
 - The demo brain accepts `#/settings?demo-omit=a,b` to drop paths and
   `?demo-fill=n` to add n rounds of four generated sources. Its
   git history is one seed commit, so the fixture's own pending filing

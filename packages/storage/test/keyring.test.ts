@@ -79,6 +79,29 @@ describe('PassphraseKeyring', () => {
     expect(ring.unlocked).toBe(false);
   }, 30_000);
 
+  it('adopts raw bytes the caller derived: held, remembered when asked, and a stale remembered key forgotten when not', async () => {
+    const { config, key } = await newEncryptionConfig('open sesame', FAST);
+    const store = new FakeStore();
+    const ring = new PassphraseKeyring(store);
+    await ring.unlock('open sesame', config, true);
+    expect(store.map.has(WRAPPED_KEY)).toBe(true);
+    // a new key adopted without `remember` clears what the device remembered, so the store never holds a key that no longer opens the brain
+    const raw = crypto.getRandomValues(new Uint8Array(new ArrayBuffer(32)));
+    const copy = raw.slice();
+    await ring.adopt(raw, false);
+    expect(ring.unlocked).toBe(true);
+    expect(raw.every((b) => b === 0)).toBe(true);
+    expect(store.map.has(WRAPPED_KEY)).toBe(false);
+    expect(store.map.has(DEVICE_KEY)).toBe(false);
+    const sealed = await encryptBody(await ring.key(), 'p', 'x');
+    await expect(decryptBody(key, 'p', sealed)).rejects.toThrow();
+    // adopted with `remember`, it round-trips into a fresh keyring
+    await ring.adopt(copy, true);
+    const later = new PassphraseKeyring(store);
+    expect(await later.restore()).toBe(true);
+    expect(await decryptBody(await later.key(), 'p', sealed)).toBe('x');
+  }, 30_000);
+
   it('drives the encrypting driver: ciphertext at rest, plaintext through the unlocked keyring, LockedError when locked', async () => {
     const { config } = await newEncryptionConfig('open sesame', FAST);
     const ring = new PassphraseKeyring();

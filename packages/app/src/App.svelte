@@ -7,6 +7,7 @@
   import { session } from './lib/stores/session.svelte';
   import { connectDemo, connectGitHub } from './lib/services/index';
   import StaleBanner from './lib/components/StaleBanner.svelte';
+  import UnlockSheet from './lib/components/UnlockSheet.svelte';
   import UpdateToast from './lib/components/UpdateToast.svelte';
   import { startServiceWorker } from './lib/stores/pwa.svelte';
   import { watchNetwork } from './lib/stores/pending.svelte';
@@ -66,6 +67,7 @@
     <span class="box"></span>
   </header>
   <StaleBanner />
+  <UnlockSheet />
   <UpdateToast />
   <div class="content">
     {#if onboarding}

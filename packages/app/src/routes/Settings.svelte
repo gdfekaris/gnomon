@@ -1,11 +1,13 @@
 <script lang="ts">
   // Settings — proposal §6: git connection, AI providers, context budget,
-  // privacy disclosure, theme; connect-existing validation (US-15). The
-  // encryption toggle is Phase 4 and the token walkthrough is Phase 3.
+  // privacy disclosure, theme; connect-existing validation (US-15); the
+  // encryption flows of spec §6.4 (Phase 4 block 3). The token walkthrough is onboarding.
   import { hold } from '../lib/press';
   import pkg from '../../package.json';
-  import { connectDemo, connectGitHub, describeError, disconnect } from '../lib/services/index';
+  import { connectDemo, connectGitHub, describeError, disconnect, encryption } from '../lib/services/index';
   import ValidationPanel from '../lib/components/ValidationPanel.svelte';
+  import EncryptForm from '../lib/components/EncryptForm.svelte';
+  import { DISCLOSURE } from '../lib/services/encryption';
   import { route } from '../lib/router.svelte';
   import { session } from '../lib/stores/session.svelte';
   import { type Prefs, settings, saveGit, savePrefs, saveProviderKeys } from '../lib/stores/settings.svelte';
@@ -81,6 +83,21 @@
   const saveKeys = () => run('keys', async () => {
     await saveProviderKeys({ anthropic: anthropic.trim(), openrouter: openrouter.trim() });
     savedKeys = true;
+  });
+
+  // Encryption (spec §6.4): enable, change the passphrase, lock, forget, disable. The forms are the shared component;
+  // the two one-tap flows and the confirmed disable run here.
+  let enabling = $state(false);
+  let rekeying = $state(false);
+  let disabling = $state(false);
+  let encDone = $state<string | null>(null);
+  const files = (n: number) => `${n} file${n === 1 ? '' : 's'}`;
+  const lockNow = () => run('enc-lock', async () => { encryption.lock(); encDone = null; });
+  const forget = () => run('enc-forget', async () => { await encryption.forget(); encDone = null; });
+  const doDisable = () => run('enc-disable', async () => {
+    const n = await encryption.disable();
+    disabling = false;
+    encDone = `Encryption is off: ${files(n)} rewritten as plaintext, and the passphrase forgotten on this device.`;
   });
 </script>
 
@@ -161,13 +178,52 @@
   </p>
 </section>
 
+<section data-testid="encryption">
+  <h3>Encryption</h3>
+  {#if !session.driver}
+    <p class="hint">Connect a brain first.</p>
+  {:else if session.encryption.locked}
+    <p data-testid="enc-locked">This brain is encrypted and locked on this device. Unlock it above to read it or to change its encryption.</p>
+  {:else if session.encryption.enabled}
+    <p data-testid="enc-on">Encryption is on. Passage, notes, principle, proposal, and capture text is encrypted on this device before upload; GitHub stores ciphertext.</p>
+    <p class="hint">{DISCLOSURE}</p>
+    <div class="row">
+      <button onclick={lockNow} disabled={busy} use:hold={pressed === 'enc-lock'} data-testid="enc-lock">Lock now</button>
+      <button onclick={forget} disabled={busy} use:hold={pressed === 'enc-forget'} data-testid="enc-forget">Forget on this device</button>
+      <button onclick={() => { rekeying = !rekeying; disabling = false; }} disabled={busy} data-testid="enc-rekey">Change passphrase</button>
+      <button onclick={() => { disabling = !disabling; rekeying = false; }} disabled={busy} data-testid="enc-disable">Turn encryption off</button>
+    </div>
+    {#if rekeying}
+      <EncryptForm mode="rekey" ondone={(n) => { rekeying = false; encDone = `Passphrase changed: ${files(n)} re-encrypted.`; }} />
+    {/if}
+    {#if disabling}
+      <div class="confirm" role="alertdialog" data-testid="enc-disable-confirm">
+        <p>Turn encryption off? Every body is rewritten as plaintext in one commit, GitHub can read it again, and the passphrase is forgotten on this device.</p>
+        <div class="row">
+          <button onclick={doDisable} disabled={busy} use:hold={pressed === 'enc-disable'} data-testid="enc-disable-yes">{pressed === 'enc-disable' ? 'Decrypting…' : 'Decrypt the brain'}</button>
+          <button class="primary" onclick={() => (disabling = false)} disabled={busy}>Keep it encrypted</button>
+        </div>
+      </div>
+    {/if}
+  {:else}
+    <p>Encryption is off. Turning it on encrypts the text of passages, notes, principles, proposals, and captures on this device before upload, so GitHub stores only ciphertext. Desktop tools need the passphrase, or <code>gnomon decrypt</code>, to read it.</p>
+    <button onclick={() => (enabling = !enabling)} disabled={busy} data-testid="enc-enable">{enabling ? 'Not now' : 'Encrypt this brain'}</button>
+    {#if enabling}
+      <EncryptForm mode="enable" ondone={(n) => { enabling = false; encDone = `Encryption is on: ${files(n)} encrypted.`; }} />
+    {/if}
+  {/if}
+  {#if encDone}<p class="ok" role="status" data-testid="enc-done">{encDone}</p>{/if}
+</section>
+
 <section>
   <h3>Who can see what</h3>
   <p>
-    Your brain is a private repository on GitHub; GitHub holds the files and can technically read them.
+    Your brain is a private repository on GitHub; GitHub holds the files and can technically read them, unless
+    encryption is on, in which case it holds ciphertext for every passage, note, principle, proposal, and capture and
+    cleartext for titles, tags, authors, structure, and attached files.
     When you reason, the AI provider you picked receives the principle sets you selected and as many of their
     grounding passages as fit the budget, never attachments and never the whole brain. Nobody else sees anything:
-    this app has no server. Client-side encryption of passage text arrives in a later release.
+    this app has no server.
   </p>
 </section>
 
@@ -192,6 +248,9 @@
       Brain: {#if session.driver}{session.label}, {snapshot.current ? `at ${snapshot.current.head.slice(0, 7)}` : 'no snapshot'}{#if snapshot.error}, last load failed: {snapshot.error}{/if}{:else}none connected{/if}.
     </li>
     <li>Service worker {swState}.</li>
+    <li data-testid="enc-diag">
+      Encryption {session.encryption.enabled ? (session.encryption.locked ? 'on, locked' : 'on, unlocked') : 'off'}{#if session.encryption.storeError}; last key store failure: {session.encryption.storeError}{/if}.
+    </li>
     <li>
       Key derivation on this device: <button type="button" class="small" onclick={measureKdf} disabled={kdf.busy} use:hold={kdf.busy} data-testid="kdf-measure">{kdf.busy ? 'Measuring…' : 'Measure'}</button>
       {#if kdf.text}<span role="status" data-testid="kdf-timing">{kdf.text}</span>{/if}
@@ -203,6 +262,9 @@
 
 <style>
   section { margin-bottom: 1.75rem; }
+  .row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.5rem 0; }
+  .confirm { flex-direction: column; align-items: stretch; }
+  .confirm p { margin: 0 0 6px; }
   label { margin: 0.5rem 0; }
   input:not([type='range']), select { max-width: 24rem; margin-top: 0.25rem; }
   input[type='range'] { max-width: 24rem; display: block; }

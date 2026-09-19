@@ -26,11 +26,12 @@ Chromium and on WebKit as an iPhone. The maintainer's live iPhone test
 (install, create a brain, capture, file, ratify, editors) is done and its
 findings are fixed; what it left open is carried in the Phase 4 tracker.
 
-**Next: Phase 4, `docs/phase-4-tracker.md`**, block 1 (the passphrase
-keyring). Encryption was designed in spec §6.4 and the body format,
-wrapper driver, and keyring interface already exist; Phase 4 wires a real
-keyring, the flows, the CLI commands, decides attachment encryption, adds
-a second storage driver, and documents local models. The tracker's
+**Next: Phase 4, `docs/phase-4-tracker.md`**, block 4 (`gnomon encrypt`
+and `gnomon decrypt`). Blocks 1 to 3 are built: the passphrase keyring,
+the enable, disable, and rekey plans in core, and the app's unlock sheet
+and Settings → Encryption (2026-09-19); block 1 still waits on the phone's
+Measure numbers. Left: the CLI commands, the attachment encryption
+decision, a second storage driver, and local-model docs. The tracker's
 "Carried from Phase 3" list holds the maintainer's items (npm trusted
 publishing once a security key arrives, the rest of the smoke checklist).
 When the pass is done: delete the tracker, break down Phase 5, and write
