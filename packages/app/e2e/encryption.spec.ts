@@ -3,6 +3,7 @@
 // one test, so the stored bytes can be read from Node and the unlock sheet
 // can be met on relaunch. `?kdf=fast` keeps Argon2id far below the presets.
 import { expect, test } from '@playwright/test';
+import { ENCRYPTION_CONFIG_PATH, KDF_PRESETS, encryptBody, newEncryptionConfig, serializeEncryptionConfig, splitFrontmatter } from '@gnomon/core';
 import { FakeGitHub, readBrainBytes, serveGitHub } from './github-fake';
 
 const MARKER = '<!-- gnomon-enc v1 -->';
@@ -32,7 +33,7 @@ test('enable on a GitHub brain, relaunch into the unlock sheet, work on it encry
   await page.getByTestId('git-owner').fill('octocat');
   await page.getByTestId('git-name').fill('brain');
   await page.getByTestId('git-token').fill('test-token');
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.getByRole('button', { name: 'Connect', exact: true }).click();
   await expect(page.getByText('Connected: octocat/brain')).toBeVisible();
   await expect(page.getByTestId('enc-diag')).toHaveText(/Encryption off/);
 
@@ -212,4 +213,42 @@ test('onboarding offers encryption on the privacy step, before the brain holds a
   const capture = [...gh.trees.get(gh.commits.get(gh.refs.get('heads/main')!)!.tree)!.keys()].find((p) => p.startsWith('inbox/') && p.endsWith('.md'))!;
   expect(textAt(gh, capture)).toContain(MARKER);
   expect(textAt(gh, capture)).not.toContain('The first passage.');
+});
+
+// iOS Lockdown Mode removes WebAssembly from every site not excluded (the maintainer's phone, 2026-09-19), and
+// libsodium's Argon2id runs in it: the app says so up front on the Measure line, the enable form, and the unlock
+// sheet, in a sentence that names the fix, instead of "Can't find variable: WebAssembly" after a tap.
+test('a device without WebAssembly is told so before any tap, and an encrypted brain reads as locked, not broken', async ({ page }) => {
+  await page.addInitScript(() => { delete (globalThis as { WebAssembly?: unknown }).WebAssembly; });
+  // A brain encrypted elsewhere: one body sealed, the config beside it, made here with Node's WebAssembly.
+  const seed = readBrainBytes();
+  const { config, key } = await newEncryptionConfig('open sesame', KDF_PRESETS.interactive);
+  const split = splitFrontmatter(new TextDecoder().decode(seed.get(RAW)!))!;
+  seed.set(RAW, new TextEncoder().encode(`---\n${split.yaml}\n---\n${await encryptBody(key, RAW, split.body)}`));
+  seed.set(ENCRYPTION_CONFIG_PATH, new TextEncoder().encode(serializeEncryptionConfig(config)));
+  const gh = await FakeGitHub.create(seed);
+  await serveGitHub(page, gh);
+
+  await page.goto('/#/settings');
+  await page.getByTestId('use-demo').click();
+  await expect(page.getByText('Connected: demo brain')).toBeVisible();
+  await expect(page.getByTestId('kdf-timing')).toContainText('Lockdown Mode');
+  await expect(page.getByTestId('kdf-measure')).toBeDisabled();
+  await page.getByTestId('enc-enable').click();
+  await expect(page.getByTestId('enc-no-wasm')).toContainText('without WebAssembly');
+  await fillEncrypt(page, 'open sesame', { sentence: true }).catch(() => undefined);
+  await expect(page.getByTestId('encrypt-form').getByTestId('enc-go')).toBeDisabled();
+  expect(messages(gh).some((m) => m.startsWith('Encrypt'))).toBe(false);
+
+  await page.getByTestId('git-owner').fill('octocat');
+  await page.getByTestId('git-name').fill('brain');
+  await page.getByTestId('git-token').fill('test-token');
+  await page.getByRole('button', { name: 'Connect', exact: true }).click();
+  const sheet = page.getByTestId('unlock-sheet');
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByTestId('unlock-no-wasm')).toContainText('Lockdown Mode');
+  await sheet.getByTestId('unlock-passphrase').fill('open sesame');
+  await expect(sheet.getByTestId('unlock-go')).toBeDisabled();
+  await expect(page.getByTestId('enc-locked')).toBeVisible();
+  await expect(page.getByTestId('enc-diag')).toHaveText(/Encryption on, locked/);
 });

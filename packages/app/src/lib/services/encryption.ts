@@ -197,6 +197,17 @@ export async function forgetOnDevice(brain: BrainService, stack: Stack, state: E
   brain.clearSnapshot(LOCKED_SENTENCE);
 }
 
+/**
+ * libsodium's Argon2id runs in WebAssembly, and iOS Lockdown Mode removes the
+ * global from every site not excluded (the maintainer's phone, 2026-09-19:
+ * "Can't find variable: WebAssembly"). Without it there is no key derivation,
+ * so the forms say so up front instead of failing after the tap.
+ */
+export const wasmAvailable = (): boolean => typeof WebAssembly !== 'undefined' && typeof WebAssembly.instantiate === 'function';
+export const NO_WASM = 'This device runs the app without WebAssembly, so it cannot derive an encryption key. On an iPhone that is Lockdown Mode: in Safari, open this site, tap the page menu at the left of the address bar, choose Website Settings, and turn Lockdown Mode off for this site; then relaunch.';
+/** The engine's own words for the missing global: Safari says "Can't find variable", Chromium "is not defined". */
+export const isWasmError = (e: unknown): boolean => e instanceof Error && /\bWebAssembly\b/.test(e.message) && /find variable|not defined/i.test(e.message);
+
 /** The disclosure, verbatim from spec §6.4, shown wherever encryption is offered or described. */
 export const DISCLOSURE = 'Titles, tags, authors, structure, and attached files remain readable to your git host; passage text, notes, principle text, proposal text, and inbox text do not. File names and sizes stay visible. There is no recovery: a lost passphrase loses the bodies.';
 export const REMEMBER_LIMIT = 'Remembering keeps the key on this device, wrapped under a key the browser holds: anyone with this device unlocked can open the brain. One brain at a time; connecting another encrypted brain asks again.';

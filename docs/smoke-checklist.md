@@ -136,6 +136,10 @@ Node 20+ and Claude Code, and a photo on the phone to attach.
 
 ## 6f. Encryption
 
+- [ ] If the phone is in Lockdown Mode, exclude the site first (Safari, page
+      menu, Website Settings, Lockdown Mode off) or every step below says
+      "without WebAssembly" and stops. Settings → About → Measure gives two
+      numbers; note them for block 1.
 - [ ] Settings → Encryption → Encrypt this brain: the button stays off until
       the passphrases match and the sentence is typed back; encrypt with
       Remember off. On github.com the commit is `Encrypt: n files`, a

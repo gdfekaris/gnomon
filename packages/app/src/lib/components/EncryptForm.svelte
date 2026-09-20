@@ -6,7 +6,7 @@
   // and by onboarding's privacy step. `#/…?kdf=fast|interactive` picks the
   // Argon2id parameters for tests; a real brain gets the default preset.
   import { hold } from '../press';
-  import { DISCLOSURE, LOST_SENTENCE, REMEMBER_LIMIT, kdfParamsFor, typedBack } from '../services/encryption';
+  import { DISCLOSURE, LOST_SENTENCE, NO_WASM, REMEMBER_LIMIT, kdfParamsFor, typedBack, wasmAvailable } from '../services/encryption';
   import { describeError, encryption } from '../services/index';
   import { route } from '../router.svelte';
 
@@ -19,7 +19,8 @@
   let error = $state<string | null>(null);
 
   const MIN = 8;
-  const ready = $derived(passphrase.length >= MIN && confirm === passphrase && (mode === 'rekey' || typedBack(sentence)));
+  const wasm = wasmAvailable();
+  const ready = $derived(wasm && passphrase.length >= MIN && confirm === passphrase && (mode === 'rekey' || typedBack(sentence)));
 
   async function go() {
     busy = true;
@@ -42,6 +43,7 @@
 </script>
 
 <form class="panel" data-testid="encrypt-form" onsubmit={(e) => { e.preventDefault(); if (ready) void go(); }}>
+  {#if !wasm}<p class="error" role="alert" data-testid="enc-no-wasm">{NO_WASM}</p>{/if}
   {#if mode === 'enable'}
     <p class="hint">{DISCLOSURE}</p>
   {:else}

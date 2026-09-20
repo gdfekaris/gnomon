@@ -5,6 +5,7 @@
 import { DecryptError, FilingReplyError, ValidationError } from '@gnomon/core';
 import { ProviderAuthError, ProviderError, ProviderNetworkError, ProviderRateLimitError, ProviderUnavailableError } from '@gnomon/providers';
 import { AttachmentTooLargeError, AuthError, HeadMovedError, LockedError, NetworkError, NotFoundError, RateLimitError, RevertConflictError } from '@gnomon/storage';
+import { NO_WASM, isWasmError } from './encryption';
 
 const mb = (n: number) => (n / (1024 * 1024)).toFixed(1);
 
@@ -16,6 +17,7 @@ export function describeError(e: unknown): string {
   if (e instanceof AttachmentTooLargeError) return `That file is ${mb(e.size)} MB; the limit is ${mb(e.limit)} MB. Remove or replace the file.`;
   if (e instanceof LockedError) return 'This brain is encrypted and locked on this device. Enter its passphrase to unlock it.';
   if (e instanceof DecryptError) return 'That passphrase does not unlock this brain.';
+  if (isWasmError(e)) return NO_WASM;
   // GitHub
   if (e instanceof AuthError) return 'GitHub rejected the token. Check it in Settings: it must be a fine-grained token with Contents read and write on this repository, and not expired.';
   if (e instanceof NotFoundError) return `GitHub has nothing at ${e.path}. The repository may have moved, or the token cannot see it.`;

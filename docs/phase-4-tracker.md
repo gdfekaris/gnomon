@@ -65,6 +65,20 @@ commands, and any UI.
   default for new configs (one constant). Note for block 4: esbuild
   leaves the dynamic libsodium import unbundled in the CLI (310 KB), so
   `gnomon encrypt`/`decrypt` will need it bundled or declared.
+  **2026-09-19, first tap:** "Measure failed: Can't find variable:
+  WebAssembly" on build 3aedc3e, installed, with the service worker
+  unsupported and settings from the localStorage mirror: the phone is in
+  iOS Lockdown Mode, which removes WebAssembly, service workers, and (it
+  appears) IndexedDB from every site not excluded. Argon2id needs
+  WebAssembly, so encryption is unavailable there until the site is
+  excluded in Safari (page menu → Website Settings → Lockdown Mode off for
+  this site). The app now says so up front (`wasmAvailable`, `NO_WASM`:
+  the Measure line, the enable form, the unlock sheet) and `describeError`
+  maps the engine's ReferenceError to the same sentence (2026-09-20).
+  Decided not to add a non-WebAssembly derivation: PBKDF2 would be a spec
+  change with weaker cryptography, and pure-JS Argon2 without JIT is
+  unusably slow; a Lockdown Mode user excludes the one site. The numbers
+  are still pending, after the exclusion.
 - [x] **2. Enable, disable, change passphrase** (M) — done 2026-09-17. — spec §6.4 "Enabling
   encryption on an existing brain". In `core`: `planEncrypt(snapshot,
   key, config)` (every eligible body rewritten as ciphertext plus

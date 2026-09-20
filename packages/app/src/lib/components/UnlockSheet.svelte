@@ -4,7 +4,7 @@
   // this device" wraps the key under a device key in IndexedDB, with its
   // limit stated. A wrong passphrase is refused here, beside the field.
   import { hold } from '../press';
-  import { REMEMBER_LIMIT } from '../services/encryption';
+  import { NO_WASM, REMEMBER_LIMIT, wasmAvailable } from '../services/encryption';
   import { describeError, encryption } from '../services/index';
   import { session } from '../stores/session.svelte';
 
@@ -12,6 +12,7 @@
   let remember = $state(false);
   let busy = $state(false);
   let error = $state<string | null>(null);
+  const wasm = wasmAvailable();
 
   async function unlock() {
     busy = true;
@@ -32,11 +33,12 @@
     <h3 id="unlock-title">Unlock {session.label}</h3>
     <form onsubmit={(e) => { e.preventDefault(); void unlock(); }}>
     <p>This brain is encrypted. Its passphrase decrypts it on this device; nothing is sent anywhere.</p>
+    {#if !wasm}<p class="error" role="alert" data-testid="unlock-no-wasm">{NO_WASM}</p>{/if}
     <label>Passphrase <input type="password" bind:value={passphrase} autocomplete="current-password" data-testid="unlock-passphrase" /></label>
     <label class="check"><input type="checkbox" bind:checked={remember} data-testid="unlock-remember" /> Remember on this device</label>
     <p class="hint">{REMEMBER_LIMIT}</p>
     <div class="row">
-      <button type="submit" class="primary" disabled={busy || !passphrase} use:hold={busy} data-testid="unlock-go">{busy ? 'Unlocking…' : 'Unlock'}</button>
+      <button type="submit" class="primary" disabled={busy || !passphrase || !wasm} use:hold={busy} data-testid="unlock-go">{busy ? 'Unlocking…' : 'Unlock'}</button>
     </div>
     {#if error}<p class="error" role="alert" data-testid="unlock-error">{error}</p>{/if}
     </form>

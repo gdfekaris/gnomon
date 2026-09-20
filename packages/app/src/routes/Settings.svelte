@@ -7,7 +7,7 @@
   import { connectDemo, connectGitHub, describeError, disconnect, encryption } from '../lib/services/index';
   import ValidationPanel from '../lib/components/ValidationPanel.svelte';
   import EncryptForm from '../lib/components/EncryptForm.svelte';
-  import { DISCLOSURE } from '../lib/services/encryption';
+  import { DISCLOSURE, NO_WASM, wasmAvailable } from '../lib/services/encryption';
   import { route } from '../lib/router.svelte';
   import { session } from '../lib/stores/session.svelte';
   import { type Prefs, settings, saveGit, savePrefs, saveProviderKeys } from '../lib/stores/settings.svelte';
@@ -16,7 +16,9 @@
   import { KDF_PRESETS, timeDerivation } from '@gnomon/core';
 
   // Spec §20.3: how long Argon2id takes on this device, so the default parameters can be chosen from a phone's number.
-  let kdf = $state<{ busy: boolean; text: string | null }>({ busy: false, text: null });
+  // No WebAssembly (iOS Lockdown Mode) means no Argon2id: the line says so instead of a failed tap.
+  const wasm = wasmAvailable();
+  let kdf = $state<{ busy: boolean; text: string | null }>({ busy: false, text: wasm ? null : NO_WASM });
   async function measureKdf() {
     kdf = { busy: true, text: null };
     try {
@@ -252,7 +254,7 @@
       Encryption {session.encryption.enabled ? (session.encryption.locked ? 'on, locked' : 'on, unlocked') : 'off'}{#if session.encryption.storeError}; last key store failure: {session.encryption.storeError}{/if}.
     </li>
     <li>
-      Key derivation on this device: <button type="button" class="small" onclick={measureKdf} disabled={kdf.busy} use:hold={kdf.busy} data-testid="kdf-measure">{kdf.busy ? 'Measuring…' : 'Measure'}</button>
+      Key derivation on this device: <button type="button" class="small" onclick={measureKdf} disabled={kdf.busy || !wasm} use:hold={kdf.busy} data-testid="kdf-measure">{kdf.busy ? 'Measuring…' : 'Measure'}</button>
       {#if kdf.text}<span role="status" data-testid="kdf-timing">{kdf.text}</span>{/if}
     </li>
   </ul>
