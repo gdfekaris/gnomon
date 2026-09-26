@@ -664,7 +664,9 @@ Open at the close of Phase 3 (2026-09-11); none blocks a Phase 4 block.
   After it is configured: delete the token and its npmrc line.
 - [ ] **Smoke checklist remainder** (`docs/smoke-checklist.md`) — done on
   the maintainer's iPhone: install, create a brain, capture with a photo,
-  connect, file, ratify, the editors. Left: reason from two sets and
+  connect, file, ratify, the editors; step 6f, encryption, passed
+  2026-09-26 on build 2be8405 over a scratch brain (never name one
+  `gnomon-scratch-*`: the nightly deletes those as leftovers). Left: reason from two sets and
   relate a text with the real model, decline and accept a proposal, and
   the desktop round trip through Claude Code with `npx gnomon-cli`.
 - [x] **Storage diagnostics report** — done 2026-09-26: after the Lockdown
