@@ -201,6 +201,8 @@ describe('encryption in the app (spec §6.4)', () => {
     expect(typedBack('a lost passphrase loses the body')).toBe(false);
     expect(kdfParamsFor('fast')).toBe(KDF_FAST);
     expect(kdfParamsFor('interactive').memlimit).toBe(67_108_864);
-    expect(kdfParamsFor(null).memlimit).toBe(268_435_456);
+    expect(kdfParamsFor('moderate').memlimit).toBe(268_435_456);
+    // spec §20.3, decided from the phone's numbers: a new brain gets INTERACTIVE
+    expect(kdfParamsFor(null)).toEqual({ opslimit: 2, memlimit: 67_108_864 });
   });
 });

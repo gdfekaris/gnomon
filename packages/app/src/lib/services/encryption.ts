@@ -9,7 +9,7 @@
 // so it runs under vitest without Svelte.
 
 import {
-  ENCRYPTION_CONFIG_PATH, type EncryptionConfig, KDF_PRESETS, type KdfParams, deriveKeyBytes, importBodyKey, parseEncryptionConfig, planDecrypt, planEncrypt, planRekey,
+  ENCRYPTION_CONFIG_PATH, type EncryptionConfig, KDF_DEFAULT, KDF_PRESETS, type KdfParams, deriveKeyBytes, importBodyKey, parseEncryptionConfig, planDecrypt, planEncrypt, planRekey,
   randomSalt, sealCheck, toBase64, verifyCheck,
 } from '@gnomon/core';
 import { EncryptingDriver, type KeyStore, PassphraseKeyring, type StorageDriver } from '@gnomon/storage';
@@ -39,11 +39,12 @@ export const typedBack = (text: string): boolean => text.trim().replace(/[.!]+$/
 
 /** Argon2id parameters far below the presets, for tests and flows only (`#/settings?kdf=fast`); never a default. */
 export const KDF_FAST: KdfParams = { opslimit: 1, memlimit: 16 * 1024 * 1024 };
-/** The parameters a `kdf` query names: `interactive`, `fast`, or the default preset (spec §20.3, one constant). */
+/** The parameters a `kdf` query names: `fast`, `interactive`, `moderate`, or the default (spec §20.3, one constant in core). */
 export function kdfParamsFor(name: string | null | undefined): KdfParams {
   if (name === 'fast') return KDF_FAST;
   if (name === 'interactive') return KDF_PRESETS.interactive;
-  return KDF_PRESETS.moderate;
+  if (name === 'moderate') return KDF_PRESETS.moderate;
+  return KDF_DEFAULT;
 }
 
 /** The brain's encryption config, or null when the file is absent. A present file that does not parse throws, in its own words. */
@@ -109,7 +110,7 @@ export async function enableEncryption(brain: BrainService, stack: Stack, state:
   if (stack.config) throw new Error('this brain is already encrypted');
   if (!passphrase) throw new Error('a passphrase is needed');
   const s = snap(brain);
-  const { config, raw } = await newConfig(passphrase, opts.params ?? KDF_PRESETS.moderate);
+  const { config, raw } = await newConfig(passphrase, opts.params ?? KDF_DEFAULT);
   const key = await importBodyKey(raw.slice());
   const batch = await planEncrypt(s, key, config);
   try {

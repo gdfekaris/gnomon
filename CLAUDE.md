@@ -29,8 +29,8 @@ findings are fixed; what it left open is carried in the Phase 4 tracker.
 **Next: Phase 4, `docs/phase-4-tracker.md`**, block 4 (`gnomon encrypt`
 and `gnomon decrypt`). Blocks 1 to 3 are built: the passphrase keyring,
 the enable, disable, and rekey plans in core, and the app's unlock sheet
-and Settings → Encryption (2026-09-19); block 1 still waits on the phone's
-Measure numbers. Left: the CLI commands, the attachment encryption
+and Settings → Encryption (2026-09-19); block 1 closed on the phone's
+numbers (2026-09-26: Argon2id defaults to INTERACTIVE). Left: the CLI commands, the attachment encryption
 decision, a second storage driver, and local-model docs. The tracker's
 "Carried from Phase 3" list holds the maintainer's items (npm trusted
 publishing once a security key arrives, the rest of the smoke checklist).

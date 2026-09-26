@@ -31,7 +31,7 @@ commands, and any UI.
 
 ## Blocks
 
-- [ ] **1. Passphrase keyring** (M) — spec §6.4 "Key derivation", §20.3.
+- [x] **1. Passphrase keyring** (M) — done 2026-09-26, the phone's numbers below. — spec §6.4 "Key derivation", §20.3.
   Argon2id via libsodium (`libsodium-wrappers-sumo` for `crypto_pwhash`;
   WASM, runs in the browser and in Node, no DOM or Node types, so it may
   live in `core/crypto`): derive 32 bytes from passphrase + salt with the
@@ -79,6 +79,17 @@ commands, and any UI.
   change with weaker cryptography, and pure-JS Argon2 without JIT is
   unusably slow; a Lockdown Mode user excludes the one site. The numbers
   are still pending, after the exclusion.
+  **2026-09-26, the numbers** (the maintainer's iPhone, installed, the site
+  excluded from Lockdown Mode; About now says the service worker is active
+  and settings came from IndexedDB): **interactive 2.29 s, moderate
+  13.62 s.** Moderate is far over 2 s, so new configs default to
+  `KDF_PRESETS.interactive` through `KDF_DEFAULT` in `core/crypto/
+  passphrase.ts`, used by `newEncryptionConfig` and the app's enable flow;
+  `?kdf=moderate` still selects moderate for tests. Interactive is libsodium's
+  lowest preset and sits inside spec §16's 1–3 s unlock target. A config
+  stores its parameters and a passphrase change keeps them, so a brain
+  encrypted before this change keeps moderate until it is decrypted and
+  encrypted again. Spec §6.4 and §20.3 say so.
 - [x] **2. Enable, disable, change passphrase** (M) — done 2026-09-17. — spec §6.4 "Enabling
   encryption on an existing brain". In `core`: `planEncrypt(snapshot,
   key, config)` (every eligible body rewritten as ciphertext plus
@@ -138,7 +149,7 @@ commands, and any UI.
   Settings → About says on/off, locked/unlocked, and the last key-store
   failure. `#/…?kdf=fast|interactive` picks the Argon2id parameters for the
   flows and tests (`KDF_FAST`, never a default); a real brain gets
-  `KDF_PRESETS.moderate` until the phone numbers say otherwise (block 1).
+  `KDF_DEFAULT`, interactive since the phone's numbers (block 1).
   **Review view decision:** no recomputation. The wrapper keeps a body's
   ciphertext when its plaintext is unchanged, and a filing changes only two
   frontmatter lines on the capture, so the compare patch already shows
@@ -656,7 +667,9 @@ Open at the close of Phase 3 (2026-09-11); none blocks a Phase 4 block.
   connect, file, ratify, the editors. Left: reason from two sets and
   relate a text with the real model, decline and accept a proposal, and
   the desktop round trip through Claude Code with `npx gnomon-cli`.
-- [ ] **Storage diagnostics report** — Settings → About now says where
+- [x] **Storage diagnostics report** — done 2026-09-26: after the Lockdown
+  Mode exclusion the phone's About says settings came from IndexedDB and
+  the service worker is active; IndexedDB stays the store of record. — Settings → About now says where
   settings came from at launch (IndexedDB or the localStorage mirror) and
   the last storage failure. The maintainer reports the line after a cold
   relaunch of the installed app. If the mirror is what answers on iOS,

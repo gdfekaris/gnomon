@@ -9,11 +9,18 @@ import { ENCRYPTION_CHECK_PLAINTEXT, ENCRYPTION_CONFIG_PATH, type EncryptionConf
 
 export interface KdfParams { opslimit: number; memlimit: number }
 
-/** libsodium's Argon2id presets (spec §20.3): MODERATE by default; INTERACTIVE when a phone takes too long. */
+/** libsodium's Argon2id presets (spec §20.3). */
 export const KDF_PRESETS = {
   moderate: { opslimit: 3, memlimit: 268_435_456 },
   interactive: { opslimit: 2, memlimit: 67_108_864 },
 } as const satisfies Record<string, KdfParams>;
+/**
+ * The parameters a new config gets (spec §20.3, decided 2026-09-26): on the
+ * maintainer's iPhone INTERACTIVE took 2.29 s and MODERATE 13.62 s, so
+ * INTERACTIVE. A config stores its parameters, so this never changes an
+ * existing brain.
+ */
+export const KDF_DEFAULT: KdfParams = KDF_PRESETS.interactive;
 export const SALT_BYTES = 16;
 export const KEY_BYTES = 32;
 
@@ -77,7 +84,7 @@ export async function verifyCheck(key: CryptoKey, check: string): Promise<boolea
 }
 
 /** A fresh config for a brain being encrypted: a random salt, the parameters, and the check sealed under the derived key. */
-export async function newEncryptionConfig(passphrase: string, params: KdfParams = KDF_PRESETS.moderate): Promise<{ config: EncryptionConfig; key: CryptoKey }> {
+export async function newEncryptionConfig(passphrase: string, params: KdfParams = KDF_DEFAULT): Promise<{ config: EncryptionConfig; key: CryptoKey }> {
   const salt = randomSalt();
   const raw = await deriveKeyBytes(passphrase, salt, params);
   const key = await importBodyKey(raw);

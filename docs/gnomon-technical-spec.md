@@ -210,10 +210,10 @@ Payload = `nonce(12 bytes) || ciphertext || tag(16 bytes)` as produced by AES-25
 
 **Files never encrypted:** `AGENTS.md`, `README.md`, `templates/*`, both `_index.md` files (they contain titles and links, already cleartext in frontmatter), and attachments. `_set.md` and proposal bodies **are** encrypted. Attachment encryption is an open question for Phase 4 (Proposal §9.3); the first release leaves them cleartext and says so.
 
-**Key derivation.** Argon2id via libsodium: `crypto_pwhash(32, passphrase, salt, OPSLIMIT_MODERATE, MEMLIMIT_MODERATE, ALG_ARGON2ID13)`. Parameters are stored, not assumed, so they can be raised later. The 16-byte random salt and the parameters live in the repo at `.gnomon/encryption.json` (Schema §10 reserves the folder):
+**Key derivation.** Argon2id via libsodium: `crypto_pwhash(32, passphrase, salt, OPSLIMIT_INTERACTIVE, MEMLIMIT_INTERACTIVE, ALG_ARGON2ID13)` for a new brain (`KDF_DEFAULT`; §20.3). Parameters are stored, not assumed, so they can be raised later, and a brain keeps the parameters it was encrypted with. The 16-byte random salt and the parameters live in the repo at `.gnomon/encryption.json` (Schema §10 reserves the folder):
 
 ```json
-{ "version": 1, "kdf": "argon2id13", "salt": "<base64>", "opslimit": 3, "memlimit": 268435456,
+{ "version": 1, "kdf": "argon2id13", "salt": "<base64>", "opslimit": 2, "memlimit": 67108864,
   "check": "<base64 AES-GCM encryption of the constant 'gnomon-ok' under the derived key>" }
 ```
 
@@ -428,7 +428,7 @@ GitHub Actions on push to `main`: install, typecheck, unit tests, `gnomon valida
 
 1. **Snapshot persistence across launches.** Currently none (brain content never touches device storage). A Cache-API-free option is to persist only the tree listing (paths + blob SHAs, no content) to speed cold start; decide after measuring §16 targets with the GraphQL loader.
 2. **Anthropic context-window table maintenance.** Bundled table vs. a `/models` field if one becomes available; revisit at each release.
-3. **Argon2id parameters.** `MODERATE` (256 MB) may be too slow on older phones; measure on the oldest supported iPhone and decide whether to default to `INTERACTIVE` with a user-raisable setting.
+3. **Argon2id parameters.** *Decided 2026-09-26:* `INTERACTIVE` (64 MB) is the default. Measured on the maintainer's iPhone (Settings → About → Measure): `INTERACTIVE` 2.29 s, `MODERATE` 13.62 s. No user-raisable setting for now; the stored parameters leave room for one.
 4. **Multiple pending offline captures.** Deliberately capped at one, text only; revisit if real usage shows loss.
 5. **Set description placement** (context vs. system) — evaluate with real prompts in Phase 2 before removing the flag.
 6. **Attachment encryption** in Phase 4 — cleartext with disclosure in the first release; decide whether to encrypt bytes under the same key and format (marker as a sidecar, since binaries have no comment line).

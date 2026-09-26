@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ENCRYPTION_CHECK_PLAINTEXT, KDF_PRESETS, SALT_BYTES, WrongPassphraseError, DecryptError, decryptBody, deriveKeyBytes, deriveVerified, encryptBody, fromBase64,
+  ENCRYPTION_CHECK_PLAINTEXT, KDF_DEFAULT, KDF_PRESETS, SALT_BYTES, WrongPassphraseError, DecryptError, decryptBody, deriveKeyBytes, deriveVerified, encryptBody, fromBase64,
   newEncryptionConfig, parseEncryptionConfig, randomSalt, sealCheck, serializeEncryptionConfig, timeDerivation, toBase64, unlockWithPassphrase, verifyCheck,
 } from '../src/index';
 
@@ -27,6 +27,11 @@ describe('deriveKeyBytes (Argon2id via libsodium)', () => {
     expect(KDF_PRESETS.moderate).toEqual({ opslimit: 3, memlimit: 268_435_456 });
     expect(KDF_PRESETS.interactive).toEqual({ opslimit: 2, memlimit: 67_108_864 });
   });
+  it('a new config defaults to INTERACTIVE (spec §20.3: moderate took 13.6 s on the maintainer\'s phone)', async () => {
+    expect(KDF_DEFAULT).toEqual(KDF_PRESETS.interactive);
+    const { config } = await newEncryptionConfig('open sesame');
+    expect(config).toMatchObject({ opslimit: 2, memlimit: 67_108_864 });
+  }, 30_000);
 });
 
 describe('the config and its check', () => {
