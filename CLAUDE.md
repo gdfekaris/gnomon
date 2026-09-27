@@ -26,14 +26,15 @@ Chromium and on WebKit as an iPhone. The maintainer's live iPhone test
 (install, create a brain, capture, file, ratify, editors) is done and its
 findings are fixed; what it left open is carried in the Phase 4 tracker.
 
-**Next: Phase 4, `docs/phase-4-tracker.md`**, block 5 (the attachment
-encryption decision, the maintainer's). Blocks 1 to 4 are done: the
+**Next: Phase 4, `docs/phase-4-tracker.md`**, block 6 (a second storage
+driver; the maintainer picks the host). Blocks 1 to 5 are done: the
 passphrase keyring (Argon2id defaults to INTERACTIVE from the phone's
 numbers, 2026-09-26), the enable, disable, and rekey plans in core, the
 app's unlock sheet and Settings → Encryption, and `gnomon encrypt`,
 `decrypt`, and `guard` with the AGENTS.md text for encrypted brains
-(2026-09-26; not yet on npm: `gnomon-cli` 0.2.0 is the maintainer's hand
-publish). Left: the attachment decision, a second storage driver, and
+(2026-09-26; `gnomon-cli` 0.2.0 on npm through trusted publishing,
+2026-09-27: a release is a pushed `vX.Y.Z` tag), and attachments stay
+cleartext with the disclosure. Left: a second storage driver and
 local-model docs. The tracker's "Carried from Phase 3" list holds the
 maintainer's items (npm trusted publishing once a security key arrives,
 the rest of the smoke checklist).
