@@ -191,7 +191,7 @@ commands, and any UI.
   the tarball stays three files. Note for release: `npx gnomon-cli guard`
   resolves to npm's latest, which lacks `guard` until 0.2.0 is published,
   so the hook refuses every commit until then (fail closed, by design).
-- [ ] **5. Attachment encryption decision** (S, maintainer) — spec §20.6,
+- [x] **5. Attachment encryption decision** (S, maintainer) — done 2026-09-26: option A, cleartext with disclosure. — spec §20.6,
   proposal §9.3. Options: keep attachments cleartext with disclosure
   (today), or encrypt bytes under the same key with the marker as a
   sidecar (binaries have no comment line) and decrypt on view.
@@ -743,6 +743,13 @@ Open at the close of Phase 3 (2026-09-11); none blocks a Phase 4 block.
   tokens we do not keep.
 
 ## Decisions carried and made
+
+- **Attachments stay cleartext on an encrypted brain** (2026-09-26, block
+  5): the maintainer chose the recommendation. The disclosure in Settings
+  and onboarding (`DISCLOSURE` in `services/encryption.ts`) already names
+  attached files as readable to the git host; spec §6.4 and §20.6 and
+  proposal §9.3 record the decision. Encrypting bytes (a sidecar marker,
+  re-encryption at filing) waits for a real user to ask.
 
 - **A mock provider ships** (Phase 2). Spec §17's flows assume one.
 - **Editing a pending filing's metadata makes it yours** (Phase 2): the

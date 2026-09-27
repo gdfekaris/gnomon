@@ -183,9 +183,9 @@ Token UX is the adoption bottleneck: GitHub's token interface is the least frien
 
 ### 9.3 Open questions
 
-Whether the `_set.md` body should be sent as a system-level framing instruction or as ordinary context (affects how strongly the set's self-description steers the model); the spec carries a settings flag for evaluating both in Phase 2. Whether Phase 4 encryption should cover attachments or leave them cleartext with disclosure.
+Whether the `_set.md` body should be sent as a system-level framing instruction or as ordinary context (affects how strongly the set's self-description steers the model); the spec carries a settings flag for evaluating both in Phase 2.
 
-*Closed since 0.2:* Task D with a new text — no for v1; Task B with several sets selected is that comparison. Multiple passages per capture — no; one capture, one passage, optionally one file (decision 7). Auto-populating `grounds` from body links — the editor and `gnomon-cli validate` warn on disagreement and the editor offers a sync; frontmatter stays authoritative.
+*Closed since 0.2:* Task D with a new text — no for v1; Task B with several sets selected is that comparison. Multiple passages per capture — no; one capture, one passage, optionally one file (decision 7). Auto-populating `grounds` from body links — the editor and `gnomon-cli validate` warn on disagreement and the editor offers a sync; frontmatter stays authoritative. *Closed 2026-09-26:* Phase 4 encryption leaves attachments cleartext, and the disclosure says so (Technical Specification §20.6).
 
 ## 10. Acceptance Criteria for v1 (Phases 1–3)
 
