@@ -44,5 +44,7 @@ Phases 1 to 3 of the technical spec (§19) are done: the app is live at
 nightly runs the storage contract against real GitHub. Phase 4 (client-
 side encryption, a second storage driver, local-model documentation) is
 in progress; `docs/phase-4-tracker.md` is its block list and carries the
-items left open from Phase 3. `docs/smoke-checklist.md` is the live human
+items left open from Phase 3. `docs/moving-your-brain.md` says how to move a brain to
+another git host or your own server, and what follows it.
+`docs/smoke-checklist.md` is the live human
 test on a real phone.

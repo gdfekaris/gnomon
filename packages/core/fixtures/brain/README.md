@@ -129,6 +129,17 @@ once per clone, and wrap every commit: `npx gnomon-cli encrypt`, commit,
 `npx gnomon-cli decrypt`. End a session encrypted. The guard refuses any
 commit that would store a plaintext body.
 
+## Moving your brain
+
+This brain is one git repository, so it moves like one. To keep a copy on
+a host or server you control, add it as a second remote and
+`git push backup main` now and then. To move entirely, mirror-clone and
+mirror-push to an empty private repository there, then
+`git remote set-url origin <new url>` in your clone. Everything desktop
+(the CLI, your AI assistant, local models, encryption) works on any git
+host or server; the phone app works only with GitHub today. The full
+recipe: https://github.com/gdfekaris/gnomon/blob/main/docs/moving-your-brain.md
+
 ## When it feels pointless
 
 It will, early. One source and no principles is a folder, not a brain.

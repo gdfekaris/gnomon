@@ -199,7 +199,8 @@ commands, and any UI.
   passage text is what the schema promotes and attachments are kept, not
   parsed; revisit when a real user asks. Done when the decision is in the
   list below and the disclosure text in Settings and onboarding says it.
-- [ ] **6. Second storage driver** (L) — proposal §8 Phase 4 "pluggable-
+- [ ] **6. Second storage driver** (L) — **deferred 2026-09-27** by the
+  maintainer, after a discussion of why; notes below the block. — proposal §8 Phase 4 "pluggable-
   backend driver #2 (Forgejo or GitLab)", spec §6.1. Maintainer picks the
   host first. Both offer an atomic multi-file commit: Forgejo/Gitea
   `POST /repos/{owner}/{repo}/contents` with a `files` list, GitLab
@@ -213,6 +214,30 @@ commands, and any UI.
   brain on the host end to end over the fake, and create-from-template
   either works or is explicitly "connect an existing repository" for that
   host.
+  **Deferred 2026-09-27.** Checked first: Codeberg's API allows CORS from
+  the app's origin for every method, rate-limits at 2,000 requests per 10
+  minutes, has no GraphQL but a batch blob read, and cannot guard a
+  multi-file commit on the head (spec §6.1 now lists where the interface
+  is GitHub-shaped); its terms allow private repositories for "really
+  small & personal stuff like your journal … ideas or notes, but
+  explicitly not as a personal cloud or media storage." Then the question
+  was why build it at all. The proposal's three reasons: proving the
+  interface (mostly learned from reading the API), a privacy rung (a hosted
+  Forgejo is one more third party; encryption does more; self-hosting is
+  the real rung and a tiny audience), and a hedge against GitHub (the
+  brain is already a plain git repository that moves anywhere with the
+  desktop path intact; only the app is bound). No user needs it now, as
+  with attachment encryption. Instead: `docs/moving-your-brain.md` (a
+  backup remote, a move to another host, a move to your own server, what
+  follows and what does not), linked from the main README and summarised
+  in the brain template's README. **When it is built, the preferred shape
+  is git over HTTPS in the browser** (`isomorphic-git` or similar): it
+  reaches any server the user controls, and a push refused on a moved
+  branch is exactly `expectedHead`; the costs to measure first are a
+  shallow fetch per launch on a phone and the library's size, and the
+  user's server must allow CORS. Local-only storage in the app was also
+  discussed and set aside: spec §10.3 keeps brain content off the device,
+  and a browser-held brain cannot sync or reach desktop tools.
 - [ ] **7. Local-model documentation** (S) — US-13, US-16. `docs/local-
   models.md`: a desktop session with OpenCode or Pi against Ollama over
   the same AGENTS.md, the encrypt/decrypt discipline from block 4, and

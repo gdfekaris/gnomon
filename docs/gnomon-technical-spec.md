@@ -159,6 +159,14 @@ export interface CommitBatch {
 
 `expectedHead` is mandatory. Every BrainService operation passes the snapshot's head; a `HeadMovedError` triggers snapshot refresh and a user-visible prompt to retry. `readMany` exists because snapshot loading needs every markdown file's frontmatter (Schema §9 validates on read; §4.8 regenerates indexes from all frontmatter), so per-file reads are the wrong shape.
 
+**Where the interface is GitHub-shaped** (recorded 2026-09-27, when the second driver was deferred; see Proposal §8). A future driver starts from these:
+
+- `expectedHead` assumes the host can refuse a commit when the branch moved. GitHub's ref update does. Forgejo's multi-file commit (`POST /repos/{owner}/{repo}/contents`) cannot; it checks each updated or deleted file's blob sha only, so a driver there approximates the guard (a head check before, and a check after that the new commit's parent is the expected head). A git push over HTTPS gives the exact guarantee.
+- `readMany` assumes a batched read. GitHub has GraphQL; Forgejo has `GET /git/blobs?shas=`, about 48 shas per request under the URL limit; git over HTTPS fetches a pack.
+- `compare` returns patches. Forgejo's compare lists files and statuses without lines; its per-commit diff (`/git/commits/{sha}.diff`) has them.
+- `revert` is built from trees on GitHub. Forgejo has no revert endpoint, so a driver commits the parent's blobs back itself, and the per-file sha check yields the conflict refusal.
+- Browser access needs CORS. GitHub's and Codeberg's APIs allow it; a self-hosted Forgejo or git server must be configured to, and GitHub's git endpoints do not, so a git-over-HTTPS driver would sit beside the GitHub driver, never replace it.
+
 ### 6.2 GitHub driver
 
 **Reads.** `list` is `GET /git/trees/{head}?recursive=1`. `readMany` is the GraphQL endpoint (`POST https://api.github.com/graphql`, same PAT), one query per batch of up to 100 paths using aliases:
@@ -422,7 +430,7 @@ GitHub Actions on push to `main`: install, typecheck, unit tests, `gnomon valida
 | 1 | `core` schema/links/index/sets/proposals/filing/validation; `storage` interface, GitHub (REST + GraphQL) + Memory drivers, **Encrypting driver interface, body format, and unit tests with a stub keyring**; `gnomon-cli` validate/index/status published to npm; `template/` finalized and validated in CI; app shell, router, Capture with attachment, Browse with attachment view, Settings, PWA; onboarding connect-existing. |
 | 2 | Sets screen with principle reorder; `providers` both drivers; assembly + Reason screen (Tasks A, B, D); filing (Task C), review, ratify/reject; proposals screen with decide; editors with curation enforcement and grounds sync. |
 | 3 | Onboarding create-from-template, token walkthrough, privacy screen; polish. |
-| 4 | Encrypting driver wired to real keyring, unlock UI, enable/disable/passphrase-change flows; `gnomon encrypt/decrypt`; attachment-encryption decision; second storage driver. |
+| 4 | Encrypting driver wired to real keyring, unlock UI, enable/disable/passphrase-change flows; `gnomon encrypt/decrypt`; attachment-encryption decision; second storage driver (deferred 2026-09-27, see §6.1). |
 
 ## 20. Open technical decisions
 
