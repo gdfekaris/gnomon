@@ -128,6 +128,15 @@ regenerates the two index files; `npx gnomon-cli status` says where things
 stand. Needs Node 20 or newer. Without Node, the app regenerates the
 indexes on its next write, and everything else still works.
 
+An encrypted brain (encryption is turned on in the app) needs one more
+step on the desktop, since its passages are stored as ciphertext. Set the
+passphrase for the session without leaving it in your shell history:
+`read -rs GNOMON_PASSPHRASE && export GNOMON_PASSPHRASE`. Then
+`npx gnomon-cli decrypt` after you pull, `npx gnomon-cli guard --install`
+once per clone, and wrap every commit: `npx gnomon-cli encrypt`, commit,
+`npx gnomon-cli decrypt`. End a session encrypted. The guard refuses any
+commit that would store a plaintext body.
+
 ## When it feels pointless
 
 It will, early. One source and no principles is a folder, not a brain.

@@ -157,7 +157,7 @@ commands, and any UI.
   snapshot. The flow asserts it (`capture-filed`, no raw lines). Flows in
   `e2e/encryption.spec.ts` over the fake GitHub (which survives a reload)
   and the demo brain, on all four projects.
-- [ ] **4. `gnomon encrypt` / `gnomon decrypt`** (M) — spec §6.4 "Desktop
+- [x] **4. `gnomon encrypt` / `gnomon decrypt`** (M) — done 2026-09-26. — spec §6.4 "Desktop
   interop", §13. In `packages/cli`: passphrase from `GNOMON_PASSPHRASE` or
   a prompt; `decrypt` rewrites eligible bodies in the working tree as
   plaintext and keeps `.gnomon/encryption.json`; `encrypt` re-encrypts
@@ -168,7 +168,9 @@ commands, and any UI.
   the alternative. Done when encrypt → decrypt over the fixture round-trips
   byte-identical plaintext, `validate` passes in both states, the built
   CLI does it from a scratch clone in a test, and the README documents it.
-  **Built 2026-09-26, AGENTS.md wording awaiting the maintainer.** The
+  **Built 2026-09-26; the AGENTS.md wording approved the same day** (a
+  section "An encrypted brain" after the session discipline, hard rule 10,
+  and a paragraph in the template README's "Desktop tooling"). The
   maintainer chose option A: in a decrypted tree every commit is wrapped,
   `gnomon encrypt`, commit, `gnomon decrypt`. `packages/cli/src/crypt.ts`:
   `decrypt` (refuses uncommitted changes unless `--force`, since under A it

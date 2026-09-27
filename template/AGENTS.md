@@ -49,6 +49,39 @@ the capture, byte for byte.
 If `npx` is unavailable, say so, skip step 3, and tell the curator the
 indexes are stale until the app or another session regenerates them.
 
+## An encrypted brain
+
+If `.gnomon/encryption.json` exists, the brain is encrypted. Frontmatter
+stays readable, but every body under `inbox/`, `sources/`, `principles/`,
+and `maps/proposals/` is stored as ciphertext (it begins
+`<!-- gnomon-enc v1 -->`). You cannot read or write those bodies until the
+working tree is decrypted, and you must never commit one as plaintext. The
+session changes like this:
+
+1. After `git pull`, run `npx gnomon-cli decrypt`. It reads the passphrase
+   from `GNOMON_PASSPHRASE`, which the curator sets in their own shell
+   before the session. If it is not set, stop and ask the curator to set
+   it. Never ask for the passphrase in the conversation, and never print
+   it, write it to a file, or put it in a commit message.
+2. Wrap every commit: `npx gnomon-cli encrypt`, then `git add` and
+   `git commit`, then `npx gnomon-cli decrypt`. Never commit while the
+   tree is decrypted.
+3. The pre-commit hook refuses any commit that carries a plaintext body.
+   If it refuses, run `npx gnomon-cli encrypt` and commit again. Never
+   bypass it with `--no-verify`, and never edit or remove it. If the hook
+   is missing, tell the curator to run `npx gnomon-cli guard --install`.
+4. While the tree is decrypted, `git status` lists every body as
+   modified. That is the decryption, not your changes.
+   `npx gnomon-cli encrypt` shows what really changed.
+5. Before the final push, run `validate` and `index` as above, with the
+   `Index` commit wrapped like any other. End the session encrypted:
+   `npx gnomon-cli status` must show no plaintext in the working tree
+   before you push.
+
+Never create, edit, or delete `.gnomon/encryption.json`. Turning
+encryption on or off and changing the passphrase belong to the curator,
+in the app.
+
 ## Hard rules
 
 These are absolute. There is no "unless instructed otherwise." The app
@@ -83,6 +116,8 @@ files count as part of the brain.
    followed by a relative markdown link, e.g.
    `[[sources/didion-why-i-write/raw]] ([raw](../../sources/didion-why-i-write/raw.md))`.
    Frontmatter fields hold bare slugs, never links.
+10. **In an encrypted brain, never commit a plaintext body and never
+    bypass the commit guard.** See "An encrypted brain" above.
 
 ## Curation states
 
