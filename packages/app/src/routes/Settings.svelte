@@ -227,6 +227,10 @@
     grounding passages as fit the budget, never attachments and never the whole brain. Nobody else sees anything:
     this app has no server.
   </p>
+  <p class="hint">
+    To reason with no AI company seeing your text, use a model on your own computer:
+    <a href="https://github.com/gdfekaris/gnomon/blob/main/docs/local-models.md" target="_blank" rel="noopener noreferrer" data-testid="local-models-link">reasoning with a local model</a>.
+  </p>
 </section>
 
 <section class="about">

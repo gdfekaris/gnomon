@@ -268,7 +268,8 @@
     <li>
       <strong>The AI provider you choose</strong> sees only what a reasoning task sends it: the principle sets you select
       and as many of their grounding passages as fit the budget. Never attachments, never the whole brain. Nothing is sent
-      until you add a provider key in Settings and ask.
+      until you add a provider key in Settings and ask. To keep your text from every AI company, reason on your computer
+      with a <a href="https://github.com/gdfekaris/gnomon/blob/main/docs/local-models.md" target="_blank" rel="noopener noreferrer">local model</a> instead.
     </li>
     <li><strong>Nobody else.</strong> Gnomon has no server. Your token and keys stay in this browser on this device.</li>
   </ul>

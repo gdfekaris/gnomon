@@ -177,6 +177,17 @@ interactive); unlock took about that; nothing odd.
       the new source is cited when relevant.
 - [ ] `npx gnomon-cli --version` and Settings show the same version.
 
+## 7b. A local model
+
+- [ ] Follow `docs/local-models.md` on the desktop: Ollama with a raised
+      context and `qwen3:30b`, OpenCode with the config kept outside the
+      brain. In a clone, start a session and ask for Task A from Set 1:
+      the answer cites principles and passages, and nothing but Ollama
+      was used (OpenCode shows the model in use; no provider key is
+      configured). Then "File the inbox" on a fresh capture: one `File:`
+      commit, `validate` clean, the filing awaits review in the app. Note
+      how long a reply took and anything the model got wrong.
+
 ## 8. Wrap up
 
 - [ ] Note every sentence that confused you or a step that took more than

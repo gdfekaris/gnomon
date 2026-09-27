@@ -244,6 +244,19 @@ commands, and any UI.
   what stays private; linked from the CLI README and the app's privacy
   text. Done when the maintainer has run one session that way and the
   smoke checklist gains the step.
+  **Written 2026-09-27; waits on the maintainer's session.**
+  `docs/local-models.md`: who sees what in a local session; Ollama with
+  `OLLAMA_CONTEXT_LENGTH=32768` (the default 4,096 is too small for an
+  agent) and `qwen3:30b` (mixture of experts, about 3B active, 19 GB, suits
+  a CPU-only laptop such as the maintainer's 54 GB Core Ultra 7); OpenCode,
+  which reads `AGENTS.md` by itself, configured through `OPENCODE_CONFIG`
+  in `~/.config/opencode/gnomon-local.json` so no file lands in the brain
+  (`gnomon validate` would flag one): only the Ollama provider, the same
+  model for small jobs, sharing disabled, web fetch and search denied, bash
+  on ask; the encrypted-brain steps; what protects the brain from a
+  careless model. Linked from the main, CLI, and brain READMEs and from the
+  app's "Who can see what" (Settings and onboarding); smoke step 7b. **To
+  tick:** the maintainer runs step 7b once.
 
 ## UX block: Browse at scale (2026-09-12) — done 2026-09-12
 

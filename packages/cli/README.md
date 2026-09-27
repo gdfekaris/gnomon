@@ -79,6 +79,13 @@ npx gnomon-cli encrypt && git add -A && git commit -m "File: <slug>" && npx gnom
 people who prefer git filters, though it encrypts whole files, frontmatter
 included, and the app cannot read it.
 
+## A local model
+
+A desktop session can run on a model on your own computer, so no AI
+provider sees the brain: Ollama for the model, OpenCode (or any agent that
+reads `AGENTS.md`) for the session, and the CLI as always. The setup:
+https://github.com/gdfekaris/gnomon/blob/main/docs/local-models.md
+
 ## In an assistant session
 
 A brain's `AGENTS.md` asks the assistant to run

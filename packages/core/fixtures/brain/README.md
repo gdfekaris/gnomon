@@ -129,6 +129,13 @@ once per clone, and wrap every commit: `npx gnomon-cli encrypt`, commit,
 `npx gnomon-cli decrypt`. End a session encrypted. The guard refuses any
 commit that would store a plaintext body.
 
+## Reasoning with a local model
+
+A desktop session can run on a model on your own computer, so no AI
+company sees your brain: Ollama runs the model, and an agent tool that
+reads `AGENTS.md` (OpenCode, for one) does the session. The setup:
+https://github.com/gdfekaris/gnomon/blob/main/docs/local-models.md
+
 ## Moving your brain
 
 This brain is one git repository, so it moves like one. To keep a copy on
