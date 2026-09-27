@@ -1,6 +1,6 @@
 {
   "name": "gnomon-cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Gnomon desktop CLI: validate a brain, regenerate its indexes, show status, and decrypt or encrypt an encrypted brain's working tree. Run as `npx gnomon-cli <command>` in a brain.",
   "license": "MIT",
   "repository": {

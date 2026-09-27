@@ -5,7 +5,8 @@ of plain markdown in your own git repo, plus a bring-your-own-AI companion
 PWA and a small desktop CLI. Phases 1 to 3 are built: the brain format and
 library, the storage and provider drivers, the CLI, and the app with
 onboarding, capture, browse, sets, editors, reasoning, filing review,
-proposals, and a late-1980s GUI in four skins. Version 0.1.0.
+proposals, and a late-1980s GUI in four skins. Phase 4 has added
+optional client-side encryption, in the app and in the CLI. Version 0.2.0.
 
 ## Layout
 
