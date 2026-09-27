@@ -168,6 +168,27 @@ commands, and any UI.
   the alternative. Done when encrypt → decrypt over the fixture round-trips
   byte-identical plaintext, `validate` passes in both states, the built
   CLI does it from a scratch clone in a test, and the README documents it.
+  **Built 2026-09-26, AGENTS.md wording awaiting the maintainer.** The
+  maintainer chose option A: in a decrypted tree every commit is wrapped,
+  `gnomon encrypt`, commit, `gnomon decrypt`. `packages/cli/src/crypt.ts`:
+  `decrypt` (refuses uncommitted changes unless `--force`, since under A it
+  always follows a pull or a commit; `encrypt` runs on a dirty tree by
+  design, so the tracker's refusal applies to decrypt only), `encrypt`
+  (**ciphertext reuse instead of fresh nonces**, the maintainer's call: a
+  body whose plaintext equals the committed one keeps its committed
+  ciphertext, read through one `git cat-file --batch`, so an untouched
+  brain re-encrypts with no diff), and `guard`, the pre-commit check, with
+  `--install` writing `.git/hooks/pre-commit` (honours `core.hooksPath`,
+  never overwrites a foreign hook) that runs `gnomon guard` or `npx gnomon-
+  cli guard` and **refuses when neither can run**. Both commands verify the
+  passphrase against the check before touching a file and open every body
+  before writing any. `status` and `validate` say when an encrypted brain's
+  tree holds plaintext. libsodium: esbuild now bundles the dynamic import
+  (the CLI is 915 KB), and the bundle round-trips the fixture on its own
+  with no `node_modules` in reach, so no runtime dependency is declared and
+  the tarball stays three files. Note for release: `npx gnomon-cli guard`
+  resolves to npm's latest, which lacks `guard` until 0.2.0 is published,
+  so the hook refuses every commit until then (fail closed, by design).
 - [ ] **5. Attachment encryption decision** (S, maintainer) — spec §20.6,
   proposal §9.3. Options: keep attachments cleartext with disclosure
   (today), or encrypt bytes under the same key with the marker as a
@@ -871,7 +892,7 @@ Open at the close of Phase 3 (2026-09-11); none blocks a Phase 4 block.
   done (2026-09-19; the stack lives in `services/index.ts`, the flows in
   `services/encryption.ts`, the plan batches go through the plain driver by
   `commitStored`); block 4, `gnomon encrypt` / `gnomon decrypt`, is next,
-  and esbuild leaves the dynamic libsodium import unbundled in the CLI.
+  and esbuild bundles libsodium into the CLI (checked 2026-09-26).
 - The demo brain accepts `#/settings?demo-omit=a,b` to drop paths and
   `?demo-fill=n` to add n rounds of four generated sources. Its
   git history is one seed commit, so the fixture's own pending filing

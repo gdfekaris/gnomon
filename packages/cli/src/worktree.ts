@@ -88,6 +88,54 @@ export class WorkingTreeDriver implements StorageDriver {
     return this.git(['show', `HEAD:${path}`]);
   }
 
+  /**
+   * Many blobs in one `git cat-file --batch`: `HEAD:<path>` for the committed
+   * text, `:<path>` for the staged one. Absent names map to undefined; the
+   * map is empty when the tree is not a git checkout.
+   */
+  catFile(names: string[]): Map<string, string | undefined> {
+    const out = new Map<string, string | undefined>();
+    if (names.length === 0 || !existsSync(join(this.root, '.git'))) return out;
+    let raw: Buffer;
+    try {
+      raw = execFileSync('git', ['cat-file', '--batch'], { cwd: this.root, input: names.join('\n') + '\n', maxBuffer: 1 << 30, stdio: ['pipe', 'pipe', 'ignore'] });
+    } catch {
+      return out;
+    }
+    let at = 0;
+    for (const name of names) {
+      const nl = raw.indexOf(10, at);
+      if (nl === -1) break;
+      const header = raw.subarray(at, nl).toString('utf8');
+      at = nl + 1;
+      const size = /^[0-9a-f]+ blob (\d+)$/.exec(header)?.[1];
+      if (size === undefined) {
+        out.set(name, undefined); // "<name> missing", or not a blob
+        continue;
+      }
+      out.set(name, raw.subarray(at, at + Number(size)).toString('utf8'));
+      at += Number(size) + 1;
+    }
+    return out;
+  }
+
+  /** Paths staged for the next commit with content (added, copied, modified, renamed); deletions are left out. */
+  stagedPaths(): string[] {
+    const out = this.git(['diff', '--cached', '--name-only', '--diff-filter=ACMR', '-z']);
+    return out === undefined ? [] : out.split('\0').filter(Boolean).sort(cmp);
+  }
+
+  /** Whether a path is in the index (staged or committed and not removed). */
+  inIndex(path: string): boolean {
+    return (this.git(['ls-files', '--cached', '-z', '--', path]) ?? '') !== '';
+  }
+
+  /** The directory git runs hooks from, honouring core.hooksPath; undefined when not a git checkout. */
+  hooksDir(): string | undefined {
+    const p = this.git(['rev-parse', '--git-path', 'hooks'])?.trim();
+    return p ? resolve(this.root, p) : undefined;
+  }
+
   /** Tracked paths whose working-tree content differs from HEAD (modified or deleted). */
   modifiedSinceHead(): string[] {
     const out = this.git(['diff', '--name-only', '-z', 'HEAD', '--']);

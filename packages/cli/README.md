@@ -11,6 +11,7 @@ Requires Node 20 or newer. Run it in a clone of your brain:
 npx gnomon-cli validate     # schema rules over the working tree; nonzero exit on refusals
 npx gnomon-cli index        # regenerate maps/_index.md and principles/_index.md, only if changed
 npx gnomon-cli status       # counts, index freshness, uncommitted changes, and what to do next
+npx gnomon-cli decrypt      # an encrypted brain, readable for a desktop session (see below)
 ```
 
 Or install it once and use the short name:
@@ -35,6 +36,48 @@ current directory.
 - **status** prints unfiled captures, sources by curation state,
   principles and sets, open proposals, whether the indexes are current,
   the git state, and a one-line nudge naming the next step of the loop.
+- **decrypt**, **encrypt**, and **guard** are for an encrypted brain; see
+  below.
+
+## An encrypted brain
+
+When encryption is on (the app turns it on; `.gnomon/encryption.json`
+exists), passage, notes, principle, proposal, and inbox text is stored as
+ciphertext and frontmatter stays readable. `validate`, `index`, and
+`status` work without the key. To read and write the bodies on the desktop:
+
+```
+npx gnomon-cli decrypt           # after git pull: every body to plaintext, in the working tree only
+npx gnomon-cli guard --install   # once per clone: refuse any commit that carries a plaintext body
+```
+
+Then wrap every commit, so no plaintext is ever committed:
+
+```
+npx gnomon-cli encrypt && git add -A && git commit -m "File: <slug>" && npx gnomon-cli decrypt
+```
+
+- The passphrase comes from `GNOMON_PASSPHRASE`, or the command asks for
+  it in a terminal. It is checked before any file is touched; a wrong one
+  changes nothing.
+- `encrypt` keeps the committed ciphertext of every body whose plaintext
+  has not changed, so only what you edited shows in the diff, and an
+  untouched brain re-encrypts with no diff at all.
+- `decrypt` refuses a tree with uncommitted changes (it starts right after
+  a pull or a commit); `--force` overrides.
+- While the tree is decrypted, `git status` lists every body as modified;
+  that is the decryption. `gnomon status` says the tree is decrypted and
+  how many bodies are plaintext.
+- `guard --install` writes a pre-commit hook into this checkout only
+  (hooks are never pushed). The hook refuses a commit that stages a
+  plaintext body, and refuses when it cannot run `gnomon-cli` at all:
+  a blocked commit can be retried, a pushed plaintext body cannot be
+  taken back. It never overwrites a hook that is not its own.
+- Encryption is turned on, off, and re-keyed in the app, never here.
+
+[git-crypt](https://github.com/AGWA/git-crypt) is an alternative for
+people who prefer git filters, though it encrypts whole files, frontmatter
+included, and the app cannot read it.
 
 ## In an assistant session
 
