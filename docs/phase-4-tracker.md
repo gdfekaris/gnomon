@@ -678,6 +678,24 @@ batch commit for several decisions at once is acceptable history.
 
 Open at the close of Phase 3 (2026-09-11); none blocks a Phase 4 block.
 
+- [ ] **Publish `gnomon-cli` 0.2.0** (the maintainer, at the laptop; added
+  2026-09-26) — `main` is at 0.2.0 and CI is green (`cd1e7e5`). Until this
+  is done, the new commands are not on npm and an installed guard hook
+  refuses every commit.
+  1. `cd ~/Desktop/main/gnomon-dev/packages/cli && npm run build && npm
+     publish --access public` (the token in `~/.npmrc`, as for 0.1.0).
+  2. `npm view gnomon-cli version` prints `0.2.0`.
+  3. Decide the tag: `git tag v0.2.0 && git push origin v0.2.0` after the
+     publish (its `publish.yml` run fails, harmlessly, until trusted
+     publishing is configured), or no tags until then.
+  4. Try the CLI in a clone of `gdfekaris/gnomon-smoke-brain-1`:
+     `npx gnomon-cli decrypt` with no `GNOMON_PASSPHRASE` set, to see the
+     hidden prompt in a real terminal, then `guard --install`, an edit,
+     and the wrapped commit. (That brain is unencrypted: turn encryption on
+     in the app first.)
+  5. Delete `gnomon-smoke-brain-1` and its token on github.com.
+  6. Then the real brain may be encrypted, and block 5 is next.
+
 - [ ] **npm trusted publishing** — `publish.yml` is ready; saving the
   trusted publisher on npmjs.com (owner `gdfekaris`, repository `gnomon`,
   workflow `publish.yml`, "Allow npm publish") needs interactive WebAuthn
