@@ -38,7 +38,12 @@ jobs:
       - name: Build the app
         run: npm run build
         env:
-          VITE_BASE: /gnomon/
+          # The Pages path is the repository's name: /gnomon/ here, and whatever a fork is called.
+          VITE_BASE: /${{ github.event.repository.name }}/
+          # Opt-in, for forks and self-hosters only (docs/local-models.md, spec §15): a model endpoint the app may
+          # reach, "self" or an https origin, from the repository variable GNOMON_CUSTOM_ENDPOINT. It is never set
+          # on gdfekaris/gnomon, so this build is the strict app: its page and security policy are unchanged.
+          VITE_CUSTOM_ENDPOINT: ${{ vars.GNOMON_CUSTOM_ENDPOINT }}
       - name: Playwright flows against the demo brain, in Chromium and in WebKit as an iPhone
         run: |
           npx playwright install --with-deps chromium webkit

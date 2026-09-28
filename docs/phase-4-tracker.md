@@ -258,6 +258,24 @@ commands, and any UI.
   app's "Who can see what" (Settings and onboarding); smoke step 7b. **To
   tick:** the maintainer runs step 7b once.
 
+- [ ] **8. Your own model endpoint** (M) — added 2026-09-27 by the
+  maintainer, for forks, self-hosters, and the maintainer's own AWS test;
+  option 3 of the discussion (a build-time opt-in) over allowing any
+  address for everyone or a second open deployment. Off by default and
+  never set on `gdfekaris/gnomon`. Built 2026-09-27: `CustomDriver` in
+  `providers` (OpenAI-style, sharing OpenRouter's stream reader), the build
+  setting `VITE_CUSTOM_ENDPOINT` (`self`, or a bare https origin appended to
+  `connect-src`; `app/src/lib/customEndpoint.ts`, a test that an unset
+  build leaves `index.html` byte for byte), CI passing the repository
+  variable `GNOMON_CUSTOM_ENDPOINT` (and `VITE_BASE` from the repository's
+  name, so a fork under another name deploys), Settings → "Your own model"
+  (address, optional key, context window; an address the build cannot
+  reach is refused beside Save) and the About line, "Your model" on Reason
+  and Inbox, a fourth dev server on 5174 built with `self` for the flows.
+  Docs: the main README's opt-in section, `docs/local-models.md` "From the
+  phone", spec §8.1, §10.3, §15, CLAUDE.md. **To tick:** the maintainer's
+  test from the phone against a model on AWS, following the doc.
+
 ## UX block: Browse at scale (2026-09-12) — done 2026-09-12
 
 Built the same day, all "done when" checks green on both engines.

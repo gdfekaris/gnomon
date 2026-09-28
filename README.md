@@ -37,6 +37,30 @@ npm run dev -w packages/app
 
 Node 20 or newer. CI runs the same steps on every push.
 
+## Your own model (for forks and self-hosters)
+
+The app can reason with a model you run yourself (Ollama, or anything with
+an OpenAI-style API), but only in a copy of the app you build with the
+feature switched on. It is **off by default**, and it stays off in the app
+at `gdfekaris.com/gnomon/`: turning it on adds your endpoint to the
+address list the app's security policy allows, so it is a choice for
+whoever deploys a copy. To opt in:
+
+- **A fork deployed to GitHub Pages:** in your fork, Settings → Secrets
+  and variables → Actions → Variables, add `GNOMON_CUSTOM_ENDPOINT` with
+  either `self` (the model is served from the same server as the app) or
+  an https origin such as `https://model.example.com`. Enable Pages with
+  "GitHub Actions" as the source, then push or re-run the `ci` workflow.
+- **A build by hand:**
+  `VITE_CUSTOM_ENDPOINT=self VITE_BASE=/ npm run build`, then serve
+  `packages/app/dist`.
+
+Then Settings → AI providers → "Your own model" takes the endpoint's
+address, an optional key, and its context window, and Reason and Inbox
+offer "Your model". Settings → About says what a build allows. Recipes,
+including one server for both the app and the model:
+`docs/local-models.md`.
+
 ## Where things stand
 
 Phases 1 to 3 of the technical spec (§19) are done: the app is live at

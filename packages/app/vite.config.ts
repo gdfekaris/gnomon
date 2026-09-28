@@ -1,6 +1,7 @@
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { ENDPOINT_SETTING, parseEndpointSetting, withEndpointCsp } from './src/lib/customEndpoint';
 
 // `base` is the GitHub Pages subpath in CI (VITE_BASE=/gnomon/) and "/" in dev (spec §2, §18).
 const base = process.env['VITE_BASE'] ?? '/';
@@ -8,11 +9,18 @@ const base = process.env['VITE_BASE'] ?? '/';
 // Which build a device is running, for Settings → About: CI's commit, or "dev".
 const commit = (process.env['GITHUB_SHA'] ?? 'dev').slice(0, 7);
 
+// Spec §15: a custom model endpoint is off unless whoever builds the app opts in (docs/local-models.md). Unset,
+// the page and its security policy are exactly as before; gdfekaris/gnomon never sets it.
+const endpoint = parseEndpointSetting(process.env[ENDPOINT_SETTING]);
+
 export default defineConfig({
   base,
-  define: { __GNOMON_BUILD__: JSON.stringify(commit) },
+  define: { __GNOMON_BUILD__: JSON.stringify(commit), __GNOMON_CUSTOM_ENDPOINT__: JSON.stringify(process.env[ENDPOINT_SETTING]?.trim() ?? '') },
+  // A dev server with the setting (the custom endpoint flows) keeps its own dependency cache beside the plain one.
+  ...(endpoint.kind === 'off' ? {} : { cacheDir: 'node_modules/.vite-custom-endpoint' }),
   plugins: [
     svelte(),
+    { name: 'gnomon-custom-endpoint-csp', transformIndexHtml: (html) => withEndpointCsp(html, endpoint) },
     VitePWA({
       // Spec §11: precache the app shell only; prompt on update; never cache API origins.
       registerType: 'prompt',

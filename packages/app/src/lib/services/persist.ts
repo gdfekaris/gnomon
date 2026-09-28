@@ -18,7 +18,7 @@ export interface StorageDiagnostics {
   error: string | null;
 }
 
-export const SETTINGS_KEYS = ['git.token', 'git.repo', 'provider.anthropic.key', 'provider.openrouter.key', 'prefs'] as const;
+export const SETTINGS_KEYS = ['git.token', 'git.repo', 'provider.anthropic.key', 'provider.openrouter.key', 'provider.custom', 'prefs'] as const;
 export type SettingsKey = (typeof SETTINGS_KEYS)[number];
 export type SettingsRecord = Partial<Record<SettingsKey, unknown>>;
 

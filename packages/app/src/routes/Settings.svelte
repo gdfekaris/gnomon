@@ -10,7 +10,8 @@
   import { DISCLOSURE, NO_WASM, wasmAvailable } from '../lib/services/encryption';
   import { route } from '../lib/router.svelte';
   import { session } from '../lib/stores/session.svelte';
-  import { type Prefs, settings, saveGit, savePrefs, saveProviderKeys } from '../lib/stores/settings.svelte';
+  import { DEFAULT_CUSTOM_WINDOW, type Prefs, endpointPolicy, saveCustomEndpoint, settings, saveGit, savePrefs, saveProviderKeys } from '../lib/stores/settings.svelte';
+  import { describePolicy } from '../lib/customEndpoint';
   import { snapshot } from '../lib/stores/snapshot.svelte';
   import { UPDATE_CHECK_TEXT, applyUpdate, checkForUpdate, pwa } from '../lib/stores/pwa.svelte';
   import { KDF_PRESETS, timeDerivation } from '@gnomon/core';
@@ -87,6 +88,37 @@
     savedKeys = true;
   });
 
+  // A model endpoint the user runs (spec §15): only in a build that opted in, and only at the address it allows.
+  // Its error sits beside its own Save, never at the foot of the screen.
+  const selfHint = typeof location === 'undefined' ? '' : `${location.origin}/v1`;
+  const endpointHint = endpointPolicy.kind === 'origin' ? `${endpointPolicy.origin}/v1` : selfHint;
+  let customUrl = $state(settings.custom.url);
+  let customKey = $state(settings.custom.key);
+  let customWindow = $state(String(settings.custom.contextWindow));
+  let customError = $state<string | null>(null);
+  let customSaved = $state(false);
+  $effect(() => {
+    if (!settings.loaded) return;
+    customUrl = settings.custom.url;
+    customKey = settings.custom.key;
+    customWindow = String(settings.custom.contextWindow);
+  });
+  const saveCustom = async () => {
+    busy = true;
+    pressed = 'custom';
+    customError = null;
+    customSaved = false;
+    try {
+      await saveCustomEndpoint({ url: customUrl, key: customKey, contextWindow: Number(customWindow || DEFAULT_CUSTOM_WINDOW) });
+      customSaved = true;
+    } catch (e) {
+      customError = describeError(e);
+    } finally {
+      busy = false;
+      pressed = null;
+    }
+  };
+
   // Encryption (spec §6.4): enable, change the passphrase, lock, forget, disable. The forms are the shared component;
   // the two one-tap flows and the confirmed disable run here.
   let enabling = $state(false);
@@ -138,6 +170,18 @@
   <button onclick={saveKeys} disabled={busy} use:hold={pressed === 'keys'} data-testid="save-keys">Save keys</button>
   {#if savedKeys}<span class="hint">Saved on this device.</span>{/if}
   <p class="hint">Used by the Reason screen (Phase 2). Keys never leave this device except to the provider you chose.</p>
+  {#if endpointPolicy.kind !== 'off'}
+    <h4>Your own model</h4>
+    <p class="hint">
+      A model you run, such as Ollama, at an address that speaks the OpenAI-style API. This build allows
+      {endpointPolicy.kind === 'self' ? 'an endpoint on its own server' : endpointPolicy.origin}. It appears as "Your model" on Reason and Inbox.
+    </p>
+    <label>Endpoint address <input bind:value={customUrl} placeholder={endpointHint} autocapitalize="off" autocomplete="off" data-testid="custom-url" /></label>
+    <label>Key <small>(optional; sent as a bearer token)</small> <input bind:value={customKey} type="password" autocomplete="off" data-testid="custom-key" /></label>
+    <label>Context window, in tokens <input bind:value={customWindow} inputmode="numeric" data-testid="custom-window" /></label>
+    <button onclick={saveCustom} disabled={busy} use:hold={pressed === 'custom'} data-testid="custom-save">Save</button>
+    {#if customError}<p class="error" role="alert" data-testid="custom-error">{customError}</p>{:else if customSaved}<span class="hint">{customUrl.trim() ? 'Saved on this device.' : 'Removed from this device.'}</span>{/if}
+  {/if}
 </section>
 
 <section>
@@ -254,6 +298,7 @@
       Brain: {#if session.driver}{session.label}, {snapshot.current ? `at ${snapshot.current.head.slice(0, 7)}` : 'no snapshot'}{#if snapshot.error}, last load failed: {snapshot.error}{/if}{:else}none connected{/if}.
     </li>
     <li>Service worker {swState}.</li>
+    <li data-testid="custom-endpoint-build">{describePolicy(endpointPolicy)}</li>
     <li data-testid="enc-diag">
       Encryption {session.encryption.enabled ? (session.encryption.locked ? 'on, locked' : 'on, unlocked') : 'off'}{#if session.encryption.storeError}; last key store failure: {session.encryption.storeError}{/if}.
     </li>

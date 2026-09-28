@@ -16,7 +16,7 @@ export type CompletionEvent =
   | { type: 'done'; usage: { inputTokens: number; outputTokens: number }; stopReason?: string };
 
 export interface ProviderDriver {
-  id: 'anthropic' | 'openrouter' | 'mock';
+  id: 'anthropic' | 'openrouter' | 'custom' | 'mock';
   listModels(): Promise<ModelInfo[]>;
   /** streaming */
   complete(req: CompletionRequest): AsyncIterable<CompletionEvent>;

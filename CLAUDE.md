@@ -67,6 +67,9 @@ When the pass is done: delete the tracker, break down Phase 5, and write
   happen only when the maintainer asks for that change in the current
   session. The maintainer's own brain, `~/Desktop/main/geo-brain-2`, has no
   remote; never push it anywhere.
+- The custom model endpoint (`VITE_CUSTOM_ENDPOINT`, repository variable
+  `GNOMON_CUSTOM_ENDPOINT`) is opt-in for forks and self-hosters. Never set
+  it on `gdfekaris/gnomon`: the app at gdfekaris.com stays strict.
 - Files never move (schema §1 rule 1). A principle changes set by copy
   then delete, never by a path change; the app offers exactly that.
 - Never `fetch` an imported `?url` asset: a production build inlines small

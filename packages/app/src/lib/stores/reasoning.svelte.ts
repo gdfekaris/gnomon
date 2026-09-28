@@ -3,7 +3,8 @@ import { untrack } from 'svelte';
 import type { Task } from '@gnomon/core';
 import type { ModelInfo } from '@gnomon/providers';
 import { type ProviderId, type ReasoningState, ReasoningService } from '../services/reasoning';
-import { settings } from './settings.svelte';
+import { endpointPolicy, settings } from './settings.svelte';
+import { endpointProblem } from '../customEndpoint';
 
 /** The Reason screen's tasks: the four assembly tasks, Derive (Task E), and Relate sources to a set (Task F); the last two share the source picker. */
 export type ScreenTask = Task | 'derive' | 'relate-set';
@@ -25,7 +26,9 @@ export const reasoner = new ReasoningService(reasoning);
  * still there.
  */
 export function configureReasoner(): void {
-  reasoner.configure({ ...(settings.anthropicKey ? { anthropic: settings.anthropicKey } : {}), ...(settings.openrouterKey ? { openrouter: settings.openrouterKey } : {}) });
+  // A custom endpoint counts only in a build that allows it, and only at an address this build can reach (spec §15).
+  const custom = settings.custom.url && typeof location !== 'undefined' && !endpointProblem(settings.custom.url, endpointPolicy, location.origin) ? { custom: $state.snapshot(settings.custom) } : {};
+  reasoner.configure({ ...(settings.anthropicKey ? { anthropic: settings.anthropicKey } : {}), ...(settings.openrouterKey ? { openrouter: settings.openrouterKey } : {}), ...custom });
   // Called from effects keyed on the keys above; what it writes it must not also track, or the effect loops.
   untrack(() => {
     const providers = reasoner.providerIds;

@@ -6,10 +6,11 @@ passages as fit. A local model removes that last party: the model runs on
 your own computer, reads your brain from your own clone, and nothing it
 reads leaves the machine.
 
-The app cannot do this (a phone does not run these models, and the app
-talks only to providers on the internet). It is a desktop session: an agent
-tool that reads the brain's `AGENTS.md`, backed by a model running
-locally. This page sets that up with [Ollama](https://ollama.com) (runs
+Most of this page is a desktop session: an agent tool that reads the
+brain's `AGENTS.md`, backed by a model running locally. The app at
+gdfekaris.com talks only to Anthropic and OpenRouter; a copy of the app
+you build and host yourself can also talk to a model you run, which is
+the last section, "From the phone". This page sets that up with [Ollama](https://ollama.com) (runs
 the model) and [OpenCode](https://opencode.ai) (the agent, which reads
 `AGENTS.md` by itself). Any agent tool that reads `AGENTS.md` and can run
 shell commands works the same way.
@@ -160,3 +161,143 @@ kind of local endpoint as Ollama, and other agent tools that read
 `AGENTS.md` work the same way. The rules for what stays private are the
 same: the model runs locally, the agent has no cloud provider configured,
 and web access is off.
+
+## From the phone: your own copy of the app, with your own model
+
+The app installed from gdfekaris.com reasons only through Anthropic or
+OpenRouter, and that will not change: its security policy lets it talk to
+those two, GitHub, and itself, and nothing else. A copy of the app you build
+can also reach **one** model endpoint you run. The feature is off unless
+the build switches it on with `VITE_CUSTOM_ENDPOINT` (for a fork on GitHub
+Pages, the repository variable `GNOMON_CUSTOM_ENDPOINT`; the main README
+says how). It takes one of two values:
+
+- `self`: the model is served from the same server as the app. The
+  security policy needs no new address, and the browser needs no CORS.
+  The simplest shape, and the one below.
+- `https://model.example.com`: the app is hosted in one place (a fork's
+  GitHub Pages) and the model in another. That one address is added to the
+  policy, and the model's server must allow the app's site (CORS).
+
+Settings → About in any copy says which it allows.
+
+The model's server needs three things a phone requires and a desktop
+tunnel does not: **HTTPS** with a real certificate (a phone will not call a
+plain `http://` address from an https app), **a key**, because Ollama has
+no login of its own and the address is reachable from the internet, and a
+**name** the phone can reach.
+
+### One server for both the app and the model (`self`), on AWS
+
+A sketch for Ubuntu; adapt the names. You need a domain name you can point
+at the server (for example `brain.example.com`).
+
+1. **An instance.** With a 24 GB GPU, `qwen3:30b` is fast (use an AMI with
+   NVIDIA drivers, such as AWS's Deep Learning AMI); on a processor alone,
+   pick around 64 GB of RAM and expect slow replies. Give it an Elastic IP,
+   point `brain.example.com` at it, and in its security group open 443 and
+   80 (for the certificate) to the internet and 22 to your own address only.
+   Check AWS's current prices, and stop the instance when you are not
+   using it.
+
+2. **Ollama and the model.** On the server:
+
+   ```
+   curl -fsSL https://ollama.com/install.sh | sh
+   sudo systemctl edit ollama.service     # add under [Service]:
+                                          # Environment="OLLAMA_CONTEXT_LENGTH=32768"
+   sudo systemctl daemon-reload && sudo systemctl restart ollama
+   ollama pull qwen3:30b
+   ```
+
+   Ollama listens on `localhost:11434` only, which is what you want: only
+   Caddy, below, reaches it.
+
+3. **Your copy of the app.** On your computer, in a clone of this
+   repository:
+
+   ```
+   npx npm@latest install
+   VITE_CUSTOM_ENDPOINT=self VITE_BASE=/ npm run build
+   scp -r packages/app/dist/* you@brain.example.com:/srv/gnomon/
+   ```
+
+   (Create `/srv/gnomon` on the server first, owned by your user.)
+
+4. **Caddy** in front of both, for automatic HTTPS and the key. Install it
+   from its documentation ([caddyserver.com](https://caddyserver.com/docs/install)),
+   make a key with `openssl rand -hex 24`, give it to Caddy with
+   `sudo systemctl edit caddy` and, under `[Service]`,
+   `Environment="GNOMON_MODEL_KEY=<the key>"`, then write
+   `/etc/caddy/Caddyfile`:
+
+   ```
+   brain.example.com {
+   	handle /v1/* {
+   		@nokey not header Authorization "Bearer {$GNOMON_MODEL_KEY}"
+   		respond @nokey 401
+   		reverse_proxy localhost:11434 {
+   			header_up Host localhost:11434
+   		}
+   	}
+   	handle {
+   		root * /srv/gnomon
+   		try_files {path} /index.html
+   		file_server
+   	}
+   }
+   ```
+
+   and `sudo systemctl daemon-reload && sudo systemctl restart caddy`. Every
+   `/v1/` request without the key gets 401; the rest is the app. The
+   `header_up` line presents the request to Ollama as a local one.
+
+5. **On the phone.** Open `https://brain.example.com` in Safari, and add it
+   to the Home Screen: it is a separate app from the gdfekaris.com one,
+   with its own settings. Connect a brain (a scratch one for a first test),
+   then Settings → AI providers → "Your own model": address
+   `https://brain.example.com/v1`, the key, context window `32768`, Save.
+   Reason and Inbox now offer "Your model".
+
+What leaves the phone in this shape: the reasoning request goes to your
+server and nowhere else. Your server sees the passages a task sends, as an
+AI provider would; it is yours, which is the point.
+
+### A fork on GitHub Pages with the model elsewhere
+
+Set the fork's `GNOMON_CUSTOM_ENDPOINT` to the model server's origin, say
+`https://model.example.com`, and serve only the model there. The browser
+now sends a CORS check first, without the key, so the key rule lets it
+through, and Ollama answers it once it knows the app's site:
+
+```
+model.example.com {
+	@nokey {
+		not header Authorization "Bearer {$GNOMON_MODEL_KEY}"
+		not method OPTIONS
+	}
+	respond @nokey 401
+	reverse_proxy localhost:11434 {
+		header_up Host localhost:11434
+	}
+}
+```
+
+and in Ollama's service, beside the context length,
+`Environment="OLLAMA_ORIGINS=https://<you>.github.io"`.
+
+### At home
+
+The same shapes work on a computer at home if the phone can reach it by an
+HTTPS name. Tailscale gives each machine on your private network one
+(`tailscale serve`), and the phone joins the same network with the
+Tailscale app. Inside a network only your devices are on, the key matters
+less; keep it anyway if other people share the network.
+
+### Not yet known
+
+This setup is written from the documentation of Ollama, Caddy, and the
+app, and tested against a faked endpoint; the first run on a real server
+(Phase 4 block 8) settles what the page cannot: how fast `qwen3:30b` is
+on a given instance, and whether its thinking text stays out of the
+answer or shows up in it.

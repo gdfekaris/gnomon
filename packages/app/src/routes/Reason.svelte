@@ -26,7 +26,7 @@
   const isDerive = $derived(reasoning.task === 'derive' || reasoning.task === 'relate-set');
   const isRelateSet = $derived(reasoning.task === 'relate-set');
   const assemblyTask = $derived((isDerive ? 'reason' : reasoning.task) as Task);
-  const PROVIDER_LABELS: Record<string, string> = { mock: 'Demo model (no key)', anthropic: 'Anthropic', openrouter: 'OpenRouter' };
+  const PROVIDER_LABELS: Record<string, string> = { mock: 'Demo model (no key)', anthropic: 'Anthropic', openrouter: 'OpenRouter', custom: 'Your model' };
   let selected = $state<string[]>([]);
   let modelsFor = $state<string | null>(null);
   let modelError = $state<string | null>(null);
@@ -47,6 +47,7 @@
     configureReasoner();
     void settings.anthropicKey;
     void settings.openrouterKey;
+    void settings.custom;
   });
   // Models for the chosen provider.
   $effect(() => {

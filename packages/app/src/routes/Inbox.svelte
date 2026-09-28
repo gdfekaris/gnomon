@@ -29,7 +29,7 @@
   const chosen = $derived(captures.filter((c) => !unticked.includes(c.path)));
   const stemOf = (path: string) => path.slice('inbox/'.length, -3);
   const togglePick = (path: string) => (unticked = unticked.includes(path) ? unticked.filter((p) => p !== path) : [...unticked, path]);
-  const PROVIDER_LABELS: Record<string, string> = { mock: 'Demo model (no key)', anthropic: 'Anthropic', openrouter: 'OpenRouter' };
+  const PROVIDER_LABELS: Record<string, string> = { mock: 'Demo model (no key)', anthropic: 'Anthropic', openrouter: 'OpenRouter', custom: 'Your model' };
   let models = $state<ModelInfo[]>([]);
   let model = $state<ModelInfo | null>(null);
   let modelsFor = $state<string | null>(null);
@@ -56,7 +56,7 @@
   let conflict = $state<{ sha: string; paths: string[] } | null>(null);
   let loadedHead = $state<string | null>(null);
 
-  $effect(() => { configureReasoner(); void settings.anthropicKey; void settings.openrouterKey; });
+  $effect(() => { configureReasoner(); void settings.anthropicKey; void settings.openrouterKey; void settings.custom; });
   $effect(() => {
     const provider = reasoning.provider;
     if (modelsFor === provider) return;

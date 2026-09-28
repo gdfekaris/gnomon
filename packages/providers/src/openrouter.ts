@@ -4,9 +4,8 @@
 // model's context_length, the authoritative source for budgets.
 
 import type { CompletionEvent, CompletionRequest, ModelInfo, ProviderDriver } from './driver';
-import { ProviderError } from './errors';
 import { type Fetch, boundFetch, providerFetch } from './http';
-import { readSse } from './sse';
+import { readChatCompletionStream } from './openai';
 
 export interface OpenRouterDriverOptions {
   apiKey: string;
@@ -64,22 +63,6 @@ export class OpenRouterDriver implements ProviderDriver {
         messages: [{ role: 'system', content: req.system }, ...req.messages],
       }),
     }, 'OpenRouter');
-    if (!res.body) throw new ProviderError('OpenRouter: empty response body');
-    let inputTokens = 0;
-    let outputTokens = 0;
-    let stopReason: string | undefined;
-    for await (const ev of readSse(res.body, req.signal)) {
-      if (ev.data === '[DONE]') break;
-      const data = JSON.parse(ev.data) as { choices?: Array<{ delta?: { content?: string | null }; finish_reason?: string | null }>; usage?: { prompt_tokens?: number; completion_tokens?: number }; error?: { message?: string } };
-      if (data.error) throw new ProviderError(`OpenRouter: ${data.error.message ?? 'stream error'}`);
-      const choice = data.choices?.[0];
-      if (choice?.delta?.content) yield { type: 'text', text: choice.delta.content };
-      if (choice?.finish_reason) stopReason = choice.finish_reason;
-      if (data.usage) {
-        inputTokens = data.usage.prompt_tokens ?? inputTokens;
-        outputTokens = data.usage.completion_tokens ?? outputTokens;
-      }
-    }
-    yield { type: 'done', usage: { inputTokens, outputTokens }, ...(stopReason ? { stopReason } : {}) };
+    yield* readChatCompletionStream(res, req.signal, 'OpenRouter');
   }
 }

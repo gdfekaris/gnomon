@@ -5,9 +5,9 @@
 
 import { describeError } from './errors';
 import { type Assembly, type AssemblyResult, type BrainSnapshot, type Citation, type Task, assemble, parseCitations } from '@gnomon/core';
-import { AnthropicDriver, type ChatMessage, MockProvider, type ModelInfo, OpenRouterDriver, type ProviderDriver } from '@gnomon/providers';
+import { AnthropicDriver, type ChatMessage, CustomDriver, MockProvider, type ModelInfo, OpenRouterDriver, type ProviderDriver } from '@gnomon/providers';
 
-export type ProviderId = 'mock' | 'anthropic' | 'openrouter';
+export type ProviderId = 'mock' | 'anthropic' | 'openrouter' | 'custom';
 
 export interface Turn {
   role: 'user' | 'assistant';
@@ -26,7 +26,8 @@ export interface ReasoningState {
   preview: AssemblyResult | null;
 }
 
-export interface ProviderKeys { anthropic?: string; openrouter?: string; }
+export interface CustomEndpoint { url: string; key: string; contextWindow: number; }
+export interface ProviderKeys { anthropic?: string; openrouter?: string; /** a model endpoint the user runs; only a build that allows one passes it (spec §15) */ custom?: CustomEndpoint; }
 
 export class ReasoningService {
   private drivers = new Map<ProviderId, ProviderDriver>();
@@ -41,6 +42,7 @@ export class ReasoningService {
     this.drivers = new Map([['mock', mock]]);
     if (keys.anthropic) this.drivers.set('anthropic', new AnthropicDriver({ apiKey: keys.anthropic }));
     if (keys.openrouter) this.drivers.set('openrouter', new OpenRouterDriver({ apiKey: keys.openrouter }));
+    if (keys.custom) this.drivers.set('custom', new CustomDriver({ baseUrl: keys.custom.url, contextWindow: keys.custom.contextWindow, ...(keys.custom.key ? { apiKey: keys.custom.key } : {}) }));
   }
 
   get providerIds(): ProviderId[] {

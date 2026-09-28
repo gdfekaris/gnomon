@@ -7,6 +7,8 @@ export default defineConfig({
   use: { baseURL: 'http://localhost:5173', trace: 'retain-on-failure' },
   webServer: [
     { command: 'npx vite --port 5173 --strictPort', url: 'http://localhost:5173', reuseExistingServer: !process.env['CI'], timeout: 60_000 },
+    // A dev server built as a self-hoster would with the custom model endpoint on its own server (spec §15), for the custom-endpoint flows.
+    { command: 'VITE_CUSTOM_ENDPOINT=self npx vite --port 5174 --strictPort', url: 'http://localhost:5174', reuseExistingServer: !process.env['CI'], timeout: 60_000 },
     // A production build for the PWA checks (service worker, manifest); dev never registers a worker.
     { command: 'npx vite build --outDir dist-preview && npx vite preview --outDir dist-preview --port 4173 --strictPort', url: 'http://localhost:4173', reuseExistingServer: !process.env['CI'], timeout: 120_000 },
   ],

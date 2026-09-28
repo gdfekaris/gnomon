@@ -268,7 +268,7 @@ Implements Schema §7.1–§7.4 (sets) and §7.9 (principles) as pure functions 
 
 ```ts
 export interface ProviderDriver {
-  id: 'anthropic' | 'openrouter';
+  id: 'anthropic' | 'openrouter' | 'custom';
   listModels(): Promise<ModelInfo[]>;       // { id, label, contextWindow, supportsStreaming }
   complete(req: CompletionRequest): AsyncIterable<CompletionEvent>;  // streaming; { type:'text', text } | { type:'done', usage }
 }
@@ -278,6 +278,8 @@ export interface CompletionRequest { model: string; system: string; messages: Ch
 **Anthropic driver:** `POST https://api.anthropic.com/v1/messages` with headers `x-api-key`, `anthropic-version`, and `anthropic-dangerous-direct-browser-access: true` (required for browser CORS). SSE streaming. `listModels` calls `GET /v1/models` and maps context windows from a small bundled table keyed by model family, with a conservative default when unknown.
 
 **OpenRouter driver:** `POST https://openrouter.ai/api/v1/chat/completions`, `Authorization: Bearer`, plus `HTTP-Referer` and `X-Title` headers as OpenRouter requests. `listModels` calls `GET /api/v1/models`, which returns `context_length` per model — the authoritative source for budgets.
+
+**Custom endpoint driver** (Phase 4 block 8): a model the user runs (Ollama, llama.cpp's server, LM Studio) behind the OpenAI-style API. The user gives the API base (e.g. `https://model.example.com/v1`), an optional key sent as `Authorization: Bearer`, and the context window, since these servers do not report one. `GET {base}/models` lists the models, `POST {base}/chat/completions` streams with the same reader as OpenRouter. Only a build that opts in can reach one (§15); the app names it "Your model".
 
 ### 8.2 Token estimation
 
@@ -356,6 +358,7 @@ Stores are Svelte 5 `$state` objects exported from modules; services mutate them
 | `git.token` | string | Fine-grained PAT. |
 | `git.repo` | `{ owner, name }` | |
 | `provider.anthropic.key`, `provider.openrouter.key` | string | |
+| `provider.custom` | `{ url, key, contextWindow }` | Only in a build that allows a custom endpoint (§15). |
 | `prefs` | object | Theme, budget percent, last selected sets, capture defaults, set-description placement. |
 | `enc.deviceKey` | non-extractable `CryptoKey` | Only if "remember on this device". |
 | `enc.wrappedKey` | ArrayBuffer | Brain key wrapped under `enc.deviceKey`. |
@@ -402,6 +405,7 @@ All driver errors are typed: `AuthError`, `HeadMovedError`, `RevertConflictError
 ## 15. Security considerations
 
 - Content Security Policy via meta tag: `default-src 'self'; connect-src 'self' https://api.github.com https://api.anthropic.com https://openrouter.ai; script-src 'self' 'wasm-unsafe-eval'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'`. No third-party scripts, no analytics.
+- **A custom model endpoint is a build-time opt-in** (Phase 4 block 8). `VITE_CUSTOM_ENDPOINT` (in CI, the repository variable `GNOMON_CUSTOM_ENDPOINT`) is unset by default, and then the page and its policy are exactly the above; a test holds that. `self` allows an endpoint on the app's own server, which `connect-src 'self'` already covers, so the policy is unchanged; a bare https origin is appended to `connect-src` and nothing else changes. A meta-tag policy cannot be widened at run time and GitHub Pages cannot vary it per user, so an address chosen at run time would have meant allowing every origin for every user; the build-time origin keeps the loosening to one address chosen by whoever deploys. `gdfekaris/gnomon` never sets it: the public app stays strict, and forks and self-hosters opt in (`docs/local-models.md`). Settings → About states what a build allows.
 - Markdown rendering: `markdown-it` with `html: false`; links to non-brain origins open in a new tab with `rel="noopener noreferrer"`.
 - Attachments: images are previewed inline from a `blob:` URL; PDFs are opened in a new tab from a `blob:` URL; HTML attachments are **never rendered** — they are shown as source text or downloaded — so a captured page can never run script in the app's origin.
 - Keys never appear in URLs, logs, or error reports. There are no error reports; errors stay on device.
