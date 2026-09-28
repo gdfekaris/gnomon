@@ -8,6 +8,19 @@ onboarding, capture, browse, sets, editors, reasoning, filing review,
 proposals, and a late-1980s GUI in four skins. Phase 4 has added
 optional client-side encryption, in the app and in the CLI. Version 0.2.0.
 
+## Who it's for
+
+Gnomon is built by one person for their own use, and shared for anyone who
+thinks the same way. It suits a curator: someone who wants every captured
+passage kept word for word, every AI suggestion reviewed before it counts,
+their own principles written in their own words and ranked, and the whole
+brain in a git repository they own, readable without the app. That means
+steps: a capture waits in the inbox, a filing waits for your review, a
+suggestion waits for your decision. If that sounds like too much ceremony
+for what you want, it probably is, and a lighter notes app will serve you
+better. To see for yourself without an account, open the app at
+`https://gdfekaris.com/gnomon/` and choose "Try the demo brain."
+
 ## Layout
 
 | path | what it is |
