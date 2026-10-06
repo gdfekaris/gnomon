@@ -447,8 +447,10 @@ Order as listed; S6 can happen any time and is best done early.
   capture, a YubiKey seal, a cleared capture, a revocation) verify. T9
   showed a limit now stated in `security.md` §5: a verifier's first look
   cannot see seals removed from a chain's tail before it.
-- [ ] **S3. The phone: keys** (L) — built 2026-10-05; left: the
-  maintainer's iPhone check below. `services/sealing.ts` and Settings →
+- [x] **S3. The phone: keys** (L) — done 2026-10-06: the maintainer set
+  up sealing on brain-1 from the iPhone (Ed25519), recovered in Safari as a
+  second device from the phrase, and revoked that key from the installed
+  app. Built 2026-10-05: `services/sealing.ts` and Settings →
   Sealing: setup (24 words, three asked back, the fingerprint for the
   card), recovery from the phrase, enrolling a desktop key from its
   request, revocation, forgetting this device's key, and the `recover`,
