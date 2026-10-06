@@ -436,11 +436,17 @@ Order as listed; S6 can happen any time and is best done early.
   choices made in writing it: each brain has its own root, and the FIDO
   wire format of Schema §11.8 is confirmed against `ssh-keygen -Y verify`
   in S5 before anything ships.
-- [ ] **S2. Core: seals and verification** (L) — canonical payloads,
-  sign and verify for Ed25519 and P-256 (WebCrypto, which core already
-  uses) and FIDO SSHSIG (Ed25519 through libsodium), chains and heads,
-  verdicts; fixtures T1–T22 in unit tests. Done when every attack row
-  yields exactly its verdict and every clean history verifies.
+- [x] **S2. Core: seals and verification** (L) — done 2026-10-05.
+  `packages/core/src/seal`: encodings, keys and the root, the BIP-39
+  phrase, SSHSIG, records, making seals, verification; 50 tests. Checked
+  against independent implementations: Node's Ed25519, HKDF, and P-256,
+  OpenSSH's own `ed25519_sk` vector (`core/fixtures/sshsig`), and
+  `ssh-keygen -Y verify` on our FIDO signatures, which settles the Schema
+  §11.8 wire format S5 was to confirm. Every row of `security.md` §7
+  yields its verdict; the clean cases (a sealed brain, an attested
+  capture, a YubiKey seal, a cleared capture, a revocation) verify. T9
+  showed a limit now stated in `security.md` §5: a verifier's first look
+  cannot see seals removed from a chain's tail before it.
 - [ ] **S3. The phone: keys** (L) — setup with the phrase, root
   derivation, the phone key, pins, recovery on a new phone, revocation,
   enrolling a desktop key from a request; `storage.persist()`. Done when

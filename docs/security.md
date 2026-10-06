@@ -81,6 +81,12 @@ Each can be checked.
 - **History before sealing.** Captures that exist when sealing is set up
   are sealed once, as they stand: that proves they are unchanged since
   that day, not since they were captured. The app shows the date.
+- **A verifier's first look.** Rollback is caught against the heads a
+  verifier has already accepted. A verifier that has never seen a key's
+  chain (a phone just recovered from the phrase, a fresh `gnomon
+  verify`) cannot tell that its newest seals were removed before it first
+  looked; the device that made those seals can, since it keeps its own
+  head. Gaps and breaks inside a chain are caught by any verifier.
 - **The user attesting tampered text.** Sealing attests what is on
   screen. The app shows the whole text first; it cannot know what the user
   meant to capture.

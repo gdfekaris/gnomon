@@ -239,31 +239,40 @@ Payload = `nonce(12 bytes) || ciphertext || tag(16 bytes)` as produced by AES-25
 
 Tamper evidence for captured content. `docs/security.md` states the claim, the adversary, and the assumptions it rests on (above all: agents run in a separate OS account whose only GitHub credential is a deploy key for the brain); Schema §11 is the format and verification, normative. This section is how the code does it.
 
-**Module `core/seal`** (no DOM or Node types; WebCrypto and the libsodium core already uses):
+**Module `core/seal`** (no DOM or Node types; WebCrypto and the libsodium core already uses), built in block S2:
 
 ```ts
-export type SealAlg = 'ed25519' | 'p256' | 'sk-ed25519';
-export interface Signer { keyId: string; alg: SealAlg; sign(bytes: Uint8Array): Promise<string> }   // returns `sig`
-export interface PinnedRoot { id: string; pub: string }
-export type Heads = Record<string, { seq: number; digest: string }>;
-
-canonicalJson(value): string;                     // Schema §11.3
-signedBytes(kind: 'seal' | 'enroll' | 'revoke', payload): Uint8Array;
-digest(bytes: Uint8Array): string;                // 'sha256:<hex>'
-keyId(alg, pub): string;
-bodyBytes(file): Uint8Array;                      // Schema §11.1, after decryption
-entropyToPhrase(entropy): string[]; phraseToEntropy(words): Uint8Array;   // BIP-39 English, checksum checked
-deriveRoot(entropy): Promise<{ id: string; pub: string; sign(bytes): Promise<string>; wipe(): void }>;
-verifySshsig(armored, enrolledBlob, message): boolean;                    // Schema §11.8
-buildSeal(snapshot, signer, payload, head): Promise<{ path: string; text: string; head: Heads[string] }>;
-verifyBrain(snapshot, sealFiles, root: PinnedRoot, heads: Heads): {
-  findings: Array<{ code: string; path: string; detail: string }>;
-  verdicts: Map<string, { verdict: 'verified' | 'attested' | 'unsealed' | 'broken'; since?: string; why?: string }>;  // by capture or source path
-  heads: Heads | null;                            // the heads to pin, or null when anything failed (Schema §11.6 step 6)
+// encodings (Schema §11.1, §11.3)
+canonicalJson(value): string;  signedBytes(kind: 'seal' | 'enroll' | 'revoke', payload): Uint8Array;
+digest(bytes): Promise<string>;  bodyBytes(body): Uint8Array;
+// keys (§11.4)
+type SealAlg = 'ed25519' | 'p256' | 'sk-ed25519';
+interface Signer { keyId: string; alg: SealAlg; pub: string; sign(bytes: Uint8Array): Promise<string> }   // returns `sig`
+keyId(alg, pub); fingerprint(id); verifySignature(alg, pub, sig, message): Promise<boolean>;            // never throws
+generateDeviceKey(prefer?): { privateKey: CryptoKey; signer: Signer };    // non-extractable; Ed25519, else P-256
+cryptoKeySigner(privateKey, alg, pub); ed25519Signer(seed);               // the latter for the root and tests
+newEntropy(); entropyToPhrase(entropy): string[]; phraseToEntropy(words);  // BIP-39 English; PhraseError
+deriveRoot(entropy): Signer & { wipe(): void };
+verifySshsig(armored, publicKeyLine, message, namespace?);  parseSkPublicKey(line);      // §11.8
+// records (§11.2, §11.4)
+rootFile(root); makeEnrollment(root, key); makeRevocation(root, r); makeRequest(key);   // { path, text }
+// making seals (§11.5, §11.7)
+sealContent(capture, attachmentBytes?): SealContent;                      // the three digests
+sealPosition(gnomonFiles, keyId, storedHead?): { seq, prev };             // greater of stored and tree
+makeSeal(signer, { kind, stem, at, content | filed_as }, position): { path, text, head };
+encryptSealFiles(key, gnomonFiles); decryptSealFiles(key, gnomonFiles);   // §11.3, for the encryption plans
+// verification (§11.6)
+sealInputFromSnapshot(snapshot, gnomonFiles, attachmentDigest): SealInput;
+verifySeals(input, pinnedRoot, pinnedHeads): {
+  locked: boolean;                                                        // ciphertext seen: nothing verified
+  findings: Array<{ code; path; detail }>;                                // root-replaced, key-record-invalid, unknown-key, seal-invalid,
+                                                                          // chain-gap, chain-broken, rolled-back, sealed-after-revocation, sealed-capture-deleted
+  verdicts: Map<path, { verdict: 'verified' } | { verdict: 'attested'; since } | { verdict: 'unsealed' } | { verdict: 'broken'; why }>;
+  heads: Heads | null;                                                    // to pin; null unless clean (step 6)
 };
 ```
 
-The BIP-39 English word list ships in core as data. `verifyBrain` is pure over a snapshot: the snapshot loader reads `.gnomon/keys/` and `.gnomon/seals/` with everything else, and decrypts seal files with the brain key on an encrypted brain.
+The BIP-39 English word list ships in core as data, held to the published file's SHA-256 by a test. Verification takes `.gnomon/` as a map of path to text, read with the rest of the snapshot and with seal files decrypted on an encrypted brain, and digests attachments through a callback: the app can cache digests by blob sha (block S4), the CLI reads the files. The tests check the encodings, the root derivation, and Ed25519 and P-256 signatures against Node's independent implementations, FIDO signatures against OpenSSH's own vector (`core/fixtures/sshsig`) and `ssh-keygen -Y verify`, and every row of `security.md` §7.
 
 **The phone.** Setup (Settings → Sealing) draws 32 bytes from `crypto.getRandomValues`, shows the 24 words once, asks for three of them back, derives the root, generates the device key with `crypto.subtle.generateKey` and `extractable: false` (Ed25519 where the browser supports it, else ECDSA P-256 with SHA-256; settled on the maintainer's iPhone in block S3), signs the enrollment, commits `Set up sealing`, and wipes the entropy and the root secret. It calls `navigator.storage.persist()`. Recovery on a new device takes the phrase, re-derives the root, pins it, and enrolls a fresh device key. Enrolling a desktop key lists `.gnomon/keys/requests/`, shows each fingerprint for the curator to compare with the one `gnomon keys request` printed, and takes the phrase. Revocation takes the phrase and names the last good seal as this device has pinned it.
 
