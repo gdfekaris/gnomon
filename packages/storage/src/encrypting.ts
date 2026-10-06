@@ -1,9 +1,10 @@
 // EncryptingDriver — spec §6.4. Transparent to callers: reads return
-// plaintext, commit stores ciphertext. Markdown bodies only; frontmatter,
-// attachments, the scaffold, templates, and both index files stay cleartext.
+// plaintext, commit stores ciphertext. Markdown bodies, and seal files whole
+// (schema §11.3); frontmatter, attachments, the scaffold, templates, both
+// index files, and the other sealing files stay cleartext.
 
 import type { CommitBatch, FileWrite, ReadResult, TreeEntry } from '@gnomon/core';
-import { decryptBody, encryptBody, isEncryptablePath, isEncryptedBody, splitFrontmatter } from '@gnomon/core';
+import { SEALS_DIR, decryptBody, encryptBody, isEncryptablePath, isEncryptedBody, splitFrontmatter } from '@gnomon/core';
 import type { CommitInfo, FileChange, StorageDriver } from './driver';
 import type { Keyring } from './keyring';
 
@@ -40,6 +41,10 @@ export class EncryptingDriver implements StorageDriver {
 
   /** Decrypt a stored text when its body carries the marker; plaintext passes through. The key is fetched only when needed. */
   private async open(path: string, stored: ReadResult): Promise<ReadResult> {
+    if (path.startsWith(SEALS_DIR)) {
+      if (!isEncryptedBody(stored.text)) return { ...stored, encrypted: false };
+      return { text: await decryptBody(await this.keyring.key(), path, stored.text), sha: stored.sha, encrypted: true };
+    }
     const split = splitFrontmatter(stored.text);
     if (!split || !isEncryptedBody(split.body)) return { ...stored, encrypted: false };
     const body = await decryptBody(await this.keyring.key(), path, split.body);
@@ -56,11 +61,14 @@ export class EncryptingDriver implements StorageDriver {
   /** Encrypt the body of every text write on an encryptable path. A body equal to the stored plaintext keeps its ciphertext. */
   async commit(batch: CommitBatch): Promise<{ sha: string }> {
     const targets = batch.writes.filter((w): w is { path: string; text: string } => 'text' in w && isEncryptablePath(w.path));
-    if (targets.length === 0) return this.inner.commit(batch);
+    const seals = batch.writes.filter((w): w is { path: string; text: string } => 'text' in w && w.path.startsWith(SEALS_DIR) && !isEncryptedBody(w.text));
+    if (targets.length === 0 && seals.length === 0) return this.inner.commit(batch);
     const key = await this.keyring.key();
     const stored = await this.inner.readMany(targets.map((w) => w.path));
 
     const sealed = new Map<string, string>();
+    // A seal file is new in every commit that writes it (schema §11.2), so it is always encrypted fresh, whole.
+    for (const w of seals) sealed.set(w.path, await encryptBody(key, w.path, w.text));
     for (const w of targets) {
       const split = splitFrontmatter(w.text);
       if (!split) continue; // not a frontmatter file; the write is refused downstream, store as given

@@ -1,7 +1,9 @@
-// Sealing keys (spec §6.5; Phase 5 block S3) over the fake GitHub: set up
-// with the recovery phrase, keep the device key across a relaunch (a
+// Sealing (spec §6.5; Phase 5 blocks S3 and S4). Keys, over the fake GitHub:
+// set up with the recovery phrase, keep the device key across a relaunch (a
 // non-extractable CryptoKey in IndexedDB, on each engine), enroll a desktop
-// key from its request, revoke it, and add a second device from the phrase.
+// key from its request, revoke it, add a second device from the phrase.
+// Seals: a capture sealed as it is saved, "Seal as mine and ratify",
+// sealing the existing captures, and an agent's edit shown as broken.
 import { type Browser, type Page, expect, test } from '@playwright/test';
 import { makeRequest } from '@gnomon/core';
 import { FakeGitHub, readBrainBytes, serveGitHub } from './github-fake';
@@ -17,6 +19,8 @@ async function connect(page: Page, gh: FakeGitHub) {
   await page.getByTestId('git-token').fill('test-token');
   await page.getByRole('button', { name: 'Connect', exact: true }).click();
   await expect(page.getByText('Connected: octocat/brain')).toBeVisible();
+  // The brain finishes loading after "Connected" shows, and the screen above Sealing grows when it does: wait, so a tap lands where it aims.
+  await expect(page.getByTestId('diagnostics')).toContainText(/octocat\/brain, at [0-9a-f]{7}/);
 }
 
 /** Set up sealing through the screens; returns the 24 words and the fingerprint shown. */
@@ -107,4 +111,73 @@ test('a second device adds itself from the phrase', async ({ page, browser }: { 
   await expect(panel.getByTestId('seal-key')).toHaveCount(2);
   expect(messages(gh)).toContain('Enroll key: Old phone');
   await other.context().close();
+});
+
+test('captures are sealed as they are saved; an unsealed filing is sealed as mine and ratified; existing captures are sealed once', async ({ page }) => {
+  await page.goto('/#/settings');
+  await page.getByTestId('use-demo').click();
+  await expect(page.getByText('Connected: demo brain')).toBeVisible();
+  await expect(page.getByTestId('diagnostics')).toContainText(/demo brain, at [0-9a-f]{7}/);
+  await setUp(page);
+  const panel = page.getByTestId('sealing');
+  await expect(panel.getByTestId('seal-summary')).toContainText('0 sealed when captured, 0 sealed after the fact, 7 unsealed');
+  await expect(panel.getByTestId('seal-uncapturable')).toContainText('1 source names no capture');
+  await expect(panel.getByTestId('seal-backfill')).toHaveText('Seal existing captures (4)');
+
+  // A capture saved now carries its seal.
+  await page.goto('/#/capture');
+  await page.getByTestId('capture-text').fill('Sealed the moment it was saved.');
+  await page.getByTestId('capture-save').click();
+  await expect(page.getByTestId('saved')).toBeVisible();
+  await page.goto('/#/inbox');
+  const unfiled = page.getByTestId('unfiled');
+  await expect(unfiled.locator('li').filter({ hasText: '20260906-070000-2bq' }).getByTestId('seal-mark')).toHaveText('unsealed');
+  await expect(unfiled.locator('li').filter({ hasNotText: '20260906-070000-2bq' }).getByTestId('seal-mark')).toHaveText('sealed');
+
+  // Filing the old, unsealed capture: ratifying it seals the capture as mine first, on the panel that shows the passage.
+  await unfiled.locator('li').filter({ hasNotText: '20260906-070000-2bq' }).locator('input[type=checkbox]').uncheck();
+  await page.getByTestId('process').click();
+  const filing = page.getByTestId('filing-unknown-the-only-way-to');
+  await expect(filing.getByTestId('state')).toHaveText('awaiting review');
+  await expect(filing.getByTestId('review-panel').getByTestId('seal-mark').first()).toHaveText('unsealed');
+  await expect(filing.getByTestId('ratify-seal-first')).toBeVisible();
+  await expect(filing.getByTestId('ratify')).toHaveText('Seal as mine and ratify');
+  await filing.getByTestId('ratify').click();
+  await expect(filing.getByTestId('state')).toHaveText('ratified');
+  await page.goto('/#/browse/sources/unknown-the-only-way-to/raw.md');
+  await expect(page.getByTestId('seal-mark')).toHaveText(/^sealed since /);
+
+  // The rest, once.
+  await page.goto('/#/settings');
+  await panel.getByTestId('seal-backfill').click();
+  await panel.getByTestId('seal-backfill-yes').click();
+  await expect(panel.getByTestId('seal-done')).toHaveText(/Sealed \d+ captures? as they stand today\./);
+  await expect(panel.getByTestId('seal-backfill')).toHaveCount(0);
+  await expect(panel.getByTestId('seal-summary')).toContainText(', 0 unsealed');
+  await expect(page.getByTestId('seal-banner')).toHaveCount(0);
+});
+
+test('an agent’s edit to a sealed passage shows as broken: a banner, the mark, and Reason leaves it out', async ({ page }) => {
+  const gh = await FakeGitHub.create(readBrainBytes());
+  await connect(page, gh);
+  await setUp(page);
+  const panel = page.getByTestId('sealing');
+  await panel.getByTestId('seal-backfill').click();
+  await panel.getByTestId('seal-backfill-yes').click();
+  await expect(panel.getByTestId('seal-summary')).toContainText(', 0 unsealed');
+  await expect(page.getByTestId('seal-banner')).toHaveCount(0);
+
+  const RAW = 'sources/aurelius-meditations-4-3/raw.md';
+  const head = gh.refs.get('heads/main')!;
+  const blob = gh.trees.get(gh.commits.get(head)!.tree)!.get(RAW)!;
+  const text = new TextDecoder().decode(gh.blobs.get(blob)!);
+  await gh.externalCommit({ [RAW]: text.replace('Men seek retreats', 'Men seek comfort') });
+  await page.reload();
+  await page.goto(`/#/browse/${RAW}`);
+  await expect(page.getByTestId('seal-banner')).toContainText('1 passage does not match its seal');
+  await expect(page.getByTestId('seal-mark')).toHaveText('broken: its passage differs from the sealed capture');
+  await page.goto('/#/reason');
+  await expect(page.getByTestId('reason-left-out')).toContainText('it does not match its sealed capture: Retire into thyself');
+  await page.goto('/#/settings');
+  await expect(panel.getByTestId('seal-summary')).toContainText('1 broken');
 });

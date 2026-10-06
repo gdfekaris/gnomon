@@ -6,7 +6,7 @@
   // Each error sits beside the control that failed.
   import { hold } from '../press';
   import { describeError, sealingFlows } from '../services/index';
-  import { confirmPositions, defaultLabel, wordsMatch } from '../services/sealing';
+  import { confirmPositions, defaultLabel, unsealedCaptures, wordsMatch } from '../services/sealing';
   import { session } from '../stores/session.svelte';
 
   const s = $derived(session.sealing);
@@ -77,6 +77,19 @@
     forgetting = false;
   }, 'This device’s key is forgotten. The phrase adds the device back.');
   const err = (at: string) => (error?.at === at ? error.text : null);
+  // Verification at the last load (schema §11.6): counts by verdict, and the captures still unsealed.
+  const counts = $derived.by(() => {
+    const c = { verified: 0, attested: 0, unsealed: 0, broken: 0 };
+    for (const [p, v] of Object.entries(s.verdicts)) if (!s.uncapturable.includes(p)) c[v.verdict] += 1;
+    return c;
+  });
+  const unsealed = $derived(unsealedCaptures(s));
+  let backfilling = $state(false);
+  const sealAll = () => act('backfill', async () => {
+    const n = await sealingFlows.sealExisting();
+    backfilling = false;
+    done = `Sealed ${n} capture${n === 1 ? '' : 's'} as they stand today.`;
+  });
 </script>
 
 <section data-testid="sealing">
@@ -141,6 +154,40 @@
     <p class="error" role="alert" data-testid="seal-unenrolled">This device’s key ({s.device?.fingerprint}) is no longer enrolled in this brain: it was revoked or removed. Forget it here, then add the device again with the phrase.</p>
   {:else}
     <p data-testid="seal-on">Sealing is on. Root fingerprint <code data-testid="seal-root">{s.root}</code>; compare it with your paper card.</p>
+    {#if s.locked}
+      <p class="hint" data-testid="seal-locked">The brain is locked, so its seals cannot be read. Unlock it to verify.</p>
+    {:else if s.verifiedHead}
+      <p data-testid="seal-summary">
+        Checked at {s.verifiedHead.slice(0, 7)}: {counts.verified} sealed when captured, {counts.attested} sealed after the fact, {counts.unsealed} unsealed{#if counts.broken}, <strong class="error">{counts.broken} broken</strong>{/if}, counting captures and the sources filed from them.
+      </p>
+      {#if s.uncapturable.length}
+        <p class="hint" data-testid="seal-uncapturable">{s.uncapturable.length} source{s.uncapturable.length === 1 ? ' names' : 's name'} no capture, so nothing can seal {s.uncapturable.length === 1 ? 'it' : 'them'}; {s.uncapturable.length === 1 ? 'it shows' : 'they show'} as unsealed.</p>
+      {/if}
+    {/if}
+    {#if s.findings.length}
+      <div class="panel" data-testid="seal-findings">
+        <p class="error">The seal record was altered:</p>
+        <ul>{#each s.findings as f (`${f.code}:${f.path}`)}<li><code>{f.path}</code>: {f.detail}</li>{/each}</ul>
+        <p class="hint">Look at the brain’s history for the commits that touched these files. Seals are never edited or deleted by Gnomon.</p>
+      </div>
+    {/if}
+    {#if unsealed.length}
+      {#if backfilling}
+        <div class="confirm" role="alertdialog" data-testid="seal-backfill-confirm">
+          <p>
+            Seal the {unsealed.length} unsealed capture{unsealed.length === 1 ? '' : 's'} as {unsealed.length === 1 ? 'it stands' : 'they stand'} today? This proves {unsealed.length === 1 ? 'it is' : 'they are'} unchanged from now on, not that nothing changed before:
+            each will read “sealed since” today. Seal an agent’s capture only after reading it; you can do that one at a time from the capture itself.
+          </p>
+          <div class="row">
+            <button onclick={sealAll} disabled={busy !== null} use:hold={busy === 'backfill'} data-testid="seal-backfill-yes">{busy === 'backfill' ? 'Sealing…' : `Seal ${unsealed.length}`}</button>
+            <button class="primary" onclick={() => (backfilling = false)} disabled={busy !== null}>Not now</button>
+          </div>
+          {#if err('backfill')}<p class="error" role="alert">{err('backfill')}</p>{/if}
+        </div>
+      {:else}
+        <button onclick={() => (backfilling = true)} disabled={busy !== null} data-testid="seal-backfill">Seal existing captures ({unsealed.length})</button>
+      {/if}
+    {/if}
     <ul class="keys" data-testid="seal-keys">
       {#each s.keys as k (k.key)}
         <li data-testid="seal-key">

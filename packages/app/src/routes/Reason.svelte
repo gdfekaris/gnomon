@@ -2,10 +2,12 @@
   // Reason — US-8, US-9, US-10, US-19; proposal §6. Set picker chips, task
   // presets, provider and model picker, the budget bar from assemble
   // before sending, a streaming transcript, and citations as links.
+  import { session } from '../lib/stores/session.svelte';
+  import { withoutBroken } from '../lib/services/sealing';
   import { hold } from '../lib/press';
   import { untrack } from 'svelte';
   import { type SourceFm, type Task, buildDerivePrompt, buildRelatePrompt, setLabel } from '@gnomon/core';
-  import { linkLabel, renderAnswer } from '../lib/markdown';
+  import { browseHref, linkLabel, renderAnswer } from '../lib/markdown';
   import { brain } from '../lib/services/index';
   import { taskLabel, describeAssemblyError, ReasoningService } from '../lib/services/reasoning';
   import { extractProposal } from '../lib/services/proposals';
@@ -20,7 +22,9 @@
   import { describeError } from '../lib/services/index';
   import { snapshot } from '../lib/stores/snapshot.svelte';
 
-  const s = $derived(snapshot.current);
+  // Decision D3 (spec §6.5): passages that do not match their seals are left out of every task here, and named above the answer.
+  const s = $derived(withoutBroken(snapshot.current, session.sealing.verdicts));
+  const leftOut = $derived(snapshot.current ? Object.entries(session.sealing.verdicts).filter(([p, v]) => v.verdict === 'broken' && p.startsWith('sources/') && snapshot.current!.files.has(p)).map(([p]) => p) : []);
   const TASKS: Array<Task | 'derive' | 'relate-set'> = ['reason', 'relate', 'compare', 'free', 'derive', 'relate-set'];
   // Derive (Task E) and Relate sources to a set (Task F) share the source picker and the set select.
   const isDerive = $derived(reasoning.task === 'derive' || reasoning.task === 'relate-set');
@@ -165,6 +169,12 @@
 </script>
 
 <h2>Reason</h2>
+{#if leftOut.length}
+  <p class="error" role="alert" data-testid="reason-left-out">
+    Left out of every task here, because {leftOut.length === 1 ? 'it does' : 'they do'} not match {leftOut.length === 1 ? 'its' : 'their'} sealed capture:
+    {#each leftOut as p, i (p)}{i ? ', ' : ''}<a href={browseHref(p)}>{linkLabel(p, snapshot.current!)}</a>{/each}.
+  </p>
+{/if}
 {#if !s}
   <ConnectionNotice />
 {:else}

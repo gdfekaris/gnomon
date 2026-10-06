@@ -464,7 +464,16 @@ Order as listed; S6 can happen any time and is best done early.
   the maintainer sets up sealing on the iPhone, recovers it in a second
   browser profile from the phrase, and Ed25519-or-P-256 is settled on
   the device.
-- [ ] **S4. The phone: sealing and verdicts** (L) — seals on capture
+- [ ] **S4. The phone: sealing and verdicts** (L) — built 2026-10-06;
+  left: the maintainer's check on brain-1. Seals on every capture (also one
+  made at launch before the first verification, and offline ones when they
+  are committed), verification after every load with marks on Inbox,
+  Browse, and the file view, a banner for findings, ratify refused for a
+  broken source and "Seal as mine and ratify" for an unsealed one, filing
+  refused for a broken capture, Reason without broken passages and a notice
+  naming them, "Seal existing captures", "Seal as mine" on a capture, seal
+  files encrypted whole by the wrapper and the plans. 10 app unit tests and
+  two Playwright flows on both engines (repeated four times each). Was: — seals on capture
   (offline included), verdict marks, the banner, ratify and filing
   rules, "Seal as mine", sealing existing captures, seals in the
   encryption plans; Playwright on both engines and the built projects.

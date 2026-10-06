@@ -10,6 +10,10 @@
   import { snapshot } from '../lib/stores/snapshot.svelte';
   import { lastBrowse } from '../lib/lastBrowse';
   import { route } from '../lib/router.svelte';
+  import SealMark from '../lib/components/SealMark.svelte';
+  import { hold } from '../lib/press';
+  import { describeError, sealingFlows } from '../lib/services/index';
+  import { session } from '../lib/stores/session.svelte';
 
   let { path, anchor = undefined }: { path: string; anchor?: string | undefined } = $props();
   const s = $derived(snapshot.current);
@@ -32,6 +36,21 @@
   // Arriving from an accepted link proposal: say which ground was added, or that it was one already.
   const added = $derived((route.query.get('added') ?? '').split(',').filter(Boolean));
   const already = $derived(route.query.get('already') === '1');
+  // "Seal as mine" (spec §6.5): an unsealed capture, read in full on this page, sealed by this device.
+  const canSeal = $derived(path.startsWith('inbox/') && session.sealing.status === 'on' && session.sealing.verdicts[path]?.verdict === 'unsealed');
+  let sealing = $state(false);
+  let sealError = $state<string | null>(null);
+  async function sealMine() {
+    sealing = true;
+    sealError = null;
+    try {
+      await sealingFlows.sealAsMine(path.slice('inbox/'.length, -'.md'.length));
+    } catch (e) {
+      sealError = describeError(e);
+    } finally {
+      sealing = false;
+    }
+  }
 </script>
 
 <p><a href={lastBrowse.hash} data-testid="back-to-browse">← Browse</a></p>
@@ -44,7 +63,14 @@
   <p class="error">No file at <code>{path}</code>.</p>
 {:else}
   <h2>{typeof fm['title'] === 'string' ? fm['title'] : fm['type'] === 'principle-set' ? setLabel(file.fm as never) : path}</h2>
-  <p class="meta"><code>{path}</code></p>
+  <p class="meta"><code>{path}</code> <SealMark {path} /></p>
+  {#if canSeal}
+    <p class="hint" data-testid="seal-mine-row">
+      This capture has no seal. If the passage{fm['note'] ? ', the note,' : ''}{fm['attachment'] ? ' and the attached file' : ''} below are what you captured,
+      <button class="small" onclick={sealMine} disabled={sealing} use:hold={sealing} data-testid="seal-mine">{sealing ? 'Sealing…' : 'seal it as yours'}</button>.
+    </p>
+    {#if sealError}<p class="error" role="alert" data-testid="seal-mine-error">{sealError}</p>{/if}
+  {/if}
   {#if added.length}
     <p class="ok" role="status" data-testid="ground-added"><span>Added {#each added as g, i (g)}{i ? ', ' : ''}<a href={browseHref(`sources/${g}/raw.md`)}>{linkLabel(`sources/${g}/raw.md`, s)}</a>{/each} to the grounds.</span></p>
   {:else if already}

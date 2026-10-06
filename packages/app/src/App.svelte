@@ -7,6 +7,7 @@
   import { session } from './lib/stores/session.svelte';
   import { connectDemo, connectGitHub } from './lib/services/index';
   import StaleBanner from './lib/components/StaleBanner.svelte';
+  import SealBanner from './lib/components/SealBanner.svelte';
   import UnlockSheet from './lib/components/UnlockSheet.svelte';
   import UpdateToast from './lib/components/UpdateToast.svelte';
   import { startServiceWorker } from './lib/stores/pwa.svelte';
@@ -67,6 +68,7 @@
     <span class="box"></span>
   </header>
   <StaleBanner />
+  <SealBanner />
   <UnlockSheet />
   <UpdateToast />
   <div class="content">

@@ -280,7 +280,8 @@
   </p>
 </section>
 
-<section class="about">
+<section class="about" data-testid="about">
+  <h3>About</h3>
   <p class="hint">
     Gnomon {pkg.version}, build <span data-testid="build">{__GNOMON_BUILD__}</span>.
     {#if pwa.needRefresh}

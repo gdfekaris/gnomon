@@ -6,6 +6,7 @@
 import { type BrainSnapshot, type CommitBatch, ValidationError, applyBatch, validateBatch } from '@gnomon/core';
 import { HeadMovedError, type StorageDriver, loadSnapshot } from '@gnomon/storage';
 import { describeError } from './errors';
+import type { CaptureSealer } from './sealing';
 
 export interface SnapshotState {
   current: BrainSnapshot | null;
@@ -16,6 +17,9 @@ export interface SnapshotState {
 
 export class BrainService {
   private driver: StorageDriver | null = null;
+  private readonly loaded: Array<(s: BrainSnapshot) => void> = [];
+  /** Adds this device's seal to a capture batch when sealing is on (spec §6.5); none when it is not. */
+  captureSealer: CaptureSealer | null = null;
 
   constructor(private readonly state: SnapshotState) {}
 
@@ -67,6 +71,11 @@ export class BrainService {
     }
   }
 
+  /** Run `fn` after every load of a snapshot from the driver (verification, spec §6.5). */
+  onLoad(fn: (s: BrainSnapshot) => void): void {
+    this.loaded.push(fn);
+  }
+
   /** Reload the snapshot from the driver's head. Clears `stale`. */
   async refresh(): Promise<BrainSnapshot> {
     if (!this.driver) throw new Error('no brain is connected');
@@ -76,6 +85,7 @@ export class BrainService {
       const s = await loadSnapshot(this.driver);
       this.state.current = s;
       this.state.stale = false;
+      for (const fn of this.loaded) fn(s);
       return s;
     } catch (e) {
       this.state.error = describeError(e);

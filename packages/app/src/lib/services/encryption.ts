@@ -14,6 +14,12 @@ import {
 } from '@gnomon/core';
 import { EncryptingDriver, type KeyStore, PassphraseKeyring, type StorageDriver } from '@gnomon/storage';
 import type { BrainService } from './brain';
+import { readSealingFiles } from './sealing';
+
+/** The brain's seal files through `driver`: plaintext through the encrypting wrapper or on an unencrypted brain (schema §11.3). */
+async function sealFiles(driver: StorageDriver): Promise<Map<string, string>> {
+  return new Map([...(await readSealingFiles(driver))].filter(([p]) => p.startsWith('.gnomon/seals/')));
+}
 
 export interface EncryptionState {
   /** `.gnomon/encryption.json` exists on the connected brain */
@@ -112,7 +118,7 @@ export async function enableEncryption(brain: BrainService, stack: Stack, state:
   const s = snap(brain);
   const { config, raw } = await newConfig(passphrase, opts.params ?? KDF_DEFAULT);
   const key = await importBodyKey(raw.slice());
-  const batch = await planEncrypt(s, key, config);
+  const batch = await planEncrypt(s, key, config, { seals: await sealFiles(stack.plain) });
   try {
     await brain.commitStored(batch, stack.plain);
   } catch (e) {
@@ -135,7 +141,7 @@ export async function disableEncryption(brain: BrainService, stack: Stack, state
   if (!stack.keyring.unlocked) throw new Error('unlock the brain first');
   // The plan takes the bodies the wrapper read as ciphertext; a snapshot applied locally after a commit does not carry that mark.
   const s = await brain.refresh();
-  const batch = planDecrypt(s);
+  const batch = planDecrypt(s, await sealFiles(stack.driver));
   await brain.commitStored(batch, stack.plain);
   await stack.keyring.forget();
   const next: Stack = { driver: stack.plain, plain: stack.plain, keyring: null, config: null, store: stack.store };
@@ -154,7 +160,7 @@ export async function changePassphrase(brain: BrainService, stack: Stack, state:
   const s = await brain.refresh();
   const { config, raw } = await newConfig(passphrase, opts.params ?? { opslimit: stack.config.opslimit, memlimit: stack.config.memlimit });
   const key = await importBodyKey(raw.slice());
-  const batch = await planRekey(s, key, config);
+  const batch = await planRekey(s, key, config, await sealFiles(stack.driver));
   try {
     await brain.commitStored(batch, stack.plain);
   } catch (e) {

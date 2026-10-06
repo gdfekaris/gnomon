@@ -30,6 +30,8 @@ const join = (yaml: string, body: string): string => `---\n${yaml}\n---\n${body}
 export interface EncryptOptions {
   /** rewrite bodies that are already encrypted too, under the new key (a passphrase change) */
   rekey?: boolean;
+  /** the brain's seal files (schema §11.3), as plaintext: each is stored whole as ciphertext under `key` */
+  seals?: ReadonlyMap<string, string>;
 }
 
 /**
@@ -47,22 +49,31 @@ export async function planEncrypt(s: BrainSnapshot, key: CryptoKey, config: Encr
     const split = splitFrontmatter(serializeFile(f))!;
     writes.push({ path: f.path, text: join(split.yaml, await encryptBody(key, f.path, split.body)) });
   }
+  for (const [path, text] of opts.seals ?? []) {
+    if (isEncryptedBody(text)) throw new Error(`${path} is still ciphertext: give the seal files as plaintext`);
+    writes.push({ path, text: await encryptBody(key, path, text) });
+  }
   writes.push({ path: ENCRYPTION_CONFIG_PATH, text: serializeEncryptionConfig(config) });
   const n = writes.length - 1;
   return { message: opts.rekey ? 'Change passphrase' : `Encrypt: ${n} file${n === 1 ? '' : 's'}`, expectedHead: s.head, writes, deletes: [] };
 }
 
-/** Every encrypted body rewritten as the plaintext the snapshot holds, and the config removed, in one commit. Message `Decrypt: {n} files`. */
-export function planDecrypt(s: BrainSnapshot): CommitBatch {
+/** Every encrypted body rewritten as the plaintext the snapshot holds, the seal files (given as plaintext) stored as plaintext, and the config removed, in one commit. Message `Decrypt: {n} files`. */
+export function planDecrypt(s: BrainSnapshot, seals: ReadonlyMap<string, string> = new Map()): CommitBatch {
   readable(s);
   const writes: FileWrite[] = [];
   for (const f of s.files.values()) {
     if (!f.encrypted) continue;
     writes.push({ path: f.path, text: serializeFile(f) });
   }
+  for (const [path, text] of seals) {
+    if (isEncryptedBody(text)) throw new Error(`${path} is still ciphertext: give the seal files as plaintext`);
+    writes.push({ path, text });
+  }
   const n = writes.length;
   return { message: `Decrypt: ${n} file${n === 1 ? '' : 's'}`, expectedHead: s.head, writes, deletes: [ENCRYPTION_CONFIG_PATH] };
 }
 
 /** A passphrase change: every eligible body under the new key and the new config, one commit. */
-export const planRekey = (s: BrainSnapshot, newKey: CryptoKey, newConfig: EncryptionConfig): Promise<CommitBatch> => planEncrypt(s, newKey, newConfig, { rekey: true });
+export const planRekey = (s: BrainSnapshot, newKey: CryptoKey, newConfig: EncryptionConfig, seals?: ReadonlyMap<string, string>): Promise<CommitBatch> =>
+  planEncrypt(s, newKey, newConfig, { rekey: true, ...(seals ? { seals } : {}) });

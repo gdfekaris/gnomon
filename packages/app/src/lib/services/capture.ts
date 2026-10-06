@@ -38,15 +38,22 @@ export async function captureToInbox(brain: BrainService, input: CaptureInput): 
     return buildCapture(params);
   };
 
+  // With sealing on, the capture's seal goes in the same commit (schema §7.5), and the device's head moves once it lands.
+  const commitSealed = async (batch: typeof built.batch) => {
+    const sealed = brain.captureSealer ? await brain.captureSealer.seal(batch) : null;
+    const r = await brain.commit(sealed?.batch ?? batch);
+    await sealed?.committed();
+    return r;
+  };
   let built = attempt();
   let sha: string;
   try {
-    ({ sha } = await brain.commit(built.batch));
+    ({ sha } = await commitSealed(built.batch));
   } catch (e) {
     if (!(e instanceof HeadMovedError)) throw e;
     await brain.refresh();
     built = attempt();
-    ({ sha } = await brain.commit(built.batch));
+    ({ sha } = await commitSealed(built.batch));
   }
   const attachmentPath = built.batch.writes.find((w) => 'bytes' in w)?.path;
   return { stem: built.stem, path: built.path, sha, ...(attachmentPath ? { attachment: attachmentPath } : {}) };

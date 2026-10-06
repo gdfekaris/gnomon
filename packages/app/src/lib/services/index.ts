@@ -25,7 +25,11 @@ const keyStore: KeyStore | null = typeof indexedDB === 'undefined' ? null : { ge
 
 // Spec §6.5, §10.3: this device's sealing key per brain, non-extractable, in IndexedDB; the demo brain's only in the tab.
 const githubSealStore: seal.SealStore = typeof indexedDB === 'undefined' ? seal.memorySealStore() : seal.idbSealStore({ get, set, del });
-let sealing: seal.SealingContext | null = null;
+let sealing: Omit<seal.SealingContext, 'plain' | 'driver' | 'state'> | null = null;
+brain.captureSealer = seal.captureSealer(() => (sealing && stack ? sealingContext() : null));
+brain.onLoad(() => {
+  if (sealing && stack) void seal.loadSealing(sealingContext());
+});
 
 let stack: enc.Stack | null = null;
 /** The composed drivers of the session, for the encryption flows and diagnostics. */
@@ -35,7 +39,7 @@ export const encryptionStack = (): enc.Stack | null => stack;
 async function attach(plain: StorageDriver, mode: 'github' | 'demo', label: string): Promise<void> {
   stack = await enc.composeStack(plain, keyStore, session.encryption);
   session.sealing = seal.emptySealing();
-  sealing = { brain, plain, store: mode === 'demo' ? seal.memorySealStore() : githubSealStore, brainId: mode === 'demo' ? 'demo' : label, state: session.sealing };
+  sealing = { brain, cache: seal.newSealCache(), store: mode === 'demo' ? seal.memorySealStore() : githubSealStore, brainId: mode === 'demo' ? 'demo' : label };
   session.driver = stack.driver;
   session.mode = mode;
   session.label = label;
@@ -45,8 +49,8 @@ async function attach(plain: StorageDriver, mode: 'github' | 'demo', label: stri
   } catch (e) {
     if (!(e instanceof LockedError)) throw e;
     session.encryption.locked = true;
+    await seal.loadSealing(sealingContext());
   }
-  await seal.loadSealing(sealing);
 }
 
 /**
@@ -108,9 +112,9 @@ export const encryption = {
 };
 
 function sealingContext(): seal.SealingContext {
-  if (!sealing) throw new Error('no brain is connected');
-  // The state object is the session's, re-read each time: Svelte's proxy is what the screens watch.
-  return { ...sealing, state: session.sealing };
+  if (!sealing || !stack) throw new Error('no brain is connected');
+  // The drivers follow the stack (encryption on or off); the state object is the session's, re-read each time: Svelte's proxy is what the screens watch.
+  return { ...sealing, plain: stack.plain, driver: stack.driver, state: session.sealing };
 }
 
 /** The sealing flows of spec §6.5 on the connected brain (block S3: keys; seals come in S4). */
@@ -123,4 +127,6 @@ export const sealingFlows = {
   revoke: (key: string, phrase: string) => seal.revokeKey(sealingContext(), key, phrase),
   forget: () => seal.forgetDeviceKey(sealingContext()),
   reload: () => seal.loadSealing(sealingContext()),
+  sealAsMine: (stem: string) => seal.sealAsMine(sealingContext(), stem),
+  sealExisting: () => seal.sealExisting(sealingContext()),
 };

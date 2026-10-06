@@ -58,6 +58,8 @@ export interface ProcessOptions {
   /** The captures to file, by inbox path; every unfiled capture when absent. Unknown or filed paths are skipped. */
   paths?: string[];
   signal?: AbortSignal;
+  /** why a capture must not be filed, or undefined: a capture that does not match its seal is not filed (spec §6.5) */
+  refuse?: (path: string) => string | undefined;
 }
 
 /**
@@ -80,6 +82,8 @@ export async function processInbox(state: InboxState, brain: BrainService, drive
         const s = snap(brain);
         const current = s.files.get(capture.path) as BrainFile<InboxFm> | undefined;
         if (!current || current.fm.status !== 'unfiled') throw new Error('no longer unfiled');
+        const refused = opts.refuse?.(capture.path);
+        if (refused) throw new Error(refused);
         const prompt = buildFilingPrompt(s, current, budgetTokens);
         if (!prompt.ok) throw new Error(`the capture needs about ${prompt.neededTokens.toLocaleString()} tokens and the budget is ${prompt.budgetTokens.toLocaleString()}`);
         const reply = await completeText(provider, model, prompt.system, prompt.context, signal);

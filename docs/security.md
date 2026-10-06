@@ -1,9 +1,13 @@
 # Gnomon — tamper evidence for captured content
 
-**Status: designed 2026-10-05, not yet built.** The format is Schema §11,
-the implementation plan Technical Specification §6.5, and the work Phase 5
-blocks S2 to S7 (`tamper-evidence-proposal.md` §8). Until those blocks
-ship, Gnomon makes none of the claims below, and this line says so.
+**Status, 2026-10-06: built on the phone, not yet on the desktop.** The
+format is Schema §11, the implementation Technical Specification §6.5, the
+work Phase 5 blocks S2 to S7 (`tamper-evidence-proposal.md` §8). The core
+verifier, the phone's keys, and the phone's seals and verdicts are built
+(S2 to S4). Not yet: the desktop CLI and YubiKey (S5), the separate agent
+account that assumption S1 requires (S6), and the independent verifier
+(S7). Until S6 is in place on the maintainer's machine, S1 does not hold
+there, and neither does the claim; this line says so until it does.
 
 This document is for someone deciding whether to trust Gnomon with
 content that AI agents also work on. It states what Gnomon claims, against

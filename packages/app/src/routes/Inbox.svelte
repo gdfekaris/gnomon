@@ -8,7 +8,9 @@
   import MarkdownView from '../lib/components/MarkdownView.svelte';
   import { browseHref, linkLabel } from '../lib/markdown';
   import ConnectionNotice from '../lib/components/ConnectionNotice.svelte';
-  import { brain, describeError } from '../lib/services/index';
+  import { brain, describeError, sealingFlows } from '../lib/services/index';
+  import { ratifyRule } from '../lib/services/sealing';
+  import SealMark from '../lib/components/SealMark.svelte';
   import { type FilingEntry, loadFilings, processInbox, ratify, reject, reviewOf, unfiledCaptures } from '../lib/services/inbox';
   import { ReasoningService } from '../lib/services/reasoning';
   import { inbox } from '../lib/stores/inbox.svelte';
@@ -77,7 +79,7 @@
     busy = 'process';
     error = null;
     try {
-      await processInbox(inbox, brain, session.driver, reasoner.driver(reasoning.provider), model, ReasoningService.budget(model, settings.prefs.budgetPercent), { paths: chosen.map((c) => c.path) });
+      await processInbox(inbox, brain, session.driver, reasoner.driver(reasoning.provider), model, ReasoningService.budget(model, settings.prefs.budgetPercent), { paths: chosen.map((c) => c.path), refuse: (p) => (session.sealing.verdicts[p]?.verdict === 'broken' ? 'not filed: this capture does not match its seal' : undefined) });
       await loadFilings(inbox, brain, session.driver);
     } catch (e) {
       error = describeError(e);
@@ -93,13 +95,28 @@
   // not at the foot of the page where a phone never sees it.
   let acting = $state<'ratify' | 'reject' | null>(null);
   let failedOn = $state<string | null>(null);
+  // Spec §6.5, decision D2: a source that does not match its sealed capture is never ratified; an unsealed one is
+  // ratified after the curator seals the capture as theirs, on this panel, where the passage is in full view.
+  const rawOf = (f: FilingEntry) => `sources/${f.slug}/raw.md`;
+  const BROKEN_SOURCE = 'This source does not match its sealed capture, so it cannot be ratified. Reject the filing instead.';
   async function doRatify(f: FilingEntry) {
     if (!session.driver) return;
     busy = f.sha;
     acting = 'ratify';
     error = null;
     failedOn = null;
-    try { await ratify(inbox, brain, session.driver, f); open = null; } catch (e) { error = describeError(e); failedOn = f.sha; } finally { busy = null; acting = null; }
+    try {
+      const rule = ratifyRule(session.sealing, rawOf(f));
+      if (rule === 'broken') throw new Error(BROKEN_SOURCE);
+      if (rule === 'seal-first') {
+        const stem = snapshot.current?.files.get(rawOf(f))?.fm as { inbox_ref?: string } | undefined;
+        if (!stem?.inbox_ref) throw new Error('this source names no capture to seal');
+        await sealingFlows.sealAsMine(stem.inbox_ref);
+        if (ratifyRule(session.sealing, rawOf(f)) === 'broken') throw new Error(`The capture is sealed now, but ${BROKEN_SOURCE.charAt(0).toLowerCase()}${BROKEN_SOURCE.slice(1)}`);
+      }
+      await ratify(inbox, brain, session.driver, f);
+      open = null;
+    } catch (e) { error = describeError(e); failedOn = f.sha; } finally { busy = null; acting = null; }
   }
   async function doReject(f: FilingEntry) {
     if (!session.driver) return;
@@ -150,7 +167,7 @@
     <ul data-testid="unfiled">
       {#each captures as c (c.path)}
         <li>
-          {#if captures.length > 1}<input type="checkbox" checked={!unticked.includes(c.path)} onchange={() => togglePick(c.path)} aria-label="File {stemOf(c.path)}" data-testid="pick-{stemOf(c.path)}" /> {/if}<a href={browseHref(c.path)}><code>{stemOf(c.path)}</code></a>{#if c.fm.attachment}{' · attachment'}{/if}{#if c.fm.note}{` — ${c.fm.note}`}{/if}
+          {#if captures.length > 1}<input type="checkbox" checked={!unticked.includes(c.path)} onchange={() => togglePick(c.path)} aria-label="File {stemOf(c.path)}" data-testid="pick-{stemOf(c.path)}" /> {/if}<a href={browseHref(c.path)}><code>{stemOf(c.path)}</code></a> <SealMark path={c.path} />{#if c.fm.attachment}{' · attachment'}{/if}{#if c.fm.note}{` — ${c.fm.note}`}{/if}
         </li>
       {:else}
         <li class="empty">Nothing waiting.</li>
@@ -215,7 +232,7 @@
             <div class="review" data-testid="review-panel">
               {#each review.added as file (file.path)}
                 <article class="added">
-                  <h4><a href={browseHref(file.path)}>{linkLabel(file.path, s)}</a> <small><code>{file.path}</code> · new</small></h4>
+                  <h4><a href={browseHref(file.path)}>{linkLabel(file.path, s)}</a> <small><code>{file.path}</code> · new</small> <SealMark path={file.path} /></h4>
                   {#if f.state === 'pending' && file.path.endsWith('/raw.md')}
                     <p class="edit"><a href={editHref(file.path, f.slug)} data-testid="edit-source">Edit metadata</a> <small>· the passage text is immutable; an edit makes this source yours</small></p>
                   {:else if f.state === 'pending' && file.path.endsWith('/notes.md')}
@@ -239,11 +256,13 @@
                 </article>
               {/if}
               {#if f.state === 'pending'}
+                {@const rule = ratifyRule(session.sealing, rawOf(f))}
                 <div class="row">
-                  <button class="primary" onclick={() => doRatify(f)} disabled={busy !== null} use:hold={busy === f.sha && acting === 'ratify'} data-testid="ratify">Ratify</button>
+                  <button class="primary" onclick={() => doRatify(f)} disabled={busy !== null || rule === 'broken'} use:hold={busy === f.sha && acting === 'ratify'} data-testid="ratify">{rule === 'seal-first' ? 'Seal as mine and ratify' : 'Ratify'}</button>
                   <button onclick={() => doReject(f)} disabled={busy !== null} use:hold={busy === f.sha && acting === 'reject'} data-testid="reject">Reject</button>
                   {#if busy === f.sha}<span role="status" class="hint" data-testid="deciding">{acting === 'ratify' ? 'Ratifying…' : 'Rejecting…'} one commit, then the list reloads.</span>{/if}
                 </div>
+                {#if rule === 'broken'}<p class="error" role="alert" data-testid="ratify-broken">{BROKEN_SOURCE}</p>{:else if rule === 'seal-first'}<p class="hint" data-testid="ratify-seal-first">Its capture has no seal. Ratifying seals the capture as yours first: the passage above is what will be sealed.</p>{/if}
               {:else if f.state === 'ratified'}
                 <p class="hint" data-testid="ratified-note">Ratified. Its source is part of the brain now; the notes and details can be edited from Browse.</p>
               {:else if f.state === 'yours'}

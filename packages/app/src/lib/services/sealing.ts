@@ -1,18 +1,21 @@
-// Sealing keys on the phone — spec §6.5, schema §7.20 and §11.4; Phase 5
-// block S3. Setting up sealing (the recovery phrase, the root, this device's
-// key), recovering on another device from the phrase, enrolling a desktop
-// key from its request, revoking a key, and forgetting this device's key.
-// Seals themselves come in block S4. The root exists only for the moment it
+// Sealing on the phone — spec §6.5, schema §7.20 and §11; Phase 5 blocks S3
+// and S4. Keys: setting up sealing (the recovery phrase, the root, this
+// device's key), recovering on another device from the phrase, enrolling a
+// desktop key from its request, revoking a key, forgetting this device's key.
+// Seals: one on every capture this device commits, "Seal as mine" for a
+// capture without one, sealing every existing capture once, and verification
+// of the whole brain after every load, whose verdicts the screens show. The root exists only for the moment it
 // signs and is wiped at once; the phrase is never stored. This device's key is
 // non-extractable and lives in IndexedDB beside the pinned root and heads
 // (spec §10.3), never in the localStorage mirror. Framework-free: it writes
 // into a plain state object handed to it, so it runs under vitest.
 
 import {
-  type EnrollPayload, KEYS_DIR, type Heads, type PinnedRoot, ROOT_PATH, SEALS_DIR, deriveRoot, entropyToPhrase, fingerprint, generateDeviceKey, keyRecords,
-  makeEnrollment, makeRevocation, newEntropy, nowUtc, parseRequestFile, parseRootRecord, phraseToEntropy, requestPath, rootFile, sealPosition,
+  type BrainFile, type BrainSnapshot, type CommitBatch, type EnrollPayload, type InboxFm, KEYS_DIR, type Heads, type PinnedRoot, ROOT_PATH, SEALS_DIR, type SealFinding,
+  type SealVerdict, applyBatch, cryptoKeySigner, deriveRoot, digest, entropyToPhrase, fingerprint, generateDeviceKey, keyRecords, makeEnrollment, makeRevocation, makeSeal,
+  newEntropy, nowUtc, parseRequestFile, parseRootRecord, phraseToEntropy, requestPath, rootFile, sealContent, sealInputFromSnapshot, sealPosition, tryParseFile, verifySeals,
 } from '@gnomon/core';
-import type { StorageDriver } from '@gnomon/storage';
+import { LockedError, type StorageDriver } from '@gnomon/storage';
 import type { BrainService } from './brain';
 
 /** What this device keeps for one brain (spec §10.3, `seal.<owner>/<name>`). */
@@ -62,14 +65,31 @@ export interface SealingState {
   requests: SealRequestView[];
   /** a sealing file that did not read, in its own words */
   error: string | null;
+  /** schema §11.6 at the last verified head: per capture and source path */
+  verdicts: Record<string, SealVerdict>;
+  /** findings about the seal record itself; any one is a banner on every screen */
+  findings: SealFinding[];
+  /** seal files are still ciphertext (an encrypted brain, locked): nothing was verified */
+  locked: boolean;
+  /** the head the verdicts belong to, or null before the first verification */
+  verifiedHead: string | null;
+  /** sources that name no capture (made by hand, or filed before `inbox_ref`): nothing can seal them */
+  uncapturable: string[];
 }
 
-export const emptySealing = (): SealingState => ({ status: 'off', root: null, device: null, keys: [], requests: [], error: null });
+export const emptySealing = (): SealingState => ({ status: 'off', root: null, device: null, keys: [], requests: [], error: null, verdicts: {}, findings: [], locked: false, verifiedHead: null, uncapturable: [] });
+
+/** What a session keeps between runs: the last sealing files read, attachment digests by blob sha, and a run counter that drops stale results. */
+export interface SealCache { files: Map<string, string>; digests: Map<string, string>; run: number }
+export const newSealCache = (): SealCache => ({ files: new Map(), digests: new Map(), run: 0 });
 
 export interface SealingContext {
   brain: BrainService;
-  /** the plain driver: sealing files are never encrypted except seals, which S4 handles */
+  /** the plain driver: stored bytes, as GitHub has them */
   plain: StorageDriver;
+  /** the session's driver: the encrypting wrapper on an encrypted brain, which reads seal files as plaintext */
+  driver: StorageDriver;
+  cache: SealCache;
   store: SealStore;
   /** names the brain in the store: `owner/name`, or `demo` */
   brainId: string;
@@ -117,14 +137,63 @@ export async function describeSealing(files: ReadonlyMap<string, string>, record
   return out;
 }
 
-/** Read the brain's sealing files and this device's record, and set the state. Never throws: a failure is the state's error. */
-export async function loadSealing(ctx: SealingContext): Promise<void> {
+/** The sealing files as plaintext through the session's driver; ciphertext through the plain one when the brain is locked. */
+async function readFiles(ctx: SealingContext): Promise<Map<string, string>> {
   try {
-    const next = await describeSealing(await readSealingFiles(ctx.plain), await ctx.store.get(ctx.brainId));
-    Object.assign(ctx.state, next);
+    return await readSealingFiles(ctx.driver);
   } catch (e) {
+    if (e instanceof LockedError) return readSealingFiles(ctx.plain);
+    throw e;
+  }
+}
+
+/**
+ * Read the brain's sealing files and this device's record, set the state, and
+ * verify the loaded snapshot against the pinned root and heads (schema §11.6),
+ * moving the pins forward on a clean result. Never throws: a failure is the
+ * state's error. A run overtaken by a newer one leaves the state to it.
+ */
+export async function loadSealing(ctx: SealingContext): Promise<void> {
+  const run = ++ctx.cache.run;
+  try {
+    const files = await readFiles(ctx);
+    const record = await ctx.store.get(ctx.brainId);
+    const next = await describeSealing(files, record);
+    const s = ctx.brain.snapshot;
+    let verified: Pick<SealingState, 'verdicts' | 'findings' | 'locked' | 'verifiedHead' | 'uncapturable'> = { verdicts: {}, findings: [], locked: false, verifiedHead: null, uncapturable: [] };
+    if (record && s && (next.status === 'on' || next.status === 'unenrolled')) {
+      const input = sealInputFromSnapshot(s, files, (path) => attachmentDigest(ctx, s, path));
+      const r = await verifySeals(input, record.root, record.heads);
+      verified = {
+        verdicts: Object.fromEntries(r.verdicts),
+        findings: r.findings,
+        locked: r.locked,
+        verifiedHead: s.head,
+        uncapturable: s.byType('source').filter((f) => !f.fm.inbox_ref).map((f) => f.path),
+      };
+      if (r.heads && run === ctx.cache.run) {
+        const fresh = await ctx.store.get(ctx.brainId);
+        if (fresh && fresh.keyId === record.keyId) await ctx.store.set(ctx.brainId, { ...fresh, heads: { ...fresh.heads, ...r.heads } });
+      }
+    }
+    if (run !== ctx.cache.run) return;
+    ctx.cache.files = files;
+    Object.assign(ctx.state, next, verified);
+  } catch (e) {
+    if (run !== ctx.cache.run) return;
     Object.assign(ctx.state, emptySealing(), { error: e instanceof Error ? e.message : String(e) });
   }
+}
+
+/** An attachment's digest (schema §11.1), read once per blob and kept by its sha for the session. */
+async function attachmentDigest(ctx: SealingContext, s: BrainSnapshot, path: string): Promise<string | undefined> {
+  const a = s.attachments.get(path);
+  if (!a) return undefined;
+  const known = a.sha ? ctx.cache.digests.get(a.sha) : undefined;
+  if (known) return known;
+  const d = await digest((await ctx.plain.readBytes(path)).bytes);
+  if (a.sha) ctx.cache.digests.set(a.sha, d);
+  return d;
 }
 
 /** A name for a key in commit messages and lists: one line, at most 40 characters. */
@@ -282,4 +351,129 @@ async function commit(ctx: SealingContext, b: { message: string; writes: Array<{
   const head = ctx.brain.head;
   if (!head) throw new Error('no brain is connected');
   await ctx.brain.commit({ message: b.message, expectedHead: head, writes: b.writes, deletes: b.deletes });
+}
+
+/**
+ * This device's signer for the brain, or null when it cannot seal. `atLaunch` is for capture: the app opens on
+ * Capture, and a capture made before the first verification has finished must still be sealed, so there the
+ * device's own record is enough unless the state already says the key is not trusted here. Its stored head keeps
+ * the chain right before the brain's seal files have been read.
+ */
+async function deviceSigner(ctx: SealingContext, atLaunch = false) {
+  const st = ctx.state.status;
+  if (atLaunch ? st === 'mismatch' || st === 'unenrolled' : st !== 'on') return null;
+  const record = await ctx.store.get(ctx.brainId);
+  if (!record) return null;
+  return { record, signer: await cryptoKeySigner(record.key, record.alg, record.pub) };
+}
+
+/** Remember the head a committed seal made, and the seal itself, so the next one follows it. */
+async function advance(ctx: SealingContext, keyId: string, seals: Array<{ path: string; text: string; head: { seq: number; digest: string } }>): Promise<void> {
+  const last = seals[seals.length - 1];
+  if (!last) return;
+  const fresh = await ctx.store.get(ctx.brainId);
+  if (fresh && fresh.keyId === keyId) await ctx.store.set(ctx.brainId, { ...fresh, heads: { ...fresh.heads, [keyId]: last.head } });
+  for (const x of seals) ctx.cache.files.set(x.path, x.text);
+}
+
+/** Adds this device's seal to a `Capture:` batch (schema §7.5), and records it once the commit lands. */
+export interface CaptureSealer {
+  seal(batch: CommitBatch): Promise<{ batch: CommitBatch; committed(): Promise<void> } | null>;
+}
+
+/** The sealer for the connected brain; `ctx` is read at each capture, so a capture made before sealing is on simply goes unsealed. */
+export function captureSealer(ctx: () => SealingContext | null): CaptureSealer {
+  return {
+    async seal(batch) {
+      const c = ctx();
+      if (!c) return null;
+      const dev = await deviceSigner(c, true);
+      if (!dev) return null;
+      const md = batch.writes.find((w): w is { path: string; text: string } => 'text' in w && /^inbox\/[^/]+\.md$/.test(w.path));
+      if (!md) return null;
+      const parsed = tryParseFile(md.path, md.text);
+      if (!parsed.ok || parsed.file.fm.type !== 'inbox') return null;
+      const file = parsed.file as BrainFile<InboxFm>;
+      const stem = md.path.slice('inbox/'.length, -'.md'.length);
+      const bytes = file.fm.attachment ? batch.writes.find((w): w is { path: string; bytes: Uint8Array } => 'bytes' in w && w.path === `inbox/${file.fm.attachment}`)?.bytes : undefined;
+      const content = await sealContent({ stem, body: file.body, note: file.fm.note, attachment: file.fm.attachment }, bytes);
+      const made = await makeSeal(dev.signer, { kind: 'capture', stem, at: file.fm.created, content }, await sealPosition(c.cache.files, dev.record.keyId, dev.record.heads[dev.record.keyId]));
+      return {
+        batch: { ...batch, writes: [...batch.writes, { path: made.path, text: made.text }] },
+        committed: () => advance(c, dev.record.keyId, [made]),
+      };
+    },
+  };
+}
+
+/** The `attest` seal for a capture in the snapshot (schema §11.5), made after the curator was shown its whole text. */
+async function attestSeal(ctx: SealingContext, signer: Awaited<ReturnType<typeof cryptoKeySigner>>, s: BrainSnapshot, stem: string, files: ReadonlyMap<string, string>, stored: { seq: number; digest: string } | undefined, at: string) {
+  const f = s.files.get(`inbox/${stem}.md`) as BrainFile<InboxFm> | undefined;
+  if (!f || f.fm.type !== 'inbox') throw new Error(`there is no capture ${stem}`);
+  const bytes = f.fm.attachment ? (await ctx.plain.readBytes(`inbox/${f.fm.attachment}`)).bytes : undefined;
+  const content = await sealContent({ stem, body: f.body, note: f.fm.note, attachment: f.fm.attachment }, bytes);
+  return makeSeal(signer, { kind: 'attest', stem, at, content }, await sealPosition(files, signer.keyId, stored));
+}
+
+const NOT_HERE = 'this device cannot seal: set up sealing, or add this device with the recovery phrase, in Settings';
+
+/** "Seal as mine" (schema §7.20): one `attest` seal for a capture that has no valid seal; `Seal: <stem>`. */
+export async function sealAsMine(ctx: SealingContext, stem: string, at = nowUtc()): Promise<void> {
+  const dev = await deviceSigner(ctx);
+  if (!dev) throw new Error(NOT_HERE);
+  const v = ctx.state.verdicts[`inbox/${stem}.md`]?.verdict;
+  if (v === 'verified' || v === 'attested') throw new Error('this capture is already sealed');
+  if (v === 'broken') throw new Error('this capture does not match its seal; sealing it again would hide that');
+  const s = ctx.brain.snapshot;
+  if (!s) throw new Error('no brain is connected');
+  const made = await attestSeal(ctx, dev.signer, s, stem, ctx.cache.files, dev.record.heads[dev.record.keyId], at);
+  await commit(ctx, { message: `Seal: ${stem}`, writes: [{ path: made.path, text: made.text }], deletes: [] });
+  await advance(ctx, dev.record.keyId, [made]);
+  await loadSealing(ctx);
+}
+
+/** The captures with no seal at the last verification, by stem. */
+export const unsealedCaptures = (state: SealingState): string[] =>
+  Object.entries(state.verdicts)
+    .filter(([p, v]) => p.startsWith('inbox/') && v.verdict === 'unsealed')
+    .map(([p]) => p.slice('inbox/'.length, -'.md'.length))
+    .sort();
+
+/** Seal every unsealed capture once, as it stands (schema §7.20, decision D6): `Seal: <n> existing captures`. */
+export async function sealExisting(ctx: SealingContext, at = nowUtc()): Promise<number> {
+  const dev = await deviceSigner(ctx);
+  if (!dev) throw new Error(NOT_HERE);
+  const s = ctx.brain.snapshot;
+  if (!s || ctx.state.verifiedHead !== s.head) throw new Error('the brain is still being verified; try again in a moment');
+  const stems = unsealedCaptures(ctx.state);
+  if (stems.length === 0) return 0;
+  const files = new Map(ctx.cache.files);
+  const made: Array<Awaited<ReturnType<typeof makeSeal>>> = [];
+  let stored = dev.record.heads[dev.record.keyId];
+  for (const stem of stems) {
+    const m = await attestSeal(ctx, dev.signer, s, stem, files, stored, at);
+    files.set(m.path, m.text);
+    stored = m.head;
+    made.push(m);
+  }
+  await commit(ctx, { message: `Seal: ${stems.length} existing capture${stems.length === 1 ? '' : 's'}`, writes: made.map((m) => ({ path: m.path, text: m.text })), deletes: [] });
+  await advance(ctx, dev.record.keyId, made);
+  await loadSealing(ctx);
+  return stems.length;
+}
+
+/** What ratifying a filing's source is allowed to do, by its verdict (decision D2): go, refuse, or seal the capture first. */
+export function ratifyRule(state: SealingState, rawPath: string): 'ok' | 'broken' | 'seal-first' {
+  if (state.status !== 'on') return state.verdicts[rawPath]?.verdict === 'broken' ? 'broken' : 'ok';
+  const v = state.verdicts[rawPath]?.verdict;
+  if (v === 'broken') return 'broken';
+  return v === 'unsealed' ? 'seal-first' : 'ok';
+}
+
+/** The snapshot reasoning works from: broken passages left out (decision D3). The same snapshot when nothing is broken. */
+export function withoutBroken(s: BrainSnapshot | null, verdicts: Record<string, SealVerdict>): BrainSnapshot | null {
+  if (!s) return s;
+  const broken = Object.entries(verdicts).filter(([p, v]) => v.verdict === 'broken' && p.startsWith('sources/') && s.files.has(p)).map(([p]) => p);
+  if (broken.length === 0) return s;
+  return applyBatch(s, { message: '', expectedHead: s.head, writes: [], deletes: broken });
 }

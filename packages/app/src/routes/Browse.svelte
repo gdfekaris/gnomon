@@ -6,6 +6,7 @@
   // fifty rows at a time. Sets live on the Sets screen, captures on Inbox,
   // proposals on Proposals; this screen is for reading what was collected
   // (maintainer, 2026-09-11; at scale, 2026-09-12).
+  import SealMark from '../lib/components/SealMark.svelte';
   import { untrack } from 'svelte';
   import { type SourceFm } from '@gnomon/core';
   import { browseHref, linkLabel } from '../lib/markdown';
@@ -104,7 +105,7 @@
         <ul>
           {#each g.rows as f (f.path)}
             <li class="source">
-              <a class="title" href={browseHref(f.path)}>{f.fm.title}</a>
+              <a class="title" href={browseHref(f.path)}>{f.fm.title}</a> <SealMark path={f.path} />
               <small class="detail">{detail(f.fm)}</small>
               <small><code>{f.path}</code>{#if sort !== 'author'} · {f.fm.created.slice(0, 10)}{/if}</small>
             </li>

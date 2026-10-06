@@ -11,7 +11,7 @@ import { readBrainBytes } from '@gnomon/storage/testing';
 import { BrainService, type SnapshotState } from '../src/lib/services/brain';
 import {
   type SealingContext, beginSetup, cleanLabel, confirmPositions, defaultLabel, describeSealing, emptySealing, enrollRequest, finishSetup, forgetDeviceKey, loadSealing,
-  memorySealStore, readSealingFiles, recoverDevice, revocationPoint, revokeKey, wordsMatch,
+  memorySealStore, newSealCache, readSealingFiles, recoverDevice, revocationPoint, revokeKey, wordsMatch,
 } from '../src/lib/services/sealing';
 
 const fresh = (): SnapshotState => ({ current: null, stale: false, loading: false, error: null });
@@ -24,7 +24,7 @@ let phone: SealingContext;
 async function device(): Promise<SealingContext> {
   const brain = new BrainService(fresh());
   await brain.connect(plain);
-  const ctx: SealingContext = { brain, plain, store: memorySealStore(), brainId: 'me/brain', state: emptySealing() };
+  const ctx: SealingContext = { brain, plain, driver: plain, cache: newSealCache(), store: memorySealStore(), brainId: 'me/brain', state: emptySealing() };
   await loadSealing(ctx);
   return ctx;
 }
