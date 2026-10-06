@@ -7,6 +7,8 @@ September 2026
 
 *Changes from 0.1, keyed to `alignment-review.md`: renamed to Gnomon in every path and identifier (§4); snapshot loading is eager through the GitHub GraphQL API (3.7); the CLI is `packages/cli`, published as `gnomon-cli` with binary `gnomon`, and the template carries no `package.json` (2.6, 3.8); principles carry `order` and the sets module gains principle operations (2.1); proposals are one file each with their own module (3.2); attachments flow through capture, storage, filing, and review (2.3c); ratify and reject follow Schema §5 with filing-time inbox marking (3.1); index frontmatter is `type: index` only (3.3); the flat-principles repair is removed (3.6); repository creation uses `auto_init` (3.10.7).*
 
+*2026-10-05: seals (§6.5, and §6.4, §10.3, §13, §15), Phase 5; the claim and threat model are `security.md`, the format Schema §11.*
+
 ---
 
 ## 1. Purpose and scope
@@ -233,6 +235,48 @@ Payload = `nonce(12 bytes) || ciphertext || tag(16 bytes)` as produced by AES-25
 
 **What is deliberately not done:** no custom padding or length hiding (file sizes leak; disclosed), no encryption of filenames (slugs leak; disclosed), no key escrow or recovery — a lost passphrase loses the bodies, and the enable flow requires the user to type that sentence back.
 
+### 6.5 Seals (designed 2026-10-05, Phase 5)
+
+Tamper evidence for captured content. `docs/security.md` states the claim, the adversary, and the assumptions it rests on (above all: agents run in a separate OS account whose only GitHub credential is a deploy key for the brain); Schema §11 is the format and verification, normative. This section is how the code does it.
+
+**Module `core/seal`** (no DOM or Node types; WebCrypto and the libsodium core already uses):
+
+```ts
+export type SealAlg = 'ed25519' | 'p256' | 'sk-ed25519';
+export interface Signer { keyId: string; alg: SealAlg; sign(bytes: Uint8Array): Promise<string> }   // returns `sig`
+export interface PinnedRoot { id: string; pub: string }
+export type Heads = Record<string, { seq: number; digest: string }>;
+
+canonicalJson(value): string;                     // Schema §11.3
+signedBytes(kind: 'seal' | 'enroll' | 'revoke', payload): Uint8Array;
+digest(bytes: Uint8Array): string;                // 'sha256:<hex>'
+keyId(alg, pub): string;
+bodyBytes(file): Uint8Array;                      // Schema §11.1, after decryption
+entropyToPhrase(entropy): string[]; phraseToEntropy(words): Uint8Array;   // BIP-39 English, checksum checked
+deriveRoot(entropy): Promise<{ id: string; pub: string; sign(bytes): Promise<string>; wipe(): void }>;
+verifySshsig(armored, enrolledBlob, message): boolean;                    // Schema §11.8
+buildSeal(snapshot, signer, payload, head): Promise<{ path: string; text: string; head: Heads[string] }>;
+verifyBrain(snapshot, sealFiles, root: PinnedRoot, heads: Heads): {
+  findings: Array<{ code: string; path: string; detail: string }>;
+  verdicts: Map<string, { verdict: 'verified' | 'attested' | 'unsealed' | 'broken'; since?: string; why?: string }>;  // by capture or source path
+  heads: Heads | null;                            // the heads to pin, or null when anything failed (Schema §11.6 step 6)
+};
+```
+
+The BIP-39 English word list ships in core as data. `verifyBrain` is pure over a snapshot: the snapshot loader reads `.gnomon/keys/` and `.gnomon/seals/` with everything else, and decrypts seal files with the brain key on an encrypted brain.
+
+**The phone.** Setup (Settings → Sealing) draws 32 bytes from `crypto.getRandomValues`, shows the 24 words once, asks for three of them back, derives the root, generates the device key with `crypto.subtle.generateKey` and `extractable: false` (Ed25519 where the browser supports it, else ECDSA P-256 with SHA-256; settled on the maintainer's iPhone in block S3), signs the enrollment, commits `Set up sealing`, and wipes the entropy and the root secret. It calls `navigator.storage.persist()`. Recovery on a new device takes the phrase, re-derives the root, pins it, and enrolls a fresh device key. Enrolling a desktop key lists `.gnomon/keys/requests/`, shows each fingerprint for the curator to compare with the one `gnomon keys request` printed, and takes the phrase. Revocation takes the phrase and names the last good seal as this device has pinned it.
+
+**Sealing in the app.** `BrainService` adds the seal to the `Capture:` batch when this device has a key for the brain; an offline capture (§14) is sealed when it is committed, with `at` from when it was captured. After the commit lands the device stores its new head. Settings → Sealing offers "Seal existing captures" once (each shown as a count, the claim "unchanged since today" spelled out) and every unsealed capture offers "Seal as mine", which shows the whole passage, note, and attachment name first.
+
+**Verdicts in the app.** `verifyBrain` runs on every snapshot load. Inbox and Browse rows carry the verdict (broken loud, unsealed quiet, attested with its date); any finding is a banner on every screen until the brain verifies. Ratify refuses a broken source and, for an unsealed one, offers "Seal as mine and ratify" after showing the passage. Filing refuses a broken capture. Reasoning leaves broken passages out of the prompt and names them in a notice above the answer. Pinned heads move only on a clean result.
+
+**The CLI** (§13) signs with the YubiKey through `ssh-keygen -Y sign -n gnomon-seal@v1 -f <handle>` (the handle file of a non-resident `ed25519-sk` key, touch required, PIN optional) and verifies with `core/seal`. Its pinned root and heads live in `$XDG_CONFIG_HOME/gnomon/seal/<brain>.json`, the brain named by its root commit's sha. Unlike the other commands, `capture`, `seal`, and `keys request` commit what they write, because a seal's `seq` and the commit that carries it must agree; they push only when asked (`--push`).
+
+**Encryption.** `planEncrypt`, `planDecrypt`, and `planRekey` (§6.4) include every seal file, whole; the payloads and signatures are untouched.
+
+**Where verification counts.** The app on the phone and `gnomon verify` in the maintainer's own account are the trusted verifiers. `gnomon verify` anywhere an agent runs, and in a brain's CI, is advisory: the agent controls that environment. `security.md` says so.
+
 ## 7. Brain model operations (`core`)
 
 ### 7.1 Links (`links`)
@@ -362,6 +406,7 @@ Stores are Svelte 5 `$state` objects exported from modules; services mutate them
 | `prefs` | object | Theme, budget percent, last selected sets, capture defaults, set-description placement. |
 | `enc.deviceKey` | non-extractable `CryptoKey` | Only if "remember on this device". |
 | `enc.wrappedKey` | ArrayBuffer | Brain key wrapped under `enc.deviceKey`. |
+| `seal.<owner>/<name>` | `{ key: CryptoKey, keyId, alg, root: { id, pub }, heads }` | §6.5: the device's non-extractable signing key for that brain, the pinned root, the pinned heads. Never leaves the device. |
 
 No brain content — markdown or attachment — is ever written to IndexedDB, localStorage, or the Cache API. iOS may evict this store after seven days of non-use; the app treats a missing token as "signed out" and re-onboards to the token step only.
 
@@ -389,12 +434,16 @@ Launch → Capture screen is the default route, rendered before the snapshot loa
 
 `template/` contains the scaffold exactly as Schema §2 describes it: `AGENTS.md`, `README.md`, `templates/*`, `principles/ps-g8xw/_set.md`, the two generated-empty index files, `inbox/`, `sources/`, `maps/` with empty-directory keepers, and a `.gitignore` for editor and OS cruft only (attachments are tracked, so no binary extensions are ignored). No `package.json`, no scripts.
 
-`packages/cli` is published to npm as **`gnomon-cli`** with the binary **`gnomon`**; a clone runs `npx gnomon-cli <command>`, an installed user runs `gnomon <command>`. It composes `core` with a working-tree driver (reads and writes the local filesystem; makes no commits — the agent or the user commits). Commands:
+`packages/cli` is published to npm as **`gnomon-cli`** with the binary **`gnomon`**; a clone runs `npx gnomon-cli <command>`, an installed user runs `gnomon <command>`. It composes `core` with a working-tree driver (reads and writes the local filesystem; makes no commits — the agent or the user commits — except the sealing commands, §6.5). Commands:
 
 - `gnomon validate` — Schema §9 over the working tree; prints refusals and warnings; nonzero exit on refusals.
 - `gnomon index` — regenerate both index files (same code as the app); writes only if changed.
 - `gnomon status` — counts: unfiled captures, sources by curation state, sets and principles (with how many are in the reserve), open proposals, whether encryption is on and how many bodies are ciphertext; uncommitted changes; a one-line nudge (what to run next). Read-only.
 - `gnomon encrypt` / `gnomon decrypt` — Phase 4; same format as §6.4; passphrase via prompt or `GNOMON_PASSPHRASE`.
+- `gnomon keys request [--label <name>]` — Phase 5 (§6.5); commits a request for the YubiKey's `ed25519-sk` key and prints its fingerprint for the curator to compare on the phone. `gnomon keys trust` — shows the root fingerprint from `.gnomon/root.json`, and pins it only after the curator confirms it matches the paper card.
+- `gnomon capture [--note <text>] [--attach <file>]` — the passage from standard input; writes the capture and its seal (a touch), commits `Capture: <stem>`.
+- `gnomon seal <stem>` — prints the capture's whole text, then seals it (a touch) and commits `Seal: <stem>`.
+- `gnomon verify [--json]` — Schema §11.6 over the working tree's `HEAD`; prints findings and the count of each verdict, lists broken and unsealed items; exit 1 on any finding or broken verdict. Trusted only in the maintainer's own account (§6.5).
 
 AGENTS.md instructs agents to run `npx gnomon-cli validate && npx gnomon-cli index` before the final push of a session. Requires Node 20+; the README says so and names the app-side regeneration as the fallback for users without Node.
 
@@ -411,6 +460,7 @@ All driver errors are typed: `AuthError`, `HeadMovedError`, `RevertConflictError
 - Keys never appear in URLs, logs, or error reports. There are no error reports; errors stay on device.
 - Dependencies pinned with lockfile; `npm audit` in CI; libsodium and yaml pinned to exact versions.
 - Subresource integrity is not applicable (same-origin bundle), but the Pages deploy is from a protected branch only.
+- Tamper evidence for captured content is §6.5 and Schema §11; its claim, threat model, assumptions, and limits are `docs/security.md`.
 
 ## 16. Performance targets
 

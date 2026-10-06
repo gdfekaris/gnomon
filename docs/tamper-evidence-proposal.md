@@ -8,11 +8,13 @@ expert reviewer. The commit audit remains as a hygiene layer (Appendix
 A); its block A1, one commit vocabulary, is done (`415827a`).
 
 Decided by the maintainer on 2026-10-05: protect only what the user
-captures; metadata is excluded; the desktop signs with a YubiKey touch.
-Proposed here and awaiting review: credential separation for agent
-sessions (§4.6) and a recovery phrase as the root of trust (§4.1). Six
-smaller decisions are in §7. Nothing here is normative until a block
-moves it into the schema and the spec.
+captures; metadata is excluded; the desktop signs with a YubiKey touch;
+credential separation for agent sessions (§4.6); a recovery phrase as the
+root of trust (§4.1); D1 to D6 as recommended (§7). Block S1 moved the
+format into Schema §11 and §7.20, the implementation into Technical
+Specification §6.5, and the claim and threat model into `security.md`;
+those are now the normative texts, and where this proposal differs from
+them, they win.
 
 ---
 
@@ -407,7 +409,7 @@ gains the device key, the pinned root, and pinned heads), §13 (the CLI
 commits sealed operations). Capture's fifteen-second budget (US-1) is
 unaffected: one signature is milliseconds.
 
-## 7. Decisions for the maintainer
+## 7. Decisions (all six accepted as recommended, 2026-10-05)
 
 | # | Question | Recommendation |
 |---|---|---|
@@ -422,11 +424,18 @@ unaffected: one signature is milliseconds.
 
 Order as listed; S6 can happen any time and is best done early.
 
-- [ ] **S1. The claim and the format** (S) — `docs/security.md`; schema:
-  `.gnomon/root.json`, `keys/`, `seals/`, the new messages (the
-  vocabulary test), AGENTS.md's `.gnomon/` rule; the spec section. Done
-  when a reader can reimplement verification from the schema and spec
-  alone.
+- [x] **S1. The claim and the format** (S) — done 2026-10-05.
+  `docs/security.md` (claim, assets, adversary, assumptions with how to
+  check each, limits, mechanism, attack table, evidence; marked "designed,
+  not yet built" until S2 to S7 ship); Schema §11 (what is sealed, files,
+  encodings, keys and root derivation, the seal payload, verification
+  steps and verdicts, making seals, FIDO signatures byte for byte), §7.20
+  and the new messages, §2, §7.5, §7.17, §7.19, §10; Technical
+  Specification §6.5 (`core/seal` interface, the phone, the CLI, where
+  verification counts), §10.3, §13, §15; AGENTS.md hard rule 11. Two
+  choices made in writing it: each brain has its own root, and the FIDO
+  wire format of Schema §11.8 is confirmed against `ssh-keygen -Y verify`
+  in S5 before anything ships.
 - [ ] **S2. Core: seals and verification** (L) — canonical payloads,
   sign and verify for Ed25519 and P-256 (WebCrypto, which core already
   uses) and FIDO SSHSIG (Ed25519 through libsodium), chains and heads,

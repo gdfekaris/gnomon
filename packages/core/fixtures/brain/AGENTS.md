@@ -81,9 +81,9 @@ session changes like this:
    `npx gnomon-cli status` must show no plaintext in the working tree
    before you push.
 
-Never create, edit, or delete `.gnomon/encryption.json`. Turning
-encryption on or off and changing the passphrase belong to the curator,
-in the app.
+Never create, edit, or delete `.gnomon/encryption.json` (hard rule 11).
+Turning encryption on or off and changing the passphrase belong to the
+curator, in the app.
 
 ## Hard rules
 
@@ -121,6 +121,13 @@ files count as part of the brain.
    Frontmatter fields hold bare slugs, never links.
 10. **In an encrypted brain, never commit a plaintext body and never
     bypass the commit guard.** See "An encrypted brain" above.
+11. **You never create, edit, or delete anything under `.gnomon/`.** It
+    holds the encryption settings and the seals: signatures the
+    curator's devices make over each capture, with keys you do not have
+    and must not look for. A capture you write has no seal and shows as
+    unsealed until the curator reads it and seals it; that is expected.
+    Changing a sealed capture or its filed copy shows as broken on the
+    curator's phone, whatever the commit says.
 
 ## Curation states
 

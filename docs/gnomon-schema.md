@@ -11,6 +11,8 @@ September 2026
 
 *2026-10-05: one commit vocabulary, for the commit audit (`tamper-evidence-proposal.md` Appendix A.0): the messages the app already commits for edits, set updates, reorders, and principle deletion are named in §7; clearing a capture is §7.19; `Index` is named; desktop sessions pull with `--rebase` (§7.13); the filed capture keeps its `updated` (§4.6).*
 
+*2026-10-05, later: seals, tamper evidence for captured content (§11, §7.20, and §2, §7.5, §7.17, §7.19, §10), from `tamper-evidence-proposal.md`; the claim and threat model are `security.md`.*
+
 ---
 
 ## 1. Scope and principles
@@ -29,7 +31,11 @@ Three design rules govern every decision below:
 <brain-root>/
 ├── AGENTS.md                     # agent protocol (procedural enforcement)
 ├── README.md                     # human orientation; links to AGENTS.md
-├── .gnomon/                      # RESERVED: app metadata (e.g. encryption.json); may be absent
+├── .gnomon/                      # RESERVED: app metadata; may be absent
+│   ├── encryption.json           # present only on an encrypted brain (Technical Specification §6.4)
+│   ├── root.json                 # sealing: the root's public key, informational (§11)
+│   ├── keys/                     # sealing: enrollments, revocations, requests (§11.4)
+│   └── seals/<key-id>/<seq>.json # sealing: one seal per file (§11.5)
 ├── inbox/
 │   ├── <stem>.md                 # a capture, unfiled or filed
 │   └── <stem>.<ext>              # optional: the capture's attached source file
@@ -60,7 +66,7 @@ Three design rules govern every decision below:
 
 A brain is valid when `AGENTS.md`, the five top-level folders (`inbox`, `sources`, `principles`, `maps`, `templates`), and at least one principle set exist. `maps/proposals/` is created by whoever writes the first proposal and is not required for validity. The app's connect-time validator (US-15) checks exactly this list and offers to add anything missing; it never moves or rewrites existing content.
 
-`.gnomon/encryption.json` is optional: present only on an encrypted brain (Technical Specification §6.4), never itself encrypted, and, like everything under a dot-directory, outside validation, the indexes, and every prompt.
+`.gnomon/encryption.json` is optional: present only on an encrypted brain (Technical Specification §6.4), never itself encrypted, and, like everything under a dot-directory, outside validation, the indexes, and every prompt. The sealing files (§11) are optional too, present once sealing is set up; they are outside §9 validation and are checked by §11.6 verification instead.
 
 A brain contains no `package.json`, lockfile, or `node_modules/`. Desktop tooling is the published `gnomon-cli` package, run as `npx gnomon-cli <command>` (or `gnomon <command>` once installed); the brain itself stays plain markdown plus attachments.
 
@@ -307,7 +313,7 @@ The last remaining set cannot be deleted.
 
 ### 7.5 Capture to inbox
 
-Write `inbox/<stem>.md` (§3.4) with the pasted body and optional `note`; if a file was attached, write `inbox/<stem>.<ext>` beside it and set `attachment`. One commit: `Capture: <stem>`. Under fifteen seconds end to end (US-1). Captures are never regenerated into the indexes, so this commit carries no index change.
+Write `inbox/<stem>.md` (§3.4) with the pasted body and optional `note`; if a file was attached, write `inbox/<stem>.<ext>` beside it and set `attachment`. When the capturing device has an enrolled sealing key (§11), write the capture's `capture` seal (§11.5, §11.7) in the same commit. One commit: `Capture: <stem>`. Under fifteen seconds end to end (US-1). Captures are never regenerated into the indexes, so this commit carries no index change.
 
 ### 7.6 Filing (Task C in AGENTS.md)
 
@@ -375,7 +381,7 @@ The app may decide several proposals in one commit when the curator picks them t
 
 ### 7.17 Encrypt, decrypt, change passphrase
 
-The app (Technical Specification §6.4) rewrites every eligible body as ciphertext and adds `.gnomon/encryption.json` in one commit, `Encrypt: <n> files`; the reverse, `Decrypt: <n> files`, removes the file; a passphrase change re-encrypts every body under the new key and rewrites the salt and check, `Change passphrase`. Frontmatter never changes in these commits, so the indexes do not either. Agents never make them.
+The app (Technical Specification §6.4) rewrites every eligible body as ciphertext and adds `.gnomon/encryption.json` in one commit, `Encrypt: <n> files`; the reverse, `Decrypt: <n> files`, removes the file; a passphrase change re-encrypts every body under the new key and rewrites the salt and check, `Change passphrase`. Seal files (§11.5) are rewritten in the same commits, whole, as ciphertext or plaintext (§11.3); their payloads and signatures never change. Frontmatter never changes in these commits, so the indexes do not either. Agents never make them.
 
 ### 7.18 Edit a principle, a source, or notes
 
@@ -387,7 +393,17 @@ The curator's edits, each one commit with indexes regenerated:
 
 ### 7.19 Clear an inbox capture
 
-When the curator clears a capture whose filing was ratified, or one left `unfiled` by a rejection, delete `inbox/<stem>.md` and its attachment, if any; one commit `Clear: <stem>`. Captures are not in the indexes, so the commit carries no index change. Agents never make it (§4.6). The app does not offer this yet; the message is reserved so that history tools have a rule for it.
+When the curator clears a capture whose filing was ratified, or one left `unfiled` by a rejection, delete `inbox/<stem>.md` and its attachment, if any; when the brain has sealing set up, write a `clear` seal for the stem (§11.5) in the same commit; one commit `Clear: <stem>`. Captures are not in the indexes, so the commit carries no index change. Agents never make it (§4.6). The app does not offer this yet; the message is reserved so that history tools have a rule for it.
+
+### 7.20 Sealing
+
+The curator's sealing acts (§11); agents make none of them.
+
+- **Set up sealing** (the app): write `.gnomon/root.json` and the device's enrollment (§11.4); one commit `Set up sealing`.
+- **Seal a capture** that has no valid content seal (the app or `gnomon seal`), after showing the curator its whole text: one `attest` seal (§11.5); one commit `Seal: <stem>`. Sealing every existing capture at once, after setup: one `attest` seal each, one commit `Seal: <n> existing captures`.
+- **Request a desktop key** (`gnomon keys request`): write `.gnomon/keys/requests/<key-id>.json`; one commit `Request key: <label>`.
+- **Enroll a key** (the app, with the recovery phrase): write `.gnomon/keys/<key-id>.json`, and delete the request when there was one; one commit `Enroll key: <label>`.
+- **Revoke a key** (the app, with the recovery phrase): write `.gnomon/keys/<key-id>.revoked.json`; one commit `Revoke key: <label>`.
 
 ## 8. Prompt assembly context rules
 
@@ -437,8 +453,122 @@ On an encrypted brain read without its key, the frontmatter rules run as usual a
 ## 10. Reserved and forbidden
 
 - Filenames beginning with `_` are reserved for descriptors and generated files.
-- `.gnomon/` is reserved for app metadata; nothing else writes there, and it is never part of a prompt.
+- `.gnomon/` is reserved for app metadata; nothing else writes there, and it is never part of a prompt. Agents never create, edit, or delete anything under it.
 - `principles/_reserve/` is the reserve (§7.14): principle files only, never a `_set.md`, never part of a prompt, never written by an agent.
 - `original` is a reserved basename inside source folders.
 - No file outside `maps/proposals/` may carry `type: proposal`.
 - Agents must never: create, rename, reorder, or delete a set; create, reorder, or delete a principle, or change any `order`; write any `human`-curated file beyond the §4.6 clerical exception; edit either `_index.md`; modify a `raw.md` body or any attachment; delete an inbox capture or attachment; change a proposal's `status` except when recording a decision the curator made in that session; create a branch; leave the session with unpushed commits. The app treats any commit that does one of these as requiring mandatory curator review before its files count as part of the brain.
+
+## 11. Seals
+
+Seals make tampering with captured content evident. `security.md` states the claim they support, the threat model, and its assumptions; this section is the normative format and verification, exact enough to reimplement. Technical Specification §6.5 describes the implementation.
+
+### 11.1 What is sealed
+
+The *sealed content* of a capture `inbox/<stem>.md` is its body, its `note`, and its attachment; the same content in a filed source is the body of a `raw.md` whose `inbox_ref` is `<stem>`, and its `original.<ext>`. Nothing else is sealed: no other frontmatter field (titles, authors, tags, `curated`, `status`, `filed_as`), and no principle, set, notes, proposal, or index file.
+
+- **Body bytes** of a markdown file: the body as §4 splits it (a leading byte-order mark removed, CRLF and CR turned to LF, the text after the line that closes the frontmatter); decrypted when it carries the encryption marker (Technical Specification §6.4); then normalized (trailing newlines collapsed to exactly one, and a body that is empty or only newlines is empty); encoded as UTF-8.
+- **Note bytes:** the UTF-8 encoding of the `note` value as parsed from YAML.
+- **Attachment bytes:** the file's bytes.
+- **Digest:** `sha256:` followed by the 64 lowercase hex digits of the SHA-256 of the bytes.
+
+### 11.2 Files
+
+| Path | Holds | Signed by |
+|---|---|---|
+| `.gnomon/root.json` | `{"v": 1, "alg": "ed25519", "pub": …, "id": …}`, the root's public key. Informational: no verifier trusts it (§11.6). | — |
+| `.gnomon/keys/<key-id>.json` | An enrollment (§11.4). | the root |
+| `.gnomon/keys/<key-id>.revoked.json` | A revocation (§11.4). | the root |
+| `.gnomon/keys/requests/<key-id>.json` | A desktop key awaiting enrollment (§11.4). Carries no trust. | — |
+| `.gnomon/seals/<key-id>/<seq>.json` | One seal (§11.5). `<seq>` is decimal, zero-padded to six digits, wider only past 999999. | the device key `<key-id>` |
+
+A signed file is the JSON object `{"payload": {…}, "sig": "…"}`; its layout and key order are free, since only the payload's canonical form (§11.3) is signed. Nothing under `.gnomon/keys/` or `.gnomon/seals/` is ever edited or deleted, except a request, deleted by its `Enroll key:` commit, and seal files rewritten as ciphertext or plaintext by the §7.17 commits.
+
+### 11.3 Encodings
+
+- **base64** is RFC 4648 §4, the standard alphabet, with padding.
+- **Canonical JSON.** Payload values are objects, strings, `null`, and integers from 0 to 2^53 − 1; nothing else. The canonical form is RFC 8785 (JCS), which for these types is: object keys sorted by UTF-16 code units, recursively; no whitespace; strings escaped as ECMAScript `JSON.stringify` escapes them (`\"`, `\\`, `\b`, `\f`, `\n`, `\r`, `\t`, other code points below U+0020 as `\u00xx` in lowercase hex, everything else as literal UTF-8); integers in plain decimal.
+- **Signed bytes** of a payload: the UTF-8 of a context line, then the canonical JSON. The context line is `gnomon-seal v1\n` for a seal, `gnomon-enroll v1\n` for an enrollment, `gnomon-revoke v1\n` for a revocation. A signature for one kind can never verify as another.
+- **A seal's digest** is the digest (§11.1) of its signed bytes. Chains (`prev`) and revocations (`last`) name seals by it.
+- **Encrypted brains.** While `.gnomon/encryption.json` exists, every seal file is stored whole in the encrypted body format of Technical Specification §6.4: the marker line, then base64 of `nonce ‖ ciphertext ‖ tag` from AES-256-GCM over the file's JSON text, with the file's repo path as associated data. Enrollment, revocation, request, and root files hold only public keys and stay cleartext.
+
+### 11.4 Keys
+
+| `alg` | `pub` | `sig` |
+|---|---|---|
+| `ed25519` | base64 of the 32-byte public key | base64 of the 64-byte RFC 8032 signature over the signed bytes |
+| `p256` | base64 of the 65-byte uncompressed point | base64 of the 64-byte `r ‖ s` (IEEE P1363) ECDSA signature, SHA-256, over the signed bytes |
+| `sk-ed25519` | the OpenSSH public key, `sk-ssh-ed25519@openssh.com <base64 blob>` | an armored SSHSIG (§11.8) |
+
+The **key id** is the lowercase hex of the first 16 bytes of the SHA-256 of the key: the 32 raw bytes for `ed25519`, the 65 bytes for `p256`, the decoded blob for `sk-ed25519`. Ed25519 verification rejects non-canonical signatures and small-order keys, as libsodium's `crypto_sign_verify_detached` does.
+
+**The root** is an `ed25519` key. Its 32-byte seed is HKDF-SHA256 (RFC 5869) with the 32 bytes of entropy as input keying material, no salt, info `gnomon root v1`, and length 32; the key pair is the RFC 8032 key pair of that seed. The **recovery phrase** is the BIP-39 encoding of the entropy, 24 words from the English list with its checksum; the checksum is checked when the phrase is typed, and BIP-39's own seed derivation (PBKDF2) is not used. The root's **fingerprint**, written on the paper card and shown by every verifier, is its key id in eight groups of four hex digits. Each brain has its own root.
+
+**Enrollment** payload: `v` (1), `kind` (`enroll`), `key` (the key id), `alg`, `pub`, `label` (a name for people, e.g. "iPhone"), `device` (`phone` or `fido`), `at` (datetime), `root` (the root's key id); `sig` by the root. Valid when the signature verifies under the pinned root, `root` is the pinned root's id, `key` is the id computed from `pub`, and the file is named `<key>.json`.
+
+**Request** payload, unsigned: `v`, `kind` (`request`), `key`, `alg` (`sk-ed25519`), `pub`, `label`, `at`, as `{"payload": {…}}`. A request is a proposal to the curator, who enrolls it only after comparing its fingerprint on the desktop and on the phone.
+
+**Revocation** payload: `v`, `kind` (`revoke`), `key`, `last_seq` (the last good seal's `seq`, 0 for none), `last` (that seal's digest, or `null` when `last_seq` is 0), `at`, `root`; `sig` by the root; file `<key>.revoked.json`. Valid under the same conditions as an enrollment, for a key that is enrolled.
+
+### 11.5 Seals
+
+| Field | In | Value |
+|---|---|---|
+| `v` | all | 1 |
+| `kind` | all | `capture` (made with the capture), `attest` (the curator sealed an existing capture after reading it), `clear` (a tombstone: the curator cleared the capture) |
+| `stem` | all | the capture's stem |
+| `body` | `capture`, `attest` | digest of the capture's body bytes |
+| `note` | `capture`, `attest` | digest of the note bytes; present exactly when the capture has a `note` |
+| `attachment` | `capture`, `attest` | `{"name": "<stem>.<ext>", "digest": …}`, or `null` when the capture has none |
+| `filed_as` | `clear` | the slug the capture was filed as, or `null` |
+| `at` | all | datetime: when captured for `capture`, when sealed for `attest`, when cleared for `clear` |
+| `key` | all | the signing key's id; equals the folder name |
+| `seq` | all | integer from 1, per key; equals the file name |
+| `prev` | all | the digest of the same key's seal `seq − 1`, or `null` when `seq` is 1 |
+
+### 11.6 Verification
+
+A verifier holds a **pinned root** (id and public key, set by the curator from the phrase or the paper fingerprint, never read from `root.json`) and **pinned heads** (per key id, the highest `seq` it has accepted and that seal's digest). On an encrypted brain it needs the brain key to read seal files; without it, verification reports that it is locked and nothing else. Findings are about the brain; verdicts are about each capture and source.
+
+1. **Keys.** The valid enrollments (§11.4) are the enrolled keys. Any other file in `.gnomon/keys/` outside `requests/` that is not a valid enrollment or revocation is a finding, *key record invalid*. A `root.json` whose `id` differs from the pinned root is a finding, *root replaced*.
+2. **Seals.** A seal folder whose key is not enrolled: every seal in it is invalid, and the folder is a finding, *unknown key*. A seal whose `key` or `seq` disagrees with its path, or whose signature does not verify under its enrolled key (§11.4, §11.8), is invalid, and a finding, *seal invalid*.
+3. **Chains,** per enrolled key with seals `1..n`: every `seq` from 1 to `n` is present (else *chain gap*); each `prev` is the digest of the seal before it (else *chain broken*); when a head is pinned, `n` is at least its `seq` and the seal at that `seq` has its digest (else *rolled back*). For a revoked key, seals after `last_seq` are invalid and a finding, *sealed after revocation*, and the seal at `last_seq` must have digest `last` (else *rolled back*).
+4. **Content,** for each stem named by a valid `capture` or `attest` seal, against every such seal:
+   - when `inbox/<stem>.md` exists: its body bytes have the seal's `body` digest; it has a `note` exactly when the seal does, with the same digest; its `attachment` field is absent exactly when the seal's is `null`, and otherwise names the seal's `name`, and that file's digest is the seal's;
+   - for every source whose `raw.md` has `inbox_ref: <stem>`: its body bytes have the seal's `body` digest; it declares `attachment` exactly when the seal's is not `null`, as `original.<ext>` with the extension of the seal's `name`, and that file has the seal's digest;
+   - when `inbox/<stem>.md` does not exist, a valid `clear` seal names the stem (else a finding, *sealed capture deleted*), and when that tombstone's `filed_as` is a slug, `sources/<slug>/raw.md` exists with `inbox_ref: <stem>` (else *sealed capture deleted*).
+5. **Verdicts,** for each capture and each source with an `inbox_ref`:
+   - **broken:** a valid seal names its stem and a check in step 4 fails for it, or an invalid seal whose payload parses names its stem;
+   - **verified:** a valid `capture` seal names its stem, and it is not broken;
+   - **attested:** no valid `capture` seal, a valid `attest` seal, and not broken; reported with the `attest` seal's `at`, the day since which it is known unchanged;
+   - **unsealed:** no seal names its stem. A source without `inbox_ref` is unsealed.
+6. **Heads.** Only when there is no finding and no broken verdict, the verifier moves its pinned heads to each key's highest `seq` and its digest.
+
+### 11.7 Making seals
+
+- A device makes a seal at commit time, not when the curator taps: `seq` is one more than the greater of the device's stored head and the highest `seq` of its key in the tree, and `prev` is the digest of that seal. The device advances its stored head after the commit lands, and never before.
+- A `capture` seal is in its `Capture:` commit (§7.5); an `attest` seal in a `Seal:` commit (§7.20), only for a capture with no valid content seal and only after the curator was shown its whole text; a `clear` seal in its `Clear:` commit (§7.19).
+- Seals are never edited or deleted (§11.2). Filing, ratifying, and rejecting need no seal: a filed copy verifies against its capture's seal (§11.6 step 4).
+
+### 11.8 FIDO signatures (`sk-ed25519`)
+
+A seal by an `sk-ed25519` key is signed with OpenSSH (`ssh-keygen -Y sign -n gnomon-seal@v1`) over the seal's signed bytes `M` (§11.3). Its `sig` is the armored SSHSIG: the line `-----BEGIN SSH SIGNATURE-----`, base64, the line `-----END SSH SIGNATURE-----`. In the SSH wire encoding, where *string* is a 4-byte big-endian length then the bytes, the decoded blob is:
+
+```
+byte[6]  "SSHSIG"
+uint32   1
+string   publickey        string "sk-ssh-ed25519@openssh.com" ‖ string pk (32 bytes) ‖ string application
+string   namespace        "gnomon-seal@v1"
+string   reserved         empty
+string   hash_algorithm   "sha512" or "sha256"
+string   signature        string "sk-ssh-ed25519@openssh.com" ‖ string sig (64 bytes) ‖ byte flags ‖ uint32 counter
+```
+
+It is valid when `publickey` equals the enrolled key's blob, `namespace` and `reserved` are as shown, `flags` has the user-presence bit (`0x01`) set, and `sig` is a valid Ed25519 signature by `pk` over
+
+```
+SHA-256(application) ‖ flags ‖ counter (uint32, big-endian) ‖ SHA-256(D)
+D = "SSHSIG" ‖ string namespace ‖ string reserved ‖ string hash_algorithm ‖ string H(M)
+```
+
+with `H` the named hash. The user-presence bit is the authenticator's statement that it was touched; requiring it makes every desktop seal evidence of a touch. Implementations are tested against `ssh-keygen -Y verify` on signatures from a real key.

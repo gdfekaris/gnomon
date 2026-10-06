@@ -11,6 +11,9 @@ small desktop CLI. This repo is the monorepo.
 - `docs/gnomon-technical-spec.md` (v0.2) — how the code is built. Module
   boundaries, interfaces, and algorithms are defined there; implement to it.
 - `docs/gnomon-proposal.md` (v0.3) — what and why.
+- `docs/security.md` — the tamper-evidence claim, threat model, and
+  assumptions (Phase 5); Schema §11 is its format. Any change to sealing
+  keeps the three in agreement.
 - `docs/alignment-review.md` — twenty decisions made 2026-09-05 with
   rationale. They are settled; do not reopen them without the user.
 - `docs/phase-<n>-tracker.md` — the current phase's block list and progress
