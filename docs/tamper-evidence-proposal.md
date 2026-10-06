@@ -447,7 +447,16 @@ Order as listed; S6 can happen any time and is best done early.
   capture, a YubiKey seal, a cleared capture, a revocation) verify. T9
   showed a limit now stated in `security.md` §5: a verifier's first look
   cannot see seals removed from a chain's tail before it.
-- [ ] **S3. The phone: keys** (L) — setup with the phrase, root
+- [ ] **S3. The phone: keys** (L) — built 2026-10-05; left: the
+  maintainer's iPhone check below. `services/sealing.ts` and Settings →
+  Sealing: setup (24 words, three asked back, the fingerprint for the
+  card), recovery from the phrase, enrolling a desktop key from its
+  request, revocation, forgetting this device's key, and the `recover`,
+  `unenrolled`, and `mismatch` states; 11 unit tests and two Playwright
+  flows on Chromium and WebKit (the non-extractable key survives a
+  relaunch in IndexedDB on both). WebKit 26.6 offers non-extractable
+  Ed25519, so the iPhone will most likely seal with Ed25519; Settings →
+  About says which. Was: — setup with the phrase, root
   derivation, the phone key, pins, recovery on a new phone, revocation,
   enrolling a desktop key from a request; `storage.persist()`. Done when
   the maintainer sets up sealing on the iPhone, recovers it in a second

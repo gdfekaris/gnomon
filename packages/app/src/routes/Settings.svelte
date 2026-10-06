@@ -7,6 +7,7 @@
   import { connectDemo, connectGitHub, describeError, disconnect, encryption } from '../lib/services/index';
   import ValidationPanel from '../lib/components/ValidationPanel.svelte';
   import EncryptForm from '../lib/components/EncryptForm.svelte';
+  import SealingPanel from '../lib/components/SealingPanel.svelte';
   import { DISCLOSURE, NO_WASM, wasmAvailable } from '../lib/services/encryption';
   import { route } from '../lib/router.svelte';
   import { session } from '../lib/stores/session.svelte';
@@ -72,7 +73,7 @@
       pressed = null;
     }
   }
-  const useDemo = () => run('demo', () => connectDemo((route.query.get('demo-omit') ?? '').split(',').filter(Boolean), Number(route.query.get('demo-fill') ?? 0) || 0, Number(route.query.get('reserve-fill') ?? 0) || 0));
+  const useDemo = () => run('demo', () => connectDemo((route.query.get('demo-omit') ?? '').split(',').filter(Boolean), Number(route.query.get('demo-fill') ?? 0) || 0, Number(route.query.get('reserve-fill') ?? 0) || 0, route.query.get('seal-request') === '1'));
   const useGitHub = () => run('connect', async () => {
     const git = { owner: owner.trim(), name: name.trim(), token: token.trim() };
     await saveGit(git);
@@ -261,6 +262,8 @@
   {#if encDone}<p class="ok" role="status" data-testid="enc-done">{encDone}</p>{/if}
 </section>
 
+<SealingPanel />
+
 <section>
   <h3>Who can see what</h3>
   <p>
@@ -301,6 +304,9 @@
     <li data-testid="custom-endpoint-build">{describePolicy(endpointPolicy)}</li>
     <li data-testid="enc-diag">
       Encryption {session.encryption.enabled ? (session.encryption.locked ? 'on, locked' : 'on, unlocked') : 'off'}{#if session.encryption.storeError}; last key store failure: {session.encryption.storeError}{/if}.
+    </li>
+    <li data-testid="seal-diag">
+      Sealing {session.sealing.status === 'off' ? 'off' : session.sealing.status === 'on' ? 'on' : session.sealing.status === 'recover' ? 'set up, no key on this device' : session.sealing.status === 'mismatch' ? 'on, root record mismatch' : 'on, this device’s key not enrolled'}{#if session.sealing.device}; this device’s key is {session.sealing.device.alg === 'ed25519' ? 'Ed25519' : 'ECDSA P-256'}{/if}.
     </li>
     <li>
       Key derivation on this device: <button type="button" class="small" onclick={measureKdf} disabled={kdf.busy || !wasm} use:hold={kdf.busy} data-testid="kdf-measure">{kdf.busy ? 'Measuring…' : 'Measure'}</button>

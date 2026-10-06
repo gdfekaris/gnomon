@@ -13,8 +13,13 @@ const binaries = import.meta.glob('../../../../core/fixtures/brain/**/*.pdf', { 
 
 const rel = (key: string) => key.slice(key.indexOf('/fixtures/brain/') + '/fixtures/brain/'.length);
 
-export async function demoDriver(omit: string[] = [], fill = 0, reserveFill = 0): Promise<MemoryDriver> {
+/** A real FIDO public key (OpenSSH's test key, core/fixtures/sshsig) for the demo's pending desktop-key request. */
+export const DEMO_YUBIKEY_PUB = 'sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIJsaDYXQYruc6bilCYDIK4YSOeG+zmrRO2M9t03//7LHAAAABHNzaDo=';
+
+/** `extra` adds files as they are (a test affordance: `#/settings?seal-request=1` adds a desktop-key request). */
+export async function demoDriver(omit: string[] = [], fill = 0, reserveFill = 0, extra: ReadonlyMap<string, string> = new Map()): Promise<MemoryDriver> {
   const seed = new Map<string, string | Uint8Array>();
+  for (const [p, t] of extra) seed.set(p, t);
   for (const [key, text] of Object.entries(texts)) seed.set(rel(key), text);
   for (const [key, url] of Object.entries(binaries)) seed.set(rel(key), await bytesOf(url));
   for (const p of omit) seed.delete(p);

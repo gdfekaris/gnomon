@@ -53,6 +53,36 @@ export function sealInputFromSnapshot(s: BrainSnapshot, gnomon: ReadonlyMap<stri
   };
 }
 
+/** Schema §11.6 step 1 without root.json: the enrollments and revocations the pinned root signed, and what else sits in `.gnomon/keys/`. */
+export async function keyRecords(gnomon: ReadonlyMap<string, string>, root: PinnedRoot): Promise<{ enrolled: Map<string, EnrollPayload>; revoked: Map<string, RevokePayload>; findings: SealFinding[] }> {
+  const findings: SealFinding[] = [];
+  const find = (code: FindingCode, path: string, detail: string) => findings.push({ code, path, detail });
+  const keyPaths = [...gnomon.keys()].filter((p) => p.startsWith(KEYS_DIR) && !p.startsWith(REQUESTS_DIR)).sort();
+  const enrolled = new Map<string, EnrollPayload>();
+  const revoked = new Map<string, RevokePayload>();
+  const rootSigned = async (kind: 'enroll' | 'revoke', payload: { root: string }, sig: string) =>
+    payload.root === root.id && (await verifySignature('ed25519', root.pub, sig, signedBytes(kind, payload)));
+  for (const path of keyPaths.filter((p) => !p.endsWith('.revoked.json'))) {
+    const parsed = parseSigned(gnomon.get(path)!);
+    const e = typeof parsed === 'string' ? parsed : await checkEnrollPayload(parsed.payload);
+    if (typeof e === 'string') find('key-record-invalid', path, e);
+    else if (path !== `${KEYS_DIR}${e.key}.json`) find('key-record-invalid', path, 'its name is not its key id');
+    else if (!(await rootSigned('enroll', e, (parsed as { sig: string }).sig))) find('key-record-invalid', path, 'the pinned root did not sign it');
+    else enrolled.set(e.key, e);
+  }
+  for (const path of keyPaths.filter((p) => p.endsWith('.revoked.json'))) {
+    const parsed = parseSigned(gnomon.get(path)!);
+    const r = typeof parsed === 'string' ? parsed : checkRevokePayload(parsed.payload);
+    if (typeof r === 'string') find('key-record-invalid', path, r);
+    else if (path !== `${KEYS_DIR}${r.key}.revoked.json`) find('key-record-invalid', path, 'its name is not its key id');
+    else if (!enrolled.has(r.key)) find('key-record-invalid', path, 'it revokes a key that is not enrolled');
+    else if (!(await rootSigned('revoke', r, (parsed as { sig: string }).sig))) find('key-record-invalid', path, 'the pinned root did not sign it');
+    else revoked.set(r.key, r);
+  }
+
+  return { enrolled, revoked, findings };
+}
+
 interface SealRec { path: string; seq: number; payload?: SealPayload; digest?: string; valid: boolean }
 
 const dirOf = (path: string) => path.slice(0, path.lastIndexOf('/') + 1);
@@ -71,28 +101,9 @@ export async function verifySeals(input: SealInput, root: PinnedRoot, pinned: He
     const r = parseRootRecord(rootText);
     if (!r || r.id !== root.id || r.pub !== root.pub) find('root-replaced', ROOT_PATH, 'it does not name the pinned root');
   }
-  const keyPaths = [...input.gnomon.keys()].filter((p) => p.startsWith(KEYS_DIR) && !p.startsWith(REQUESTS_DIR)).sort();
-  const enrolled = new Map<string, EnrollPayload>();
-  const revoked = new Map<string, RevokePayload>();
-  const rootSigned = async (kind: 'enroll' | 'revoke', payload: { root: string }, sig: string) =>
-    payload.root === root.id && (await verifySignature('ed25519', root.pub, sig, signedBytes(kind, payload)));
-  for (const path of keyPaths.filter((p) => !p.endsWith('.revoked.json'))) {
-    const parsed = parseSigned(input.gnomon.get(path)!);
-    const e = typeof parsed === 'string' ? parsed : await checkEnrollPayload(parsed.payload);
-    if (typeof e === 'string') find('key-record-invalid', path, e);
-    else if (path !== `${KEYS_DIR}${e.key}.json`) find('key-record-invalid', path, 'its name is not its key id');
-    else if (!(await rootSigned('enroll', e, (parsed as { sig: string }).sig))) find('key-record-invalid', path, 'the pinned root did not sign it');
-    else enrolled.set(e.key, e);
-  }
-  for (const path of keyPaths.filter((p) => p.endsWith('.revoked.json'))) {
-    const parsed = parseSigned(input.gnomon.get(path)!);
-    const r = typeof parsed === 'string' ? parsed : checkRevokePayload(parsed.payload);
-    if (typeof r === 'string') find('key-record-invalid', path, r);
-    else if (path !== `${KEYS_DIR}${r.key}.revoked.json`) find('key-record-invalid', path, 'its name is not its key id');
-    else if (!enrolled.has(r.key)) find('key-record-invalid', path, 'it revokes a key that is not enrolled');
-    else if (!(await rootSigned('revoke', r, (parsed as { sig: string }).sig))) find('key-record-invalid', path, 'the pinned root did not sign it');
-    else revoked.set(r.key, r);
-  }
+  const keys = await keyRecords(input.gnomon, root);
+  findings.push(...keys.findings);
+  const { enrolled, revoked } = keys;
 
   // 2. Seals.
   const folders = new Map<string, Map<number, SealRec>>();

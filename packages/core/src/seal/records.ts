@@ -115,6 +115,29 @@ export function checkRevokePayload(p: Obj): RevokePayload | string {
   return p as unknown as RevokePayload;
 }
 
+/** A key request from its file's text (schema §11.4), or why not. It carries no trust: the curator compares fingerprints before enrolling it. */
+export async function parseRequestFile(path: string, text: string): Promise<RequestPayload | string> {
+  let v: unknown;
+  try {
+    v = JSON.parse(text);
+  } catch {
+    return 'it is not JSON';
+  }
+  if (!isObj(v) || fieldsProblem(v, ['payload']) || !isObj(v.payload)) return 'it is not a request';
+  const p = v.payload;
+  const bad = fieldsProblem(p, ['v', 'kind', 'key', 'alg', 'pub', 'label', 'at']);
+  if (bad) return bad;
+  if (p.v !== 1 || p.kind !== 'request' || p.alg !== 'sk-ed25519' || !isStr(p.pub) || !isStr(p.label) || p.label.trim() === '' || !isStr(p.at) || !DATETIME.test(p.at)) return 'it is not a request';
+  let id: string;
+  try {
+    id = await keyId('sk-ed25519', p.pub);
+  } catch {
+    return 'its `pub` is not a FIDO key';
+  }
+  if (p.key !== id || path !== requestPath(id)) return 'its key id does not match its key or its name';
+  return p as unknown as RequestPayload;
+}
+
 export function parseRootRecord(text: string): RootRecord | undefined {
   try {
     const v: unknown = JSON.parse(text);
