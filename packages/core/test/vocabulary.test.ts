@@ -1,4 +1,4 @@
-// One commit vocabulary (schema §7; commit-audit-proposal.md §2.0, block A1).
+// One commit vocabulary (schema §7; tamper-evidence-proposal.md Appendix A.0, block A1).
 // Every commit message the code builds is named in schema §7, and every
 // message AGENTS.md lets an agent use is too. A message is compared by its
 // head: the words before the colon, or the whole message when it has none.

@@ -9,7 +9,7 @@ September 2026
 
 *2026-09-16: the reserve for principles (§2, §3.3, §4.5, §4.8, §7.14, §8, §9, §10), by the maintainer's decision to reopen `alignment-review.md` 2.2: a principle is in a set, in the reserve, or deleted.*
 
-*2026-10-05: one commit vocabulary, for the commit audit (`commit-audit-proposal.md` §2.0): the messages the app already commits for edits, set updates, reorders, and principle deletion are named in §7; clearing a capture is §7.19; `Index` is named; desktop sessions pull with `--rebase` (§7.13); the filed capture keeps its `updated` (§4.6).*
+*2026-10-05: one commit vocabulary, for the commit audit (`tamper-evidence-proposal.md` Appendix A.0): the messages the app already commits for edits, set updates, reorders, and principle deletion are named in §7; clearing a capture is §7.19; `Index` is named; desktop sessions pull with `--rebase` (§7.13); the filed capture keeps its `updated` (§4.6).*
 
 ---
 
