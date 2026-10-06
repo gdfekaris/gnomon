@@ -128,16 +128,15 @@ export function keepInReserve(s: BrainSnapshot, entries: KeepEntry[], now: strin
   return withIndexWrites(s, { message: `Keep: ${n} proposal${n === 1 ? '' : 's'} in reserve`, expectedHead: s.head, writes, deletes: [] });
 }
 
-/** Schema §7.16: several proposals declined (or accepted) in one commit, `status` and `updated` only. Message `Decline: {n} proposals`. */
-export function decideProposals(s: BrainSnapshot, ids: string[], status: 'accepted' | 'declined', now: string): CommitBatch {
-  if (ids.length === 0) throw new Error('nothing to decide');
+/** Schema §7.16: several proposals declined in one commit, `status` and `updated` only. Message `Decline: {n} proposals`. Accepting several is `keepInReserve`. */
+export function declineProposals(s: BrainSnapshot, ids: string[], now: string): CommitBatch {
+  if (ids.length === 0) throw new Error('nothing to decline');
   const writes: FileWrite[] = [...new Set(ids)].map((id) => {
     const prev = proposalAt(s, id);
-    return { path: prev.path, text: serializeFile({ ...prev, fm: { ...prev.fm, status, updated: now } }) };
+    return { path: prev.path, text: serializeFile({ ...prev, fm: { ...prev.fm, status: 'declined', updated: now } }) };
   });
   const n = writes.length;
-  const verb = status === 'declined' ? 'Decline' : 'Accept';
-  return withIndexWrites(s, { message: `${verb}: ${n} proposal${n === 1 ? '' : 's'}`, expectedHead: s.head, writes, deletes: [] });
+  return withIndexWrites(s, { message: `Decline: ${n} proposal${n === 1 ? '' : 's'}`, expectedHead: s.head, writes, deletes: [] });
 }
 
 export function proposalAt(s: BrainSnapshot, id: string): BrainFile<ProposalFm> {

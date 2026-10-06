@@ -9,6 +9,8 @@ September 2026
 
 *2026-09-16: the reserve for principles (§2, §3.3, §4.5, §4.8, §7.14, §8, §9, §10), by the maintainer's decision to reopen `alignment-review.md` 2.2: a principle is in a set, in the reserve, or deleted.*
 
+*2026-10-05: one commit vocabulary, for the commit audit (`commit-audit-proposal.md` §2.0): the messages the app already commits for edits, set updates, reorders, and principle deletion are named in §7; clearing a capture is §7.19; `Index` is named; desktop sessions pull with `--rebase` (§7.13); the filed capture keeps its `updated` (§4.6).*
+
 ---
 
 ## 1. Scope and principles
@@ -182,9 +184,9 @@ There is no status field. A principle in a set is in force. A principle the cura
 | `filed_as` | yes if filed | The source slug the capture became. |
 | `curated` | yes | Always `human` (captures are the user's own action). |
 
-**Body:** the captured text exactly as pasted. Inbox files and their attachments are never deleted by agents. The app deletes an inbox capture (and its attachment) only when the curator explicitly clears it after ratification or after a rejected filing.
+**Body:** the captured text exactly as pasted. Inbox files and their attachments are never deleted by agents. The app deletes an inbox capture (and its attachment) only when the curator explicitly clears it after ratification or after a rejected filing (§7.19).
 
-**Clerical exception.** `status` and `filed_as` are the only fields of a `human` file that an agent may write, and only as part of a filing commit (§7.6). The body, `note`, `attachment`, and the attachment file are untouchable. Rejection of the filing reverts both fields.
+**Clerical exception.** `status` and `filed_as` are the only fields of a `human` file that an agent may write, and only as part of a filing commit (§7.6). The body, `note`, `attachment`, `updated`, and the attachment file are untouchable: the capture's content did not change, so its `updated` stays as the curator left it (the one exception to §4.1). Rejection of the filing reverts both fields.
 
 ### 4.7 `maps/proposals/P-<date>-<nnn>.md` — `type: proposal`
 
@@ -271,7 +273,9 @@ Frontmatter fields (`grounds`, `related`, `target`, `from_source`, `source`, `se
 
 ## 7. Procedures
 
-Every procedure is one commit on `main`. Neither the app nor any agent creates a branch.
+Every procedure is one commit on `main`. Neither the app nor any agent creates a branch or a merge commit.
+
+The messages named in this section are the whole vocabulary of procedures; `AGENTS.md` lists the subset an agent may use. A commit outside it (the host's initial commit, a curator's edit by hand on desktop or on the host's website) is permitted but is not a procedure: tools that audit history report it for the curator to acknowledge rather than treating it as a violation.
 
 ### 7.1 Create a principle set
 
@@ -283,13 +287,13 @@ Every procedure is one commit on `main`. Neither the app nor any agent creates a
 
 A new brain is scaffolded with Set 1 at `ps-g8xw`, `order: 1`, no `name`, and no principles. When the app creates the brain, the whole template lands in one commit, `Scaffold: template`, on top of the host's initial commit.
 
-### 7.2 Rename a set
+### 7.2 Rename or describe a set
 
-Rewrite `name` in `_set.md`; regenerate indexes; one commit. No path changes.
+Rewrite `name` or the body in `_set.md`; regenerate indexes; one commit `Update principle set: {label}`, with the label after the change. No path changes.
 
 ### 7.3 Reorder sets
 
-Rewrite `order` in each affected `_set.md` so the sequence is 1..N; regenerate indexes; one commit.
+Rewrite `order` in each affected `_set.md` so the sequence is 1..N; regenerate indexes; one commit `Reorder principle sets`.
 
 ### 7.4 Delete a set
 
@@ -327,13 +331,13 @@ See §5. Both are single commits: `Ratify: <slug>` and `Reject: <slug>`.
 
 1. Validate layout (§2). Offer to add missing folders, `AGENTS.md`, and templates, each as one commit `Scaffold: <path>` (a folder arrives as its `.gitkeep`; a missing Set 1 is a §7.1 commit).
 2. Run the §9 validator and show refusals and warnings. The app fixes nothing else; in particular it never moves or rewrites existing files. A brain in an older format is migrated by hand.
-3. Regenerate indexes.
+3. Regenerate indexes; when they differ, one commit `Index`.
 
 ### 7.9 Create, reorder, or delete a principle
 
 - **Create:** write `principles/<set-slug>/<principle-slug>.md` with `set`, `order` = the set's current principle count + 1, `grounds`, `curated: human`; regenerate indexes; one commit `Add principle: <title>`.
-- **Reorder:** rewrite `order` on each affected principle in the set so the sequence is 1..N; regenerate; one commit.
-- **Delete:** remove the file; decrement `order` on every principle in the set that was below it; list dangling `related` refs and proposal `target`s to the curator; regenerate; one commit.
+- **Reorder:** rewrite `order` on each affected principle in the set so the sequence is 1..N; regenerate; one commit `Reorder principles: {set label}`.
+- **Delete:** remove the file; decrement `order` on every principle in the set that was below it; list dangling `related` refs and proposal `target`s to the curator; regenerate; one commit `Delete principle: <title>`.
 
 ### 7.10 Decide a proposal
 
@@ -349,7 +353,7 @@ The curator picks one or more filed sources and a target set; a model (in the ap
 
 ### 7.13 Desktop session discipline
 
-Encoded in `AGENTS.md`: `git pull` at session start; one commit per action as above; before the final push, run `npx gnomon-cli validate` and fix or report refusals, then `npx gnomon-cli index`; `git push` at session end. Agents never leave the session with unpushed commits they made.
+Encoded in `AGENTS.md`: `git pull --rebase` at session start (a plain pull can make a merge commit); one commit per action as above; before the final push, run `npx gnomon-cli validate` and fix or report refusals, then `npx gnomon-cli index` and commit what changed as `Index`; `git push` at session end, after another `git pull --rebase` if the push is refused. Agents never leave the session with unpushed commits they made.
 
 ### 7.14 The reserve: keep a principle without applying it
 
@@ -372,6 +376,18 @@ The app may decide several proposals in one commit when the curator picks them t
 ### 7.17 Encrypt, decrypt, change passphrase
 
 The app (Technical Specification §6.4) rewrites every eligible body as ciphertext and adds `.gnomon/encryption.json` in one commit, `Encrypt: <n> files`; the reverse, `Decrypt: <n> files`, removes the file; a passphrase change re-encrypts every body under the new key and rewrites the salt and check, `Change passphrase`. Frontmatter never changes in these commits, so the indexes do not either. Agents never make them.
+
+### 7.18 Edit a principle, a source, or notes
+
+The curator's edits, each one commit with indexes regenerated:
+
+- **Principle:** rewrite any of `title`, `grounds`, `related`, `tags`, and the body; never `set` or `order` (§7.9, §7.14 change those); `Edit principle: <title>`, with the title after the change. Accepting a `link` proposal is the §7.10 commit followed by this one, adding the grounds.
+- **Source metadata:** rewrite any of `title`, `author`, `work`, `year`, `locator`, `origin`, `tags` in `raw.md`, never the body (§4.2); `curated` becomes `human` (§5); `Edit source: <slug>`.
+- **Notes:** rewrite the `notes.md` body; `curated` becomes `human` (§5); `Edit notes: <slug>`.
+
+### 7.19 Clear an inbox capture
+
+When the curator clears a capture whose filing was ratified, or one left `unfiled` by a rejection, delete `inbox/<stem>.md` and its attachment, if any; one commit `Clear: <stem>`. Captures are not in the indexes, so the commit carries no index change. Agents never make it (§4.6). The app does not offer this yet; the message is reserved so that history tools have a rule for it.
 
 ## 8. Prompt assembly context rules
 

@@ -54,9 +54,12 @@ When the pass is done: delete the tracker, break down Phase 5, and write
 - Commit messages in a brain are fixed vocabulary (schema §7): `Capture:`,
   `File:`, `Ratify:`, `Reject:`, `Decide:`, `Add principle:`, `Add
   proposal:`, `Derive:`, `Relate:`, `Keep:`, `Decline:`, `Reserve
-  principle:`, `Place principle:`, `Encrypt:`, `Decrypt:`, `Change
-  passphrase`,
-  `Scaffold:`, `Index`, plus the set procedures' own messages.
+  principle:`, `Place principle:`, `Delete principle:`, `Reorder
+  principles:`, `Edit principle:`, `Edit source:`, `Edit notes:`,
+  `Clear:`, `Encrypt:`, `Decrypt:`, `Change passphrase`, `Scaffold:`,
+  `Index`, `Create principle set:`, `Update principle set:`, `Delete
+  principle set:`, `Reorder principle sets`. A new message goes into
+  schema §7 first; `core/test/vocabulary.test.ts` fails otherwise.
 - Other repositories are off limits. Agents touch only `gdfekaris/gnomon`
   and the nightly's scratch repositories (`gnomon-scratch`, and the
   `gnomon-scratch-<run>` ones it creates and deletes itself). Never read,

@@ -5,7 +5,7 @@
 // the exception in kind: it proposes a ground, and accepting it adds the
 // ground (2026-09-12), the Decide commit then an Edit principle commit.
 
-import { type BrainFile, type BrainSnapshot, type Citation, type PrincipleFm, type ProposalFm, type SourceFm, RESERVE_SLUG, backlinks, buildProposal, decideProposal, decideProposals, keepInReserve, nextProposalId, nowUtc, renderDualLink, setLabel, updatePrinciple, withIndexWrites } from '@gnomon/core';
+import { type BrainFile, type BrainSnapshot, type Citation, type PrincipleFm, type ProposalFm, type SourceFm, RESERVE_SLUG, backlinks, buildProposal, decideProposal, declineProposals, keepInReserve, nextProposalId, nowUtc, renderDualLink, setLabel, updatePrinciple, withIndexWrites } from '@gnomon/core';
 import { normalize, terms } from './browse';
 import type { BrainService } from './brain';
 import { appendGroundingLink, createPrincipleIn } from './edit';
@@ -58,7 +58,7 @@ export async function keepMany(brain: BrainService, ids: string[]): Promise<stri
 export async function declineMany(brain: BrainService, ids: string[]): Promise<void> {
   const s = brain.snapshot;
   if (!s) throw new Error('no brain is connected');
-  await brain.commit(decideProposals(s, ids, 'declined', nowUtc()));
+  await brain.commit(declineProposals(s, ids, nowUtc()));
 }
 
 export interface CloseMatch { path: string; title: string; what: 'principle' | 'proposal' }

@@ -32,18 +32,21 @@ the capture, byte for byte.
 
 ## Session discipline
 
-1. `git pull` before anything else. The brain is edited from several
-   devices; a session that starts stale ends in a conflict.
+1. `git pull --rebase` before anything else. The brain is edited from
+   several devices; a session that starts stale ends in a conflict, and a
+   plain pull can leave a merge commit, which no procedure makes.
 2. One commit per action, with these messages and no others:
    `Capture: <stem>`, `File: <slug>`, `Decide: <proposal-id>`,
-   `Derive: <n> proposals for <set label>`. Commit before you move to the
+   `Derive: <n> proposals for <set label>`,
+   `Relate: <n> proposals for <set label>`. Commit before you move to the
    next item.
 3. Before your final push: `npx gnomon-cli validate`, then
    `npx gnomon-cli index`. Fix any refusal in a file you are allowed to
    touch; report any other refusal or warning to the curator. Commit the
    regenerated indexes as `Index`.
-4. `git push` at the end of the session. Never leave the session with
-   unpushed commits you made. Never create a branch; everything is on
+4. `git push` at the end of the session; if it is refused because the
+   brain moved, `git pull --rebase` and push again. Never leave the
+   session with unpushed commits you made. Never create a branch; everything is on
    `main`.
 
 If `npx` is unavailable, say so, skip step 3, and tell the curator the
@@ -58,9 +61,9 @@ and `maps/proposals/` is stored as ciphertext (it begins
 working tree is decrypted, and you must never commit one as plaintext. The
 session changes like this:
 
-1. After `git pull`, run `npx gnomon-cli decrypt`. It reads the passphrase
-   from `GNOMON_PASSPHRASE`, which the curator sets in their own shell
-   before the session. If it is not set, stop and ask the curator to set
+1. After `git pull --rebase`, run `npx gnomon-cli decrypt`. It reads
+   the passphrase from `GNOMON_PASSPHRASE`, which the curator sets in
+   their own shell before the session. If it is not set, stop and ask the curator to set
    it. Never ask for the passphrase in the conversation, and never print
    it, write it to a file, or put it in a commit message.
 2. Wrap every commit: `npx gnomon-cli encrypt`, then `git add` and

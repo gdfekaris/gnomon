@@ -4,9 +4,9 @@
 Claude Code session the same day. Part 1 is the proposal as corrected.
 Part 2 is that session's answer to the five-step kickoff: the rule table,
 the open questions, placement, fixtures, and a draft spec section and
-tracker blocks. Nothing here is normative until the maintainer decides the
-vocabulary gaps in §2.0 and the draft text moves into the schema and the
-technical spec.
+tracker blocks. The maintainer accepted V1 to V5 on 2026-10-05 and block
+A1 put them into the schema and AGENTS.md; the rest of Part 2 stays a
+draft until its own block moves it into the spec.
 
 ---
 
@@ -142,7 +142,7 @@ operation without "agent" is curator-only and goes on the confirm list.
 | `Edit notes: <slug>` (V1) | curator | — | one `notes.md`: body; `curated` → human | — + idx | §4.3, §5 |
 | `Scaffold: template` | app | the template tree, onto a host commit | — | — | §7.1 last paragraph |
 | `Scaffold: <path>` | app | that path (a folder as its `.gitkeep`) | — | — | §7.8 |
-| `Index` | agent | — | the index files only (U1) | — | AGENTS.md rule 3, §7.13 |
+| `Index` | app, agent | — | the index files only (U1) | — | AGENTS.md rule 3, §7.8 step 3, §7.13 |
 | `Encrypt: <n> files` | curator | `.gnomon/encryption.json` | n bodies to ciphertext; frontmatter byte-identical | — | §7.17; spec §6.4 |
 | `Decrypt: <n> files` | curator | — | n bodies to plaintext; frontmatter byte-identical | `.gnomon/encryption.json` | §7.17 |
 | `Change passphrase` | curator | — | every body re-sealed; `.gnomon/encryption.json`; frontmatter byte-identical | — | §7.17 |
@@ -391,10 +391,15 @@ the vocabulary changes landing in schema §7 and AGENTS.md first.
 
 ## 2.6 Draft tracker blocks (Phase 5)
 
-- [ ] **A1. Vocabulary** (S) — decisions V1–V5 into schema §7 (and §4.6's
-  `updated` line), AGENTS.md (`Relate:`, `git pull --rebase`), the
-  template. Done when every message the code emits is in schema §7, and a
-  test greps the code's messages against the schema's list.
+- [x] **A1. Vocabulary** (S) — done 2026-10-05. V1–V5 in schema §7
+  (§7.2, §7.3, §7.8, §7.9, §7.13, new §7.18 edits and §7.19 `Clear:`, the
+  §7 preamble on commits outside the vocabulary) and §4.6 (`updated`
+  stays); AGENTS.md in the template and the fixture (`Relate:`,
+  `git pull --rebase`). Core's batch decide declined only: its unused
+  `Accept: <n> proposals` had no schema operation (a batch accept is
+  `Keep:`), so it is now `declineProposals`. `core/test/vocabulary.test.ts`
+  checks every message the code builds, and every one AGENTS.md gives an
+  agent, against the heads named in schema §7.
 - [ ] **A2. Core audit** (M) — `core/audit`, `rules.json`, the named
   checks, `HistorySource`; `MemoryDriver` keeps commits. Done when C1 and
   C2 pass and fixtures 1–24 and 26 each yield exactly their finding in

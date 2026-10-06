@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PrincipleFm, ProposalFm } from '../src/index';
-import { applyBatch, decideProposals, keepInReserve, validateBatch, validateSnapshot } from '../src/index';
+import { applyBatch, declineProposals, keepInReserve, validateBatch, validateSnapshot } from '../src/index';
 import { FIXTURE, readBrain, snapshotOf } from './brains';
 
 // Schema §7.16: several proposals decided in one commit, since one tap is one act.
@@ -35,16 +35,16 @@ describe('keepInReserve', () => {
   it('refuses a proposal that is not a reserve principle, one already decided, and an empty list', () => {
     expect(() => keepInReserve(s, [entry('P-20260905-001', 'Rise to the work')], NOW)).toThrow(/not a principle proposal for the reserve/);
     expect(() => keepInReserve(s, [entry('P-20260905-003', 'x')], NOW)).toThrow(/not a principle proposal/);
-    const decided = applyBatch(s, decideProposals(s, ['P-20260916-001'], 'declined', NOW));
+    const decided = applyBatch(s, declineProposals(s, ['P-20260916-001'], NOW));
     expect(() => keepInReserve(decided, [entry('P-20260916-001', 'Give attention freely')], NOW)).toThrow(/already declined/);
     expect(() => keepInReserve(s, [], NOW)).toThrow(/nothing to keep/);
     expect(() => keepInReserve(s, [entry('P-20260916-009', 'x')], NOW)).toThrow(/no proposal/);
   });
 });
 
-describe('decideProposals', () => {
+describe('declineProposals', () => {
   it('rewrites status and updated on each, nothing else, in one commit', () => {
-    const batch = decideProposals(s, ['P-20260916-001', 'P-20260905-003', 'P-20260916-001'], 'declined', NOW);
+    const batch = declineProposals(s, ['P-20260916-001', 'P-20260905-003', 'P-20260916-001'], NOW);
     expect(batch.message).toBe('Decline: 2 proposals');
     expect(batch.writes.map((w) => w.path)).toEqual(['maps/proposals/P-20260916-001.md', 'maps/proposals/P-20260905-003.md', 'maps/_index.md']);
     expect(validateBatch(s, batch)).toEqual([]);
@@ -56,8 +56,7 @@ describe('decideProposals', () => {
       expect(now.fm).toEqual({ ...before.fm, status: 'declined', updated: NOW });
       expect(now.body).toBe(before.body);
     }
-    expect(decideProposals(s, ['P-20260916-002'], 'accepted', NOW).message).toBe('Accept: 1 proposal');
-    expect(() => decideProposals(s, [], 'declined', NOW)).toThrow(/nothing to decide/);
-    expect(() => decideProposals(s, ['P-20260916-009'], 'declined', NOW)).toThrow(/no proposal/);
+    expect(() => declineProposals(s, [], NOW)).toThrow(/nothing to decline/);
+    expect(() => declineProposals(s, ['P-20260916-009'], NOW)).toThrow(/no proposal/);
   });
 });
