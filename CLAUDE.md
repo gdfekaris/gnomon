@@ -19,31 +19,44 @@ small desktop CLI. This repo is the monorepo.
 - `docs/phase-<n>-tracker.md` — the current phase's block list and progress
   (Phase 4 as of 2026-09-11).
 
-## Where we are (2026-09-11)
+## Where we are (2026-10-09)
 
-Done: Phases 1, 2, and 3, each green in CI. Version 0.1.0. The app is
-live at `https://gdfekaris.com/gnomon/` (GitHub Pages from main, HTTPS
-enforced); `gnomon-cli@0.1.0` is on npm; the nightly runs the storage
-contract against real GitHub and is green; every Playwright flow runs on
-Chromium and on WebKit as an iPhone. The maintainer's live iPhone test
-(install, create a brain, capture, file, ratify, editors) is done and its
-findings are fixed; what it left open is carried in the Phase 4 tracker.
+Done: Phases 1, 2, and 3. Version 0.2.0; the app is live at
+`https://gdfekaris.com/gnomon/` (GitHub Pages from main), `gnomon-cli@0.2.0`
+is on npm (a release is a pushed `vX.Y.Z` tag, trusted publishing), the
+nightly is green, and every Playwright flow runs on Chromium and on WebKit
+as an iPhone.
 
-**Next: Phase 4, `docs/phase-4-tracker.md`**, block 7 (local-model
-documentation). Block 6, a second storage driver, is deferred (2026-09-27;
-the brain moves to any git host with `docs/moving-your-brain.md`, and a
-future driver would be git over HTTPS). Blocks 1 to 5 are done: the
-passphrase keyring (Argon2id defaults to INTERACTIVE from the phone's
-numbers, 2026-09-26), the enable, disable, and rekey plans in core, the
-app's unlock sheet and Settings → Encryption, and `gnomon encrypt`,
-`decrypt`, and `guard` with the AGENTS.md text for encrypted brains
-(2026-09-26; `gnomon-cli` 0.2.0 on npm through trusted publishing,
-2026-09-27: a release is a pushed `vX.Y.Z` tag), and attachments stay
-cleartext with the disclosure. Left: local-model docs. The tracker's "Carried from Phase 3" list holds the
-maintainer's items (npm trusted publishing once a security key arrives,
-the rest of the smoke checklist).
-When the pass is done: delete the tracker, break down Phase 5, and write
-`docs/phase-5-tracker.md`; that is the working process for every phase.
+Phase 4 (`docs/phase-4-tracker.md`): blocks 1 to 5 done (encryption), 6
+deferred (a second storage driver), 7 and 8 (local models, the custom
+endpoint) built and waiting on the maintainer's own test. It closes after
+that: delete the tracker, write `docs/phase-5-tracker.md`.
+
+**Current work: tamper-evident captures, Phase 5's first feature.** The
+plan and its block list are `docs/tamper-evidence-proposal.md` §8 (the
+working tracker until the Phase 5 tracker exists); the claim and threat
+model are `docs/security.md`; the format is Schema §11 and §7.20; the code
+plan is Technical Specification §6.5. Decided by the maintainer: only what
+the user captures is protected (metadata is not), the desktop signs with
+a YubiKey touch, agents run in a separate OS account with a brain-only
+deploy key, a 24-word recovery phrase is the root, and decisions D1 to D6
+as recommended.
+
+- Done: A1 (one commit vocabulary; `core/test/vocabulary.test.ts`), S1
+  (the docs), S2 (`packages/core/src/seal`, the attack table T1 to T22,
+  FIDO checked against OpenSSH), S3 (keys on the phone; the maintainer
+  sealed brain-1 from the iPhone with an Ed25519 key on 2026-10-06).
+- Built, not ticked: **S4** (seals on every capture, verdicts, banner,
+  ratify and filing rules, Reason without broken passages, "Seal existing
+  captures"; `5f2b87e`, CI green). Waiting on the maintainer's check on
+  brain-1: Seal existing captures, the "sealed since" marks, a new
+  capture marked "sealed", no red banner. Ask for that result first.
+- Next: **S5**, the CLI (`gnomon keys request|trust`, `capture`, `seal`,
+  `verify`) with the YubiKey; then S6 (the agent account, the
+  maintainer's setup), S7 (independent Python verifier), S8 (the commit
+  audit as hygiene, Appendix A), S9 (outside review), S10 (optional signed
+  releases). `security.md`'s status line says the claim does not hold
+  until S6; keep that line true as blocks land.
 
 ## Conventions
 
