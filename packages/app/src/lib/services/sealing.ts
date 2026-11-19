@@ -11,9 +11,11 @@
 // into a plain state object handed to it, so it runs under vitest.
 
 import {
-  type BrainFile, type BrainSnapshot, type CommitBatch, type EnrollPayload, type InboxFm, KEYS_DIR, type Heads, type PinnedRoot, ROOT_PATH, SEALS_DIR, type SealFinding,
-  type SealVerdict, applyBatch, cryptoKeySigner, deriveRoot, digest, entropyToPhrase, fingerprint, generateDeviceKey, keyRecords, makeEnrollment, makeRevocation, makeSeal,
-  newEntropy, nowUtc, parseRequestFile, parseRootRecord, phraseToEntropy, requestPath, rootFile, sealContent, sealInputFromSnapshot, sealPosition, tryParseFile, verifySeals,
+  type BrainFile, type BrainSnapshot, type CommitBatch, type EnrollPayload, type InboxFm, KEYS_DIR, type Heads, type ManifestBody, type PinnedRevocations, type PinnedRoot,
+  type PrinciplesDifference, type PrinciplesSealPayload, ROOT_PATH, SEALS_DIR, type SealFinding, type SealResult, type SealVerdict, type SourceContent, type SourceFm,
+  type SourceSealPayload, applyBatch, buildManifest, canonicalJson, cryptoKeySigner, deriveRoot, digest, entropyToPhrase, fingerprint, generateDeviceKey, isEncryptedBody,
+  keyRecords, makeEnrollment, makeRevocation, makeSeal, newEntropy, nowUtc, parseRequestFile, parseRootRecord, phraseToEntropy, requestPath, rootFile, sealContent,
+  sealInputFromSnapshot, sealPosition, sourceContent, tryParseFile, usable, verifySeals,
 } from '@gnomon/core';
 import { LockedError, type StorageDriver } from '@gnomon/storage';
 import type { BrainService } from './brain';
@@ -27,6 +29,8 @@ export interface DeviceRecord {
   label: string;
   root: PinnedRoot;
   heads: Heads;
+  /** the revocations this device has accepted (schema §11.6); absent on a record made before version 2 */
+  revocations?: PinnedRevocations;
 }
 
 export interface SealStore {
@@ -65,22 +69,38 @@ export interface SealingState {
   requests: SealRequestView[];
   /** a sealing file that did not read, in its own words */
   error: string | null;
-  /** schema §11.6 at the last verified head: per capture and source path */
-  verdicts: Record<string, LegacyVerdict>;
+  /** schema §11.6 at the last verified head: per capture, source, set, and principle path */
+  verdicts: Record<string, SealVerdict>;
+  /** the brain holds a principles manifest: unsealed is a finding and only sealed material is reasoned from */
+  fullySealed: boolean;
+  /** how the principles differ from what was sealed, each also a finding */
+  differences: PrinciplesDifference[];
   /** findings about the seal record itself; any one is a banner on every screen */
   findings: SealFinding[];
   /** seal files are still ciphertext (an encrypted brain, locked): nothing was verified */
   locked: boolean;
   /** the head the verdicts belong to, or null before the first verification */
   verifiedHead: string | null;
-  /** sources that name no capture (made by hand, or filed before `inbox_ref`): nothing can seal them */
-  uncapturable: string[];
 }
 
-export const emptySealing = (): SealingState => ({ status: 'off', root: null, device: null, keys: [], requests: [], error: null, verdicts: {}, findings: [], locked: false, verifiedHead: null, uncapturable: [] });
+export const emptySealing = (): SealingState => ({
+  status: 'off', root: null, device: null, keys: [], requests: [], error: null, verdicts: {}, fullySealed: false, differences: [], findings: [], locked: false, verifiedHead: null,
+});
 
 /** What a session keeps between runs: the last sealing files read, attachment digests by blob sha, and a run counter that drops stale results. */
-export interface SealCache { files: Map<string, string>; digests: Map<string, string>; run: number; /** told of each new attachment digest, so a device can keep them across launches */ onDigest?: (sha: string, digest: string) => void }
+export interface SealCache {
+  files: Map<string, string>;
+  digests: Map<string, string>;
+  run: number;
+  /** told of each new attachment digest, so a device can keep them across launches */
+  onDigest?: (sha: string, digest: string) => void;
+  /** the current seal per source and the current manifest at the last verification, kept up to date by this device's own commits: what a replacement names */
+  current?: SealResult['current'];
+  /** the brain's seal files hold a principles manifest (read, not verified): writes to sources and principles must carry seals */
+  sealedTree?: boolean;
+  /** the verification in flight, so a commit can wait for it */
+  verifying?: Promise<void>;
+}
 export const newSealCache = (): SealCache => ({ files: new Map(), digests: new Map(), run: 0 });
 
 export interface SealingContext {
@@ -148,54 +168,54 @@ async function readFiles(ctx: SealingContext): Promise<Map<string, string>> {
 }
 
 /**
- * Until block I3 teaches the screens version 2 (integrity-proposal.md), they
- * are shown what they were shown before it: captures and sources only, and
- * a source awaiting review (`pending`: no seal of its own, matches its
- * sealed capture) as the verdict its capture carries. Core already decides
- * by version 2; nothing here grants trust core withheld, since no brain is
- * fully sealed until I3 offers it.
- */
-type LegacyVerdict = Exclude<SealVerdict, { verdict: 'pending' }>;
-function legacyVerdicts(verdicts: ReadonlyMap<string, SealVerdict>): Record<string, LegacyVerdict> {
-  const out: Record<string, LegacyVerdict> = {};
-  for (const [path, v] of verdicts) {
-    if (!path.startsWith('inbox/') && !path.startsWith('sources/')) continue;
-    out[path] = v.verdict === 'pending' ? (v.since === undefined ? { verdict: 'verified' } : { verdict: 'attested', since: v.since }) : v;
-  }
-  return out;
-}
-
-/**
  * Read the brain's sealing files and this device's record, set the state, and
  * verify the loaded snapshot against the pinned root and heads (schema §11.6),
  * moving the pins forward on a clean result. Never throws: a failure is the
  * state's error. A run overtaken by a newer one leaves the state to it.
  */
-export async function loadSealing(ctx: SealingContext): Promise<void> {
+export function loadSealing(ctx: SealingContext): Promise<void> {
+  const p = runSealing(ctx);
+  ctx.cache.verifying = p;
+  return p;
+}
+
+/** Whether any seal file is a principles manifest: read without verifying, to know that this brain expects seals on its writes. */
+function holdsManifest(files: ReadonlyMap<string, string>): boolean {
+  for (const [path, text] of files) {
+    if (!path.startsWith(SEALS_DIR) || isEncryptedBody(text)) continue;
+    try {
+      if ((JSON.parse(text) as { payload?: { kind?: unknown } }).payload?.kind === 'principles') return true;
+    } catch {
+      // not a seal file this device can read; verification reports it
+    }
+  }
+  return false;
+}
+
+async function runSealing(ctx: SealingContext): Promise<void> {
   const run = ++ctx.cache.run;
   try {
     const files = await readFiles(ctx);
     const record = await ctx.store.get(ctx.brainId);
     const next = await describeSealing(files, record);
     const s = ctx.brain.snapshot;
-    let verified: Pick<SealingState, 'verdicts' | 'findings' | 'locked' | 'verifiedHead' | 'uncapturable'> = { verdicts: {}, findings: [], locked: false, verifiedHead: null, uncapturable: [] };
+    let verified: Pick<SealingState, 'verdicts' | 'findings' | 'locked' | 'verifiedHead' | 'fullySealed' | 'differences'> = { verdicts: {}, findings: [], locked: false, verifiedHead: null, fullySealed: false, differences: [] };
+    let current: SealResult['current'] | undefined;
     if (record && s && (next.status === 'on' || next.status === 'unenrolled')) {
       const input = sealInputFromSnapshot(s, files, (path) => attachmentDigest(ctx, s, path));
-      const r = await verifySeals(input, record.root, record.heads);
-      verified = {
-        verdicts: legacyVerdicts(r.verdicts),
-        findings: r.findings,
-        locked: r.locked,
-        verifiedHead: s.head,
-        uncapturable: s.byType('source').filter((f) => !f.fm.inbox_ref).map((f) => f.path),
-      };
+      const r = await verifySeals(input, record.root, record.heads, record.revocations ?? {});
+      verified = { verdicts: Object.fromEntries(r.verdicts), findings: r.findings, locked: r.locked, verifiedHead: s.head, fullySealed: r.fullySealed, differences: r.differences };
+      if (!r.locked) current = r.current;
       if (r.heads && run === ctx.cache.run) {
         const fresh = await ctx.store.get(ctx.brainId);
-        if (fresh && fresh.keyId === record.keyId) await ctx.store.set(ctx.brainId, { ...fresh, heads: { ...fresh.heads, ...r.heads } });
+        if (fresh && fresh.keyId === record.keyId) await ctx.store.set(ctx.brainId, { ...fresh, heads: { ...fresh.heads, ...r.heads }, revocations: { ...fresh.revocations, ...r.revocations } });
       }
     }
     if (run !== ctx.cache.run) return;
     ctx.cache.files = files;
+    ctx.cache.sealedTree = holdsManifest(files);
+    if (current) ctx.cache.current = current;
+    else delete ctx.cache.current;
     Object.assign(ctx.state, next, verified);
   } catch (e) {
     if (run !== ctx.cache.run) return;
@@ -460,30 +480,246 @@ export const unsealedCaptures = (state: SealingState): string[] =>
     .map(([p]) => p.slice('inbox/'.length, -'.md'.length))
     .sort();
 
-/** Seal every unsealed capture once, as it stands (schema §7.20, decision D6): `Seal: <n> existing captures`. */
-export async function sealExisting(ctx: SealingContext, at = nowUtc()): Promise<number> {
+const CANNOT_SIGN = 'This brain is sealed, and this device holds no key for it. Add this device with the recovery phrase in Settings → Sealing, then try again.';
+const TREE_CHANGED = 'The principles differ from what you sealed. Review the differences in Settings → Sealing before changing them.';
+const STILL_VERIFYING = 'The brain is still being verified; try again in a moment.';
+
+const RAW = /^sources\/([^/]+)\/raw\.md$/;
+const sameManifest = (a: ManifestBody, b: ManifestBody): boolean => canonicalJson({ sets: a.sets, reserve: a.reserve }) === canonicalJson({ sets: b.sets, reserve: b.reserve });
+const CONTENT_KEYS = ['body', 'attachment', 'stem', 'title', 'author', 'work', 'year'] as const;
+const sameContent = (a: SourceContent, b: SourceContent): boolean => CONTENT_KEYS.every((k) => canonicalJson(a[k]) === canonicalJson(b[k]));
+
+/** What a source seal would say about a source in a snapshot (schema §11.5); its attachment digested once per blob. */
+async function contentOf(ctx: SealingContext, s: BrainSnapshot, slug: string): Promise<SourceContent | undefined> {
+  const f = s.files.get(`sources/${slug}/raw.md`) as BrainFile<SourceFm> | undefined;
+  if (!f || f.fm.type !== 'source') return undefined;
+  const c = await sourceContent({ slug, body: f.body, inboxRef: f.fm.inbox_ref, title: f.fm.title, author: f.fm.author, work: f.fm.work, year: f.fm.year });
+  if (f.fm.attachment !== undefined) {
+    const d = await attachmentDigest(ctx, s, `sources/${slug}/${f.fm.attachment}`);
+    if (!d) throw new Error(`the attached file of ${slug} could not be read, so it cannot be sealed`);
+    c.attachment = { name: f.fm.attachment, digest: d };
+  }
+  return c;
+}
+
+/** The manifest of a snapshot's principles tree, each ground bound to the body its source's seal names. */
+function manifestOf(s: BrainSnapshot, groundBody: (slug: string) => string | null): Promise<ManifestBody> {
+  const input = sealInputFromSnapshot(s, new Map(), async () => undefined);
+  return buildManifest(input.sets ?? [], input.principles ?? [], groundBody);
+}
+
+type Made = Awaited<ReturnType<typeof makeSeal>>;
+/** Seals made one after another by one device, each following the last in its chain. */
+function sealChain(ctx: SealingContext, dev: NonNullable<Awaited<ReturnType<typeof deviceSigner>>>) {
+  const files = new Map(ctx.cache.files);
+  let stored = dev.record.heads[dev.record.keyId];
+  const made: Made[] = [];
+  return {
+    made,
+    async add(req: Parameters<typeof makeSeal>[1]): Promise<Made> {
+      const m = await makeSeal(dev.signer, req, await sealPosition(files, dev.record.keyId, stored));
+      files.set(m.path, m.text);
+      stored = m.head;
+      made.push(m);
+      return m;
+    },
+  };
+}
+
+/** After a commit that carried seals: move the device's head, and remember which seals are now the current ones. */
+async function landed(ctx: SealingContext, keyId: string, made: Made[]): Promise<void> {
+  await advance(ctx, keyId, made);
+  const cur = ctx.cache.current;
+  for (const m of made) {
+    const payload = (JSON.parse(m.text) as { payload: SourceSealPayload | PrinciplesSealPayload | { kind: 'capture' | 'attest' | 'clear' } }).payload;
+    if (payload.kind === 'principles') {
+      ctx.cache.sealedTree = true;
+      if (cur) cur.manifest = { digest: m.head.digest, payload };
+    } else if (payload.kind === 'source' && cur) cur.sources.set(payload.slug, { digest: m.head.digest, payload });
+  }
+}
+
+/**
+ * Adds the seals a commit must carry (schema §7.20, §11.7): a `source` seal
+ * when a source is ratified or created by hand (from the day sealing is
+ * set up, so that what the curator ratifies is never left unsealed), a
+ * replacement when a sealed field of a sealed source changes, and a new
+ * `principles` manifest whenever the tree, or what a ground is bound to,
+ * differs from the current one. It never signs over a state it did not
+ * check: a source or a tree that already differs from its seal before the
+ * commit is refused, not re-sealed.
+ */
+export interface CommitSealer {
+  seal(batch: CommitBatch, before: BrainSnapshot): Promise<{ batch: CommitBatch; committed(): Promise<void> } | null>;
+}
+
+export function commitSealer(getCtx: () => SealingContext | null): CommitSealer {
+  return {
+    async seal(batch, before) {
+      const ctx = getCtx();
+      if (!ctx) return null;
+      const paths = [...batch.writes.map((w) => w.path), ...batch.deletes];
+      const touchesTree = paths.some((p) => p.startsWith('principles/') && !p.endsWith('/_index.md') && p !== 'principles/_index.md');
+      const raws = batch.writes.map((w) => RAW.exec(w.path)?.[1]).filter((x): x is string => x !== undefined);
+      if (!touchesTree && raws.length === 0) return null;
+      await ctx.cache.verifying;
+      // Before the brain is fully sealed a device that can sign still seals what it ratifies; one that cannot is not refused yet.
+      const sealedTree = ctx.cache.sealedTree === true;
+      const dev = await deviceSigner(ctx);
+      if (!dev) {
+        if (sealedTree) throw new Error(CANNOT_SIGN);
+        return null;
+      }
+      const cur = ctx.cache.current;
+      if (!cur || (sealedTree && !cur.manifest)) {
+        if (sealedTree) throw new Error(STILL_VERIFYING);
+        return null;
+      }
+      const after = applyBatch(before, batch);
+      const chain = sealChain(ctx, dev);
+      const at = nowUtc();
+      const newBody = new Map<string, string>();
+
+      for (const slug of raws) {
+        const now = cur.sources.get(slug);
+        const next = await contentOf(ctx, after, slug);
+        if (!next) continue;
+        const was = await contentOf(ctx, before, slug);
+        const fmOf = (s: BrainSnapshot) => (s.files.get(`sources/${slug}/raw.md`) as BrainFile<SourceFm> | undefined)?.fm.curated;
+        if (now) {
+          if (!was || !sameContent(was, now.payload)) throw new Error(`${slug} does not match its seal, so it cannot be changed. Settings → Sealing says what differs.`);
+          if (sameContent(next, now.payload)) continue;
+          if (next.body !== now.payload.body) throw new Error(`the passage of ${slug} is sealed and cannot be changed`);
+          await chain.add({ kind: 'source', slug, basis: now.payload.basis, ...(now.payload.since === undefined ? {} : { since: now.payload.since }), at, content: next, replaces: now.digest });
+        } else if (fmOf(after) === 'ratified' && fmOf(before) !== 'ratified') {
+          if (ctx.state.verdicts[`sources/${slug}/raw.md`]?.verdict === 'broken') throw new Error(`${slug} does not match its sealed capture, so it cannot be ratified`);
+          await chain.add({ kind: 'source', slug, basis: 'ratify', at, content: next, replaces: null });
+          newBody.set(slug, next.body);
+        } else if (!was && fmOf(after) === 'human') {
+          await chain.add({ kind: 'source', slug, basis: 'create', at, content: next, replaces: null });
+          newBody.set(slug, next.body);
+        }
+      }
+
+      if (cur.manifest) {
+        const bound = (slug: string) => cur.sources.get(slug)?.payload.body ?? null;
+        const stands = sameManifest(await manifestOf(before, bound), cur.manifest.payload);
+        if (!stands && touchesTree) throw new Error(TREE_CHANGED);
+        if (stands) {
+          const next = await manifestOf(after, (slug) => newBody.get(slug) ?? bound(slug));
+          if (!sameManifest(next, cur.manifest.payload)) await chain.add({ kind: 'principles', at, manifest: next, replaces: cur.manifest.digest });
+        }
+      }
+      if (chain.made.length === 0) return null;
+      return {
+        batch: { ...batch, writes: [...batch.writes, ...chain.made.map((m) => ({ path: m.path, text: m.text }))] },
+        committed: () => landed(ctx, dev.record.keyId, chain.made),
+      };
+    },
+  };
+}
+
+/** What "Seal everything that exists" would seal now: unsealed captures, the curator's sources with no seal, and the principles when there is no manifest yet. */
+export function existingToSeal(state: SealingState, s: BrainSnapshot | null): { captures: string[]; sources: string[]; sets: number; principles: number; manifest: boolean } {
+  const sources = !s
+    ? []
+    : s
+        .byType('source')
+        .filter((f) => (f.fm.curated === 'ratified' || f.fm.curated === 'human') && ['unsealed', 'pending'].includes(state.verdicts[f.path]?.verdict ?? ''))
+        .map((f) => f.path.split('/')[1]!)
+        .sort();
+  return { captures: unsealedCaptures(state), sources, sets: s?.sets.length ?? 0, principles: s?.byType('principle').length ?? 0, manifest: !state.fullySealed };
+}
+
+/**
+ * "Seal everything that exists" (schema §7.20), once: an `attest` seal for
+ * each unsealed capture, a `source` seal for each of the curator's sources
+ * that has none, and the first principles manifest; `Seal: existing
+ * material`. Refused while anything is broken or the seal record has a
+ * finding, since sealing then would sign over it.
+ */
+export async function sealExisting(ctx: SealingContext, at = nowUtc()): Promise<{ captures: number; sources: number; manifest: boolean }> {
   const dev = await deviceSigner(ctx);
   if (!dev) throw new Error(NOT_HERE);
   const s = ctx.brain.snapshot;
-  if (!s || ctx.state.verifiedHead !== s.head) throw new Error('the brain is still being verified; try again in a moment');
-  const stems = unsealedCaptures(ctx.state);
-  if (stems.length === 0) return 0;
-  const files = new Map(ctx.cache.files);
-  const made: Array<Awaited<ReturnType<typeof makeSeal>>> = [];
-  let stored = dev.record.heads[dev.record.keyId];
-  for (const stem of stems) {
-    const m = await attestSeal(ctx, dev.signer, s, stem, files, stored, at);
-    files.set(m.path, m.text);
-    stored = m.head;
-    made.push(m);
+  if (!s || ctx.state.verifiedHead !== s.head || !ctx.cache.current) throw new Error(STILL_VERIFYING);
+  if (ctx.state.findings.length || Object.values(ctx.state.verdicts).some((v) => v.verdict === 'broken')) throw new Error('Something in this brain does not match its seal. Resolve what is listed above first; sealing now would sign over it.');
+  const todo = existingToSeal(ctx.state, s);
+  if (todo.captures.length === 0 && todo.sources.length === 0 && !todo.manifest) return { captures: 0, sources: 0, manifest: false };
+  const chain = sealChain(ctx, dev);
+  const cur = ctx.cache.current;
+  for (const stem of todo.captures) {
+    const f = s.files.get(`inbox/${stem}.md`) as BrainFile<InboxFm>;
+    const bytes = f.fm.attachment ? (await ctx.plain.readBytes(`inbox/${f.fm.attachment}`)).bytes : undefined;
+    await chain.add({ kind: 'attest', stem, at, content: await sealContent({ stem, body: f.body, note: f.fm.note, attachment: f.fm.attachment }, bytes) });
   }
-  await commit(ctx, { message: `Seal: ${stems.length} existing capture${stems.length === 1 ? '' : 's'}`, writes: made.map((m) => ({ path: m.path, text: m.text })), deletes: [] });
-  await advance(ctx, dev.record.keyId, made);
+  const newBody = new Map<string, string>();
+  for (const slug of todo.sources) {
+    const content = (await contentOf(ctx, s, slug))!;
+    await chain.add({ kind: 'source', slug, basis: 'attest', since: at, at, content, replaces: null });
+    newBody.set(slug, content.body);
+  }
+  const bound = (slug: string) => newBody.get(slug) ?? cur.sources.get(slug)?.payload.body ?? null;
+  if (todo.manifest) await chain.add({ kind: 'principles', at, manifest: await manifestOf(s, bound), replaces: null });
+  else if (cur.manifest && newBody.size) {
+    // a source sealed now binds the grounds that name it, so the manifest follows, provided the tree still stands
+    if (sameManifest(await manifestOf(s, (slug) => cur.sources.get(slug)?.payload.body ?? null), cur.manifest.payload)) {
+      const next = await manifestOf(s, bound);
+      if (!sameManifest(next, cur.manifest.payload)) await chain.add({ kind: 'principles', at, manifest: next, replaces: cur.manifest.digest });
+    }
+  }
+  await commit(ctx, { message: 'Seal: existing material', writes: chain.made.map((m) => ({ path: m.path, text: m.text })), deletes: [] });
+  await landed(ctx, dev.record.keyId, chain.made);
   await loadSealing(ctx);
-  return stems.length;
+  return { captures: todo.captures.length, sources: todo.sources.length, manifest: todo.manifest };
 }
 
-/** What ratifying a filing's source is allowed to do, by its verdict (decision D2): go, refuse, or seal the capture first. */
+/** "Accept as mine" (schema §7.20): sign the principles tree as it stands, after the curator was shown every difference; `Seal: principles`. */
+export async function acceptPrinciples(ctx: SealingContext, at = nowUtc()): Promise<void> {
+  const dev = await deviceSigner(ctx);
+  if (!dev) throw new Error(NOT_HERE);
+  const s = ctx.brain.snapshot;
+  const cur = ctx.cache.current;
+  if (!s || ctx.state.verifiedHead !== s.head || !cur) throw new Error(STILL_VERIFYING);
+  if (!cur.manifest) throw new Error('the principles have not been sealed yet; seal everything that exists first');
+  if (ctx.state.differences.length === 0) throw new Error('the principles already match what you sealed');
+  const chain = sealChain(ctx, dev);
+  await chain.add({ kind: 'principles', at, manifest: await manifestOf(s, (slug) => cur.sources.get(slug)?.payload.body ?? null), replaces: cur.manifest.digest });
+  await commit(ctx, { message: 'Seal: principles', writes: chain.made.map((m) => ({ path: m.path, text: m.text })), deletes: [] });
+  await landed(ctx, dev.record.keyId, chain.made);
+  await loadSealing(ctx);
+}
+
+/** "Seal as mine" for a source (schema §7.20): one `source` seal for a source that has none, after the curator was shown its text and attribution; `Seal: source <slug>`. */
+export async function sealSourceAsMine(ctx: SealingContext, slug: string, at = nowUtc()): Promise<void> {
+  const dev = await deviceSigner(ctx);
+  if (!dev) throw new Error(NOT_HERE);
+  const s = ctx.brain.snapshot;
+  const cur = ctx.cache.current;
+  if (!s || ctx.state.verifiedHead !== s.head || !cur) throw new Error(STILL_VERIFYING);
+  const v = ctx.state.verdicts[`sources/${slug}/raw.md`]?.verdict;
+  if (v === 'verified' || v === 'attested') throw new Error('this source is already sealed');
+  if (v === 'broken') throw new Error('this source does not match its seal; sealing it again would hide that');
+  const content = await contentOf(ctx, s, slug);
+  if (!content) throw new Error(`there is no source ${slug}`);
+  const chain = sealChain(ctx, dev);
+  await chain.add({ kind: 'source', slug, basis: 'attest', since: at, at, content, replaces: null });
+  const bound = (g: string) => cur.sources.get(g)?.payload.body ?? null;
+  if (cur.manifest && sameManifest(await manifestOf(s, bound), cur.manifest.payload)) {
+    const next = await manifestOf(s, (g) => (g === slug ? content.body : bound(g)));
+    if (!sameManifest(next, cur.manifest.payload)) await chain.add({ kind: 'principles', at, manifest: next, replaces: cur.manifest.digest });
+  }
+  await commit(ctx, { message: `Seal: source ${slug}`, writes: chain.made.map((m) => ({ path: m.path, text: m.text })), deletes: [] });
+  await landed(ctx, dev.record.keyId, chain.made);
+  await loadSealing(ctx);
+}
+
+/**
+ * What ratifying a filing's source is allowed to do, by its verdict
+ * (decision D2): go, refuse, or seal the capture first. `pending` (the
+ * text is the sealed capture's) goes; an unsealed one that names a capture
+ * has that capture sealed first, after the curator read it.
+ */
 export function ratifyRule(state: SealingState, rawPath: string): 'ok' | 'broken' | 'seal-first' {
   if (state.status !== 'on') return state.verdicts[rawPath]?.verdict === 'broken' ? 'broken' : 'ok';
   const v = state.verdicts[rawPath]?.verdict;
@@ -491,10 +727,39 @@ export function ratifyRule(state: SealingState, rawPath: string): 'ok' | 'broken
   return v === 'unsealed' ? 'seal-first' : 'ok';
 }
 
-/** The snapshot reasoning works from: broken passages left out (decision D3). The same snapshot when nothing is broken. */
-export function withoutBroken(s: BrainSnapshot | null, verdicts: Record<string, SealVerdict>): BrainSnapshot | null {
-  if (!s) return s;
-  const broken = Object.entries(verdicts).filter(([p, v]) => v.verdict === 'broken' && p.startsWith('sources/') && s.files.has(p)).map(([p]) => p);
-  if (broken.length === 0) return s;
-  return applyBatch(s, { message: '', expectedHead: s.head, writes: [], deletes: broken });
+export interface LeftOut { path: string; verdict: SealVerdict['verdict'] }
+/**
+ * What reasoning may work from (schema §8, §11.6). On a fully sealed
+ * brain: the snapshot without passages whose source is not verified or
+ * attested, and the sets that do not verify as a whole, which the screen
+ * refuses. Before that: the snapshot without broken passages, as before
+ * version 2. The same snapshot when nothing is left out.
+ */
+export function reasonable(s: BrainSnapshot | null, state: SealingState): { snapshot: BrainSnapshot | null; passages: LeftOut[]; sets: LeftOut[] } {
+  if (!s || state.verifiedHead === null) return { snapshot: s, passages: [], sets: [] };
+  const u = usable({ verdicts: new Map(Object.entries(state.verdicts)), fullySealed: state.fullySealed } as SealResult);
+  const passages = u.excluded.filter((x) => x.path.startsWith('sources/') && s.files.has(x.path));
+  const sets = u.excluded.filter((x) => x.path.startsWith('principles/') && s.files.has(x.path));
+  if (passages.length === 0) return { snapshot: s, passages, sets };
+  return { snapshot: applyBatch(s, { message: '', expectedHead: s.head, writes: [], deletes: passages.map((p) => p.path) }), passages, sets };
+}
+
+/** Quotations in a reply that are found word for word in none of the texts given (spec §6.5): a string match, nothing more. */
+export function unfoundQuotes(reply: string, given: string[]): string[] {
+  const fold = (t: string) => t.replace(/[‘’‚‛]/g, "'").replace(/[“”„‟«»]/g, '"').replace(/[‐-―]/g, '-').replace(/[*_`>]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+  const hay = given.map(fold);
+  const spans = new Set<string>();
+  for (const m of reply.matchAll(/["“„«]([^"“”„«»\n]{12,})["”»]/g)) spans.add(m[1]!.trim());
+  for (const block of reply.split(/\n{2,}/)) {
+    const lines = block.split('\n');
+    if (lines.every((l) => l.startsWith('>'))) spans.add(lines.map((l) => l.replace(/^>\s?/, '')).join(' ').trim());
+  }
+  const out: string[] = [];
+  for (const span of spans) {
+    const needle = fold(span).replace(/^["']+|["'.,;:!?]+$/g, '').replace(/\s*(\.\.\.|…)\s*/g, '\u0000');
+    if (needle.length < 12) continue;
+    const parts = needle.split('\u0000').filter((p) => p.length >= 8);
+    if (parts.length && !hay.some((h) => parts.every((p) => h.includes(p)))) out.push(span);
+  }
+  return out;
 }

@@ -18,6 +18,8 @@ export function estimateTokens(text: string): number {
 export interface AssembleOptions {
   /** where the `_set.md` body goes (spec §8.3, proposal §9.3); default `context` */
   setDescriptionPlacement?: 'context' | 'system';
+  /** whether a passage that does not fit is represented by its `notes.md` body; false on a fully sealed brain, where notes are not sealed and only the sealed title and author go (schema §8 step 3). Default true. */
+  notes?: boolean;
 }
 
 export type AssemblyError =
@@ -79,6 +81,7 @@ function omittedSection(snapshot: BrainSnapshot, slugs: string[], withNotes: boo
 export function assemble(snapshot: BrainSnapshot, task: Task, selectedSets: string[], input: string, budgetTokens: number, options: AssembleOptions = {}): AssemblyResult {
   if (selectedSets.length === 0) throw new Error('select at least one principle set');
   const placement = options.setDescriptionPlacement ?? 'context';
+  const notes = options.notes ?? true;
   const sets: BrainFile<SetFm>[] = selectedSets.map((slug) => {
     const set = snapshot.sets.find((s) => s.path === `principles/${slug}/_set.md`);
     if (!set) throw new Error(`no principle set '${slug}'`);
@@ -136,7 +139,7 @@ export function assemble(snapshot: BrainSnapshot, task: Task, selectedSets: stri
   for (let i = 0; i < groundingOrder.length; i++) {
     const slug = groundingOrder[i]!;
     const src = snapshot.files.get(`sources/${slug}/raw.md`) as BrainFile<SourceFm> | undefined;
-    const rest = omittedSection(snapshot, groundingOrder.slice(i + 1), true);
+    const rest = omittedSection(snapshot, groundingOrder.slice(i + 1), notes);
     const candidate = src && src.fm.type === 'source' ? (passagesOpened ? [passageBlock(src)] : ['## Grounding passages', passageBlock(src)]) : null;
     if (!candidate || systemTokens + tokens([...chunks, ...candidate, ...rest]) > ceiling) {
       stopAt = i;
@@ -151,7 +154,7 @@ export function assemble(snapshot: BrainSnapshot, task: Task, selectedSets: stri
   const omitted = groundingOrder.slice(stopAt);
   const excluded = omitted.map((slug) => `sources/${slug}/raw`);
   if (omitted.length) {
-    const withNotes = omittedSection(snapshot, omitted, true);
+    const withNotes = omittedSection(snapshot, omitted, notes);
     chunks.push(...(systemTokens + tokens([...chunks, ...withNotes]) <= ceiling ? withNotes : omittedSection(snapshot, omitted, false)));
   }
 

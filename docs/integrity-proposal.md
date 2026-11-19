@@ -274,7 +274,7 @@ principles at all, which turns detection into prevention.
   swap a source's text, delete a revocation, edit a principle, reorder,
   edit a set's description, delete a principle, flip `curated` to
   `ratified`, add an unsealed principle.
-- [ ] **I3. The app** (L). Seal on ratify and on every principle and set
+- [x] **I3. The app** (L; done 2026-11-19: Technical Specification §6.5 says how. A source is sealed at Ratify from the day sealing is set up, not only once fully sealed; the changed text beside the sealed one waits for I4). Seal on ratify and on every principle and set
   write; "Seal existing" extended to sources and principles; marks on
   principles; unsealed treated as untrusted; Reason's provenance line and
   quote check.

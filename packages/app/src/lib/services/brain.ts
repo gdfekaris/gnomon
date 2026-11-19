@@ -6,7 +6,7 @@
 import { type BrainSnapshot, type CommitBatch, ValidationError, applyBatch, validateBatch } from '@gnomon/core';
 import { HeadMovedError, NetworkError, type StorageDriver, loadSnapshot } from '@gnomon/storage';
 import { describeError } from './errors';
-import type { CaptureSealer } from './sealing';
+import type { CaptureSealer, CommitSealer } from './sealing';
 
 export interface SnapshotState {
   current: BrainSnapshot | null;
@@ -35,6 +35,8 @@ export class BrainService {
   private readonly loaded: Array<(s: BrainSnapshot) => void> = [];
   /** Adds this device's seal to a capture batch when sealing is on (spec §6.5); none when it is not. */
   captureSealer: CaptureSealer | null = null;
+  /** Adds the seals a commit to sources or principles must carry on a fully sealed brain (spec §6.5); it refuses what it must not sign. */
+  sealer: CommitSealer | null = null;
 
   constructor(private readonly state: SnapshotState) {}
 
@@ -217,6 +219,8 @@ export class BrainService {
     const refusals = validateBatch(this.state.current, batch).filter((i) => i.level === 'refusal');
     if (refusals.length) throw new ValidationError(refusals);
     const started = clock();
+    const sealed = this.sealer ? await this.sealer.seal(batch, this.state.current) : null;
+    if (sealed) batch = sealed.batch;
     try {
       const result = await this.driver.commit(batch);
       this.seq++;
@@ -224,6 +228,7 @@ export class BrainService {
       this.state.stale = false;
       this.state.fromCopy = false;
       this.time({ commitMs: Math.round(clock() - started) });
+      await sealed?.committed();
       void this.reloadFromCopy(result.sha);
       return result;
     } catch (e) {

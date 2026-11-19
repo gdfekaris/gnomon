@@ -120,9 +120,12 @@ test('captures are sealed as they are saved; an unsealed filing is sealed as min
   await expect(page.getByTestId('diagnostics')).toContainText(/demo brain, at [0-9a-f]{7}/);
   await setUp(page);
   const panel = page.getByTestId('sealing');
-  await expect(panel.getByTestId('seal-summary')).toContainText('0 sealed when captured, 0 sealed after the fact, 7 unsealed');
-  await expect(panel.getByTestId('seal-uncapturable')).toContainText('1 source names no capture');
-  await expect(panel.getByTestId('seal-backfill')).toHaveText('Seal existing captures (4)');
+  await expect(panel.getByTestId('seal-summary')).toContainText('0 sealed, 0 sealed after the fact, 0 awaiting your review, 8 unsealed');
+  await expect(panel.getByTestId('seal-partial')).toBeVisible();
+  await expect(panel.getByTestId('seal-backfill')).toHaveText('Seal everything that exists');
+  // Until then nothing is refused, and Reason says the brain is not sealed yet.
+  await page.goto('/#/reason');
+  await expect(page.getByTestId('reason-not-sealed')).toBeVisible();
 
   // A capture saved now carries its seal.
   await page.goto('/#/capture');
@@ -145,16 +148,35 @@ test('captures are sealed as they are saved; an unsealed filing is sealed as min
   await filing.getByTestId('ratify').click();
   await expect(filing.getByTestId('state')).toHaveText('ratified');
   await page.goto('/#/browse/sources/unknown-the-only-way-to/raw.md');
-  await expect(page.getByTestId('seal-mark')).toHaveText(/^sealed since /);
+  await expect(page.getByTestId('seal-mark')).toHaveText('sealed');
 
-  // The rest, once.
+  // The rest, once: captures, the sources that are mine, and the principles.
   await page.goto('/#/settings');
   await panel.getByTestId('seal-backfill').click();
+  await expect(panel.getByTestId('seal-backfill-confirm')).toContainText(/your principles \(2 sets, \d+ principles, in their order\)/);
   await panel.getByTestId('seal-backfill-yes').click();
-  await expect(panel.getByTestId('seal-done')).toHaveText(/Sealed \d+ captures? as they stand today\./);
+  await expect(panel.getByTestId('seal-done')).toHaveText(/Sealed as they stand today: \d+ captures?, \d+ sources?, and your principles\./);
   await expect(panel.getByTestId('seal-backfill')).toHaveCount(0);
-  await expect(panel.getByTestId('seal-summary')).toContainText(', 0 unsealed');
+  await expect(panel.getByTestId('seal-full')).toContainText('Your principles are sealed and match');
   await expect(page.getByTestId('seal-banner')).toHaveCount(0);
+
+  // Sets and principles now carry a mark, and editing a principle here keeps it sealed.
+  await page.goto('/#/sets');
+  await page.getByTestId('set-toggle').first().click();
+  await expect(page.getByTestId('seal-mark').first()).toHaveText('sealed');
+  await page.goto('/#/browse/principles/ps-g8xw/courage-before-comfort.md');
+  await page.getByTestId('edit-link').click();
+  await page.getByTestId('edit-body').fill('Do the hard thing while it is still small.');
+  await page.getByTestId('edit-save').click();
+  await expect(page.getByTestId('seal-mark')).toHaveText('sealed');
+  await expect(page.getByTestId('seal-banner')).toHaveCount(0);
+
+  // A filing ratified now is sealed by the Ratify itself, and an answer says what it stood on.
+  await page.goto('/#/reason');
+  await expect(page.getByTestId('reason-not-sealed')).toHaveCount(0);
+  await page.getByTestId('input').fill('Should I start with the hard part?');
+  await page.getByTestId('send').click();
+  await expect(page.getByTestId('stood-on')).toContainText(/Stood on 2 sets, 4 principles, \d+ passages/);
 });
 
 test('an agent’s edit to a sealed passage shows as broken: a banner, the mark, and Reason leaves it out', async ({ page }) => {
@@ -164,7 +186,7 @@ test('an agent’s edit to a sealed passage shows as broken: a banner, the mark,
   const panel = page.getByTestId('sealing');
   await panel.getByTestId('seal-backfill').click();
   await panel.getByTestId('seal-backfill-yes').click();
-  await expect(panel.getByTestId('seal-summary')).toContainText(', 0 unsealed');
+  await expect(panel.getByTestId('seal-full')).toBeVisible();
   await expect(page.getByTestId('seal-banner')).toHaveCount(0);
 
   const RAW = 'sources/aurelius-meditations-4-3/raw.md';
@@ -175,9 +197,49 @@ test('an agent’s edit to a sealed passage shows as broken: a banner, the mark,
   await page.reload();
   await page.goto(`/#/browse/${RAW}`);
   await expect(page.getByTestId('seal-banner')).toContainText('1 passage does not match its seal');
-  await expect(page.getByTestId('seal-mark')).toHaveText('broken: its passage differs from the sealed capture');
+  await expect(page.getByTestId('seal-mark')).toHaveText('broken: its passage differs from the sealed one');
   await page.goto('/#/reason');
-  await expect(page.getByTestId('reason-left-out')).toContainText('it does not match its sealed capture: Retire into thyself');
+  await expect(page.getByTestId('reason-left-out')).toContainText('Retire into thyself (does not match its seal)');
   await page.goto('/#/settings');
   await expect(panel.getByTestId('seal-summary')).toContainText('1 broken');
+});
+
+test('a principle changed outside the app shows as changed, its set is not reasoned from, and accepting it is deliberate', async ({ page }) => {
+  const gh = await FakeGitHub.create(readBrainBytes());
+  await connect(page, gh);
+  await setUp(page);
+  const panel = page.getByTestId('sealing');
+  await panel.getByTestId('seal-backfill').click();
+  await panel.getByTestId('seal-backfill-yes').click();
+  await expect(panel.getByTestId('seal-full')).toBeVisible();
+
+  const P = 'principles/ps-g8xw/courage-before-comfort.md';
+  const head = gh.refs.get('heads/main')!;
+  const blob = gh.trees.get(gh.commits.get(head)!.tree)!.get(P)!;
+  const text = new TextDecoder().decode(gh.blobs.get(blob)!);
+  await gh.externalCommit({ [P]: text.replace('title: Courage before comfort', 'title: Comfort before courage') });
+  await page.reload();
+  await page.goto('/#/reason');
+  await expect(page.getByTestId('seal-banner')).toContainText('Your principles differ from what you sealed, in 1 place');
+  await expect(page.getByTestId('reason-sets-refused')).toBeVisible();
+  await expect(page.getByTestId('chip-ps-g8xw')).toBeDisabled();
+  await expect(page.getByTestId('chip-ps-7k2m')).toBeEnabled();
+
+  // Editing a principle is refused beside the control until the difference is dealt with.
+  await page.goto(`/#/browse/${P}`);
+  await expect(page.getByTestId('seal-mark')).toHaveText('changed: it differs from the sealed one');
+  await page.getByTestId('edit-link').click();
+  await page.getByTestId('edit-body').fill('Anything.');
+  await page.getByTestId('edit-save').click();
+  await expect(page.getByRole('alert').filter({ hasText: 'Review the differences in Settings' })).toBeVisible();
+
+  // Settings lists the difference; Accept as mine is disabled until the box is ticked.
+  await page.goto('/#/settings');
+  await expect(panel.getByTestId('seal-difference')).toHaveText(`${P}: edited`);
+  await expect(panel.getByTestId('seal-accept')).toBeDisabled();
+  await panel.getByTestId('seal-accept-seen').check();
+  await panel.getByTestId('seal-accept').click();
+  await expect(panel.getByTestId('seal-full')).toContainText('and match');
+  await expect(page.getByTestId('seal-banner')).toHaveCount(0);
+  expect(messages(gh)).toContain('Seal: principles');
 });

@@ -4,17 +4,20 @@
 (`integrity-proposal.md`, decisions D1 to D4), phone first. The format is
 Schema §11, the implementation Technical Specification §6.5.
 
-- **Built and in use on the phone:** keys, the recovery phrase, seals on
-  captures, chains and rollback detection, verdicts on captures, the
-  banner (blocks S2 to S4).
-- **Built in the verifier, not yet in the app** (block I2 done
-  2026-11-19, block I3 next; marked *(v2)* below and in the schema): the
-  seal a source gets at Ratify, the seal over the principles, pinned
-  revocations, and keeping everything unsealed out of reasoning. The
-  verifier checks all of it and the attack table of §7 runs in full, but
-  the app does not yet make these seals. So on a real brain today §1
-  still holds for captures only, and the two gaps of rows T23 and T24
-  stay open until I3.
+- **Built on the phone:** keys, the recovery phrase, seals on captures,
+  chains and rollback detection, the banner (blocks S2 to S4); and, since
+  2026-11-19 (blocks I2 and I3, marked *(v2)* below and in the schema),
+  the seal a source gets at Ratify, the seal over the principles, pinned
+  revocations, only sealed material in reasoning, and under each answer
+  what it stood on and any quotation not found in it.
+- **It takes one act by the curator to switch on for an existing
+  brain:** Settings → Sealing → "Seal everything that exists". Until
+  that is done on a brain, §1 holds there for captures and for sources
+  ratified from then on; rows T23 to T36 of §7 are caught from that act
+  onward. The maintainer's own brain awaits it (block I5).
+- **Not built:** repair from the copy on the phone (block I4), and
+  showing a changed principle beside its sealed text; today the app
+  names the file and the kind of change.
 - **Set aside until the phone app works well:** the desktop CLI and
   YubiKey, the separate agent account, and a second, independent
   verifier. No such verifier exists today; an earlier version of this
@@ -199,10 +202,9 @@ verification steps and verdicts.
 ## 7. Attacks and what catches them
 
 Each row is a test in `packages/core/test/seal-verify.test.ts`, and all
-of them run. T23 to T36 are the rows of version 2: the verifier catches
-them on a brain that carries version 2 seals, which the app starts
-making in block I3. Until then T23 and T24 are **not caught** on a real
-brain.
+of them run. T23 to T36 are the rows of version 2: they are caught on a
+brain once its curator has sealed everything that exists (Schema §7.20),
+and not before.
 
 | # | Action by an adversary of §3 | Caught by (Schema §11.6) | Result |
 |---|---|---|---|
@@ -228,8 +230,8 @@ brain.
 | T20 | Fork a chain (a different seal at a pinned `seq`) | step 3 | brain finding |
 | T21 | T1, T4, T8 on an encrypted brain | as above, with the brain key | as above |
 | T22 | Edit unprotected metadata (tags, `locator`, `status`) | not caught, out of scope (§2) | verified |
-| T23 | Edit a ratified source and delete its `inbox_ref` *(v2; open until I3: reads as unsealed, no finding)* | step 5, the source seal | source broken |
-| T24 | Replace a source's text and `inbox_ref` with another sealed capture's *(v2; open until I3: reads as awaiting review)* | step 5, the slug is signed | source broken |
+| T23 | Edit a ratified source and delete its `inbox_ref` *(v2)* | step 5, the source seal | source broken |
+| T24 | Replace a source's text and `inbox_ref` with another sealed capture's *(v2)* | step 5, the slug is signed | source broken |
 | T25 | Change a ratified source's title, author, work, or year *(v2)* | step 5 | source broken |
 | T26 | Flip a filing's `curated` to `ratified` without the curator *(v2)* | step 5, no source seal | brain finding, unsealed source; never assembled |
 | T27 | Delete a ratified source *(v2)* | step 5 | brain finding |

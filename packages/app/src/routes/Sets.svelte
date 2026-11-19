@@ -15,6 +15,7 @@
   import { type ReserveSort, filterPrinciples, place, principleFilterActive, principleSlug, reserve, reserveCount, sortReserve } from '../lib/services/reserve';
   import { browseHref } from '../lib/markdown';
   import ConnectionNotice from '../lib/components/ConnectionNotice.svelte';
+  import SealMark from '../lib/components/SealMark.svelte';
   import { snapshot } from '../lib/stores/snapshot.svelte';
   import { setsView } from '../lib/stores/sets.svelte';
 
@@ -195,6 +196,7 @@
                   <small data-testid="set-count">· {principles.length} principle{principles.length === 1 ? '' : 's'}</small>
                 {/if}
               </button>
+              <SealMark path={set.path} />
             </h3>
             <span class="controls">
               <button onclick={() => nudgeSet(slug, -1)} disabled={busy || i === 0} use:hold={pressed === `set:${slug}:-1`} aria-label="Move set up" data-testid="set-up">↑</button>
@@ -225,7 +227,7 @@
                 ondrop={(e) => { e.stopPropagation(); dropPrinciple(e, slug, j); }}
               >
                 <span class="num" aria-label="precedence {p.fm.order}">{p.fm.order}.</span>
-                <a href={browseHref(p.path)} class="title">{p.fm.title}</a>
+                <a href={browseHref(p.path)} class="title">{p.fm.title}</a> <SealMark path={p.path} />
                 <span class="controls">
                   {#if !searching}
                     <button onclick={() => nudgePrinciple(slug, principleSlug(p.path), -1)} disabled={busy || j === 0} use:hold={pressed === `principle:${slug}/${principleSlug(p.path)}:-1`} aria-label="Move principle up" data-testid="principle-up">↑</button>
@@ -281,7 +283,7 @@
     <ol class="principles" data-testid="reserve-list">
       {#each reservePage as p (p.path)}
         <li data-testid="reserve-{principleSlug(p.path)}">
-          <span class="title"><a href={browseHref(p.path)}>{p.fm.title}</a>{#if p.fm.tags?.length} <small class="rtags">{p.fm.tags.join(', ')}</small>{/if}</span>
+          <span class="title"><a href={browseHref(p.path)}>{p.fm.title}</a> <SealMark path={p.path} />{#if p.fm.tags?.length} <small class="rtags">{p.fm.tags.join(', ')}</small>{/if}</span>
           <span class="controls">
             <select bind:value={placeTo[p.path]} aria-label="Add to a set" data-testid="place-set">
               <option value="">Add to…</option>

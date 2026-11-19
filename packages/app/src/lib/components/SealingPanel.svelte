@@ -6,7 +6,9 @@
   // Each error sits beside the control that failed.
   import { hold } from '../press';
   import { describeError, sealingFlows } from '../services/index';
-  import { confirmPositions, defaultLabel, unsealedCaptures, wordsMatch } from '../services/sealing';
+  import { confirmPositions, defaultLabel, existingToSeal, wordsMatch } from '../services/sealing';
+  import { snapshot } from '../stores/snapshot.svelte';
+  import { browseHref } from '../markdown';
   import { session } from '../stores/session.svelte';
 
   const s = $derived(session.sealing);
@@ -77,19 +79,31 @@
     forgetting = false;
   }, 'This device’s key is forgotten. The phrase adds the device back.');
   const err = (at: string) => (error?.at === at ? error.text : null);
-  // Verification at the last load (schema §11.6): counts by verdict, and the captures still unsealed.
+  // Verification at the last load (schema §11.6): counts by verdict over captures and sources, and what is still to seal.
   const counts = $derived.by(() => {
-    const c = { verified: 0, attested: 0, unsealed: 0, broken: 0 };
-    for (const [p, v] of Object.entries(s.verdicts)) if (!s.uncapturable.includes(p)) c[v.verdict] += 1;
+    const c = { verified: 0, attested: 0, pending: 0, unsealed: 0, broken: 0 };
+    for (const [p, v] of Object.entries(s.verdicts)) if (!p.startsWith('principles/')) c[v.verdict] += 1;
     return c;
   });
-  const unsealed = $derived(unsealedCaptures(s));
+  const todo = $derived(existingToSeal(s, snapshot.current));
+  const todoCount = $derived(todo.captures.length + todo.sources.length + (todo.manifest ? 1 : 0));
+  const nothingWrong = $derived(s.findings.length === 0 && counts.broken === 0);
+  const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`;
   let backfilling = $state(false);
   const sealAll = () => act('backfill', async () => {
     const n = await sealingFlows.sealExisting();
     backfilling = false;
-    done = `Sealed ${n} capture${n === 1 ? '' : 's'} as they stand today.`;
+    done = `Sealed as they stand today: ${plural(n.captures, 'capture')}, ${plural(n.sources, 'source')}${n.manifest ? ', and your principles' : ''}.`;
   });
+  // The principles differ from what was sealed (schema §7.20): every difference is listed, and only then can the tree be accepted as it stands.
+  const DIFFERENCE: Record<string, string> = { edited: 'edited', reordered: 'moved in the order', added: 'added', removed: 'removed', 'description-edited': 'name or description edited' };
+  const seenAll = $state({ yes: false });
+  const accept = () => act('accept', async () => {
+    await sealingFlows.acceptPrinciples();
+    seenAll.yes = false;
+    done = 'Your principles are sealed as they stand now.';
+  });
+  const otherFindings = $derived(s.findings.filter((f) => f.code !== 'principles-changed'));
 </script>
 
 <section data-testid="sealing">
@@ -158,34 +172,57 @@
       <p class="hint" data-testid="seal-locked">The brain is locked, so its seals cannot be read. Unlock it to verify.</p>
     {:else if s.verifiedHead}
       <p data-testid="seal-summary">
-        Checked at {s.verifiedHead.slice(0, 7)}: {counts.verified} sealed when captured, {counts.attested} sealed after the fact, {counts.unsealed} unsealed{#if counts.broken}, <strong class="error">{counts.broken} broken</strong>{/if}, counting captures and the sources filed from them.
+        Checked at {s.verifiedHead.slice(0, 7)}, captures and sources: {counts.verified} sealed, {counts.attested} sealed after the fact, {counts.pending} awaiting your review, {counts.unsealed} unsealed{#if counts.broken}, <strong class="error">{counts.broken} broken</strong>{/if}.
+        {#if s.fullySealed}
+          <span data-testid="seal-full">Your principles are sealed{s.differences.length ? ', and differ from what you sealed' : ' and match'}. Only sealed texts and principles are used in reasoning.</span>
+        {:else}
+          <span data-testid="seal-partial">Your sources and principles are not sealed yet.</span>
+        {/if}
       </p>
-      {#if s.uncapturable.length}
-        <p class="hint" data-testid="seal-uncapturable">{s.uncapturable.length} source{s.uncapturable.length === 1 ? ' names' : 's name'} no capture, so nothing can seal {s.uncapturable.length === 1 ? 'it' : 'them'}; {s.uncapturable.length === 1 ? 'it shows' : 'they show'} as unsealed.</p>
-      {/if}
     {/if}
-    {#if s.findings.length}
-      <div class="panel" data-testid="seal-findings">
-        <p class="error">The seal record was altered:</p>
-        <ul>{#each s.findings as f (`${f.code}:${f.path}`)}<li><code>{f.path}</code>: {f.detail}</li>{/each}</ul>
-        <p class="hint">Look at the brain’s history for the commits that touched these files. Seals are never edited or deleted by Gnomon.</p>
+    {#if s.differences.length}
+      <div class="panel" data-testid="seal-differences">
+        <p class="error">Your principles differ from what you sealed:</p>
+        <ul>
+          {#each s.differences as d (d.path)}
+            <li data-testid="seal-difference"><a href={browseHref(d.path)}><code>{d.path}</code></a>: {DIFFERENCE[d.kind]}</li>
+          {/each}
+        </ul>
+        <p class="hint">
+          If you made these changes yourself, outside this app, accept them and they are sealed as they stand. If you did not, do not accept: restore the files from the brain’s history, and they will match again.
+          Until then the sets they belong to are not used in reasoning, and principles cannot be edited here.
+        </p>
+        <label class="check"><input type="checkbox" bind:checked={seenAll.yes} data-testid="seal-accept-seen" /> I have looked at each one, and these are my changes.</label>
+        <div class="row">
+          <button onclick={accept} disabled={busy !== null || !seenAll.yes} use:hold={busy === 'accept'} data-testid="seal-accept">{busy === 'accept' ? 'Sealing…' : 'Accept as mine'}</button>
+        </div>
+        {#if err('accept')}<p class="error" role="alert">{err('accept')}</p>{/if}
       </div>
     {/if}
-    {#if unsealed.length}
+    {#if otherFindings.length}
+      <div class="panel" data-testid="seal-findings">
+        <p class="error">The seal record does not verify:</p>
+        <ul>{#each otherFindings as f (`${f.code}:${f.path}`)}<li>{#if f.code === 'unsealed-source'}<a href={browseHref(f.path)}><code>{f.path}</code></a>{:else}<code>{f.path}</code>{/if}: {f.detail}</li>{/each}</ul>
+        <p class="hint">Look at the brain’s history for the commits that touched these files. Seals are never edited or deleted by Gnomon. A source marked as yours with no seal can be read and sealed from its own page.</p>
+      </div>
+    {/if}
+    {#if todoCount && s.verifiedHead && !s.locked}
       {#if backfilling}
         <div class="confirm" role="alertdialog" data-testid="seal-backfill-confirm">
           <p>
-            Seal the {unsealed.length} unsealed capture{unsealed.length === 1 ? '' : 's'} as {unsealed.length === 1 ? 'it stands' : 'they stand'} today? This proves {unsealed.length === 1 ? 'it is' : 'they are'} unchanged from now on, not that nothing changed before:
-            each will read “sealed since” today. Seal an agent’s capture only after reading it; you can do that one at a time from the capture itself.
+            Seal as they stand today: {plural(todo.captures.length, 'unsealed capture')}, {plural(todo.sources.length, 'source')} you ratified or wrote{#if todo.manifest}, and your principles ({plural(todo.sets, 'set')}, {plural(todo.principles, 'principle')}, in their order){/if}?
+            This proves they are unchanged from now on, not that nothing changed before: each will read “sealed since” today.
+            {#if todo.manifest}From then on, only sealed texts and principles are used in reasoning, and any change made outside this app shows as changed until you accept it.{/if}
+            Seal an agent’s capture only after reading it; you can do that one at a time from the capture itself.
           </p>
           <div class="row">
-            <button onclick={sealAll} disabled={busy !== null} use:hold={busy === 'backfill'} data-testid="seal-backfill-yes">{busy === 'backfill' ? 'Sealing…' : `Seal ${unsealed.length}`}</button>
+            <button onclick={sealAll} disabled={busy !== null} use:hold={busy === 'backfill'} data-testid="seal-backfill-yes">{busy === 'backfill' ? 'Sealing…' : 'Seal them'}</button>
             <button class="primary" onclick={() => (backfilling = false)} disabled={busy !== null}>Not now</button>
           </div>
           {#if err('backfill')}<p class="error" role="alert">{err('backfill')}</p>{/if}
         </div>
-      {:else}
-        <button onclick={() => (backfilling = true)} disabled={busy !== null} data-testid="seal-backfill">Seal existing captures ({unsealed.length})</button>
+      {:else if nothingWrong}
+        <button onclick={() => (backfilling = true)} disabled={busy !== null} data-testid="seal-backfill">Seal everything that exists</button>
       {/if}
     {/if}
     <ul class="keys" data-testid="seal-keys">
@@ -255,4 +292,6 @@
   .confirm { flex-direction: column; align-items: stretch; }
   textarea { width: 100%; max-width: 24rem; display: block; margin-top: 0.25rem; }
   label { margin: 0.5rem 0; display: block; }
+  label.check { display: flex; align-items: center; gap: 0.5rem; }
+  label.check input { width: auto; }
 </style>

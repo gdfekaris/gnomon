@@ -29,6 +29,7 @@ const keyStore: KeyStore | null = typeof indexedDB === 'undefined' ? null : { ge
 const githubSealStore: seal.SealStore = typeof indexedDB === 'undefined' ? seal.memorySealStore() : seal.idbSealStore({ get, set, del });
 let sealing: Omit<seal.SealingContext, 'plain' | 'driver' | 'state'> | null = null;
 brain.captureSealer = seal.captureSealer(() => (sealing && stack ? sealingContext() : null));
+brain.sealer = seal.commitSealer(() => (sealing && stack ? sealingContext() : null));
 brain.onLoad(() => {
   // A brain just opened from the copy is verified from the copy too, so launch asks the repository nothing.
   if (sealing && stack) void seal.loadSealing(sealingContext(snapshot.fromCopy));
@@ -217,4 +218,6 @@ export const sealingFlows = {
   reload: () => seal.loadSealing(sealingContext()),
   sealAsMine: (stem: string) => seal.sealAsMine(sealingContext(), stem),
   sealExisting: () => seal.sealExisting(sealingContext()),
+  acceptPrinciples: () => seal.acceptPrinciples(sealingContext()),
+  sealSourceAsMine: (slug: string) => seal.sealSourceAsMine(sealingContext(), slug),
 };

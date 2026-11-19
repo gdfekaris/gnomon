@@ -4,7 +4,8 @@
 // state object so it runs under vitest without Svelte.
 
 import { describeError } from './errors';
-import { type Assembly, type AssemblyResult, type BrainSnapshot, type Citation, type Task, assemble, parseCitations } from '@gnomon/core';
+import { type Assembly, type AssemblyResult, type BrainSnapshot, type Citation, type SealVerdict, type Task, assemble, parseCitations } from '@gnomon/core';
+import { unfoundQuotes } from './sealing';
 import { AnthropicDriver, type ChatMessage, CustomDriver, MockProvider, type ModelInfo, OpenRouterDriver, type ProviderDriver } from '@gnomon/providers';
 
 export type ProviderId = 'mock' | 'anthropic' | 'openrouter' | 'custom';
@@ -17,6 +18,10 @@ export interface Turn {
   citations: Citation[];
   /** for user turns: what was actually sent, for the "what the model saw" view */
   assembly?: Assembly;
+  /** for answers (spec §6.5): the principles and passages the model was given, each with its seal verdict when the request was sent */
+  stoodOn?: Array<{ ref: string; verdict?: SealVerdict['verdict'] }>;
+  /** for answers: quotations found word for word nowhere in what the model was given; a string match and nothing more */
+  unfound?: string[];
 }
 
 export interface ReasoningState {
@@ -66,13 +71,20 @@ export class ReasoningService {
     return Math.floor((model.contextWindow * percent) / 100);
   }
 
+  /**
+   * What sealing says about the brain being reasoned from (spec §6.5), set by
+   * the screen: on a fully sealed brain notes are not sent, and each answer
+   * records the verdict of what it stood on.
+   */
+  seals: { fullySealed: boolean; verdicts: Record<string, SealVerdict> } = { fullySealed: false, verdicts: {} };
+
   /** Assemble without sending, for the budget bar. */
   preview(snapshot: BrainSnapshot, task: Task, sets: string[], input: string, model: ModelInfo, percent: number, placement: 'context' | 'system'): AssemblyResult | null {
     if (sets.length === 0) {
       this.state.preview = null;
       return null;
     }
-    const r = assemble(snapshot, task, sets, input, ReasoningService.budget(model, percent), { setDescriptionPlacement: placement });
+    const r = assemble(snapshot, task, sets, input, ReasoningService.budget(model, percent), { setDescriptionPlacement: placement, notes: !this.seals.fullySealed });
     this.state.preview = r;
     return r;
   }
@@ -102,7 +114,12 @@ export class ReasoningService {
     }
     const history: ChatMessage[] = this.state.transcript.map((t) => ({ role: t.role, content: t.role === 'user' ? t.text : t.text }));
     const userTurn: Turn = { role: 'user', task, sets, text: input.trim() || taskLabel(task), citations: [], assembly: r };
-    const answer: Turn = { role: 'assistant', task, sets, text: '', citations: [] };
+    const verdicts = this.seals.verdicts;
+    const mark = (ref: string) => {
+      const v = verdicts[`${ref}.md`]?.verdict;
+      return v ? { ref, verdict: v } : { ref };
+    };
+    const answer: Turn = { role: 'assistant', task, sets, text: '', citations: [], stoodOn: [...sets.map((slug) => mark(`principles/${slug}/_set`)), ...r.included.map(mark)] };
     this.state.transcript = [...this.state.transcript, userTurn, answer];
     this.state.error = null;
     this.state.streaming = true;
@@ -125,6 +142,7 @@ export class ReasoningService {
       this.controller = null;
       this.state.streaming = false;
       answer.citations = parseCitations(answer.text, snapshot);
+      answer.unfound = unfoundQuotes(answer.text, [r.context, r.system]);
       this.state.transcript = [...this.state.transcript.slice(0, -1), { ...answer }];
     }
     return answer;

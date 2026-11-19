@@ -61,16 +61,23 @@ were discussed and set aside. Each block still needs the maintainer's go.
   `docs/integrity-proposal.md`; version 2 parts are marked *(v2)* until
   built. Five points the texts settled are listed under I1 in the
   proposal §10 for the maintainer to confirm.
-- Done: **step 2, I2** (2026-11-19): `core/src/seal` makes and verifies
-  `source` and `principles` seals, decides a source by slug and bytes,
-  pins revocations, and runs attack rows T1 to T36. The maintainer
-  accepted the five points. The app still shows the verdicts of before
-  (`legacyVerdicts` in `services/sealing.ts`) and makes no version 2
-  seal, so nothing changed on the phone.
-- Next: **step 2, I3** (the app: seal at Ratify and on every principle
-  and set write, "Seal everything that exists", marks, the banner's way
-  out, Reason from sealed material only with "Stood on" and the quote
-  check; Technical Specification §6.5 lists it), on the maintainer's go.
+- Done: **step 2, I2 and I3** (2026-11-19): `core/src/seal` makes and
+  verifies `source` and `principles` seals, decides a source by slug and
+  bytes, pins revocations, and runs attack rows T1 to T36. In the app
+  one `commitSealer` (`services/sealing.ts`, called from
+  `BrainService.commit`) adds the seals a commit must carry and refuses
+  to sign over a tree or source that differs from its seal; Settings →
+  Sealing has "Seal everything that exists" and "Accept as mine"; Reason
+  works from sealed material only on a fully sealed brain, with "Stood
+  on" and the quote check under each answer.
+- Waiting: **I5, the maintainer's check on brain-1** (includes the old S4
+  check): update, Settings → Sealing → Seal everything that exists; marks
+  on Browse and Sets; edit a principle and ratify a filing with no red
+  banner; a question on Reason shows "Stood on". Ask for that result
+  first.
+- Then: **I4, repair** (restore a changed file from the copy on the
+  device, and show a changed principle beside its sealed text), on the
+  maintainer's go; then step 3, the reasoning loop.
 - The nightly became `live-github.yml` on 2026-11-19: on demand only,
   against `gdfekaris/gnomon-scratch` alone, with a token that has
   Contents read and write on that one repository (the maintainer judged

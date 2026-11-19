@@ -13,7 +13,7 @@ September 2026
 
 *2026-10-05, later: seals, tamper evidence for captured content (§11, §7.20, and §2, §7.5, §7.17, §7.19, §10), from `tamper-evidence-proposal.md`; the claim and threat model are `security.md`.*
 
-*2026-11-19: integrity version 2 (`integrity-proposal.md`, decisions D1 to D4): a `source` seal made at Ratify, a `principles` manifest over the whole principles tree, verdicts by seal and never by `inbox_ref` or `curated`, pinned revocations, and only sealed material in a prompt (§7.20, §8, §11). Marked (v2) until blocks I2 and I3 build it.*
+*2026-11-19: integrity version 2 (`integrity-proposal.md`, decisions D1 to D4): a `source` seal made at Ratify, a `principles` manifest over the whole principles tree, verdicts by seal and never by `inbox_ref` or `curated`, pinned revocations, and only sealed material in a prompt (§7.20, §8, §11). Built the same day (blocks I2 and I3); the parts it added stay marked (v2).*
 
 ---
 
@@ -399,12 +399,12 @@ When the curator clears a capture whose filing was ratified, or one left `unfile
 
 ### 7.20 Sealing
 
-The curator's sealing acts (§11); agents make none of them. Parts marked *(v2)* are specified here and built in blocks I2 and I3 of `integrity-proposal.md`.
+The curator's sealing acts (§11); agents make none of them. Parts marked *(v2)* came with integrity version 2 (`integrity-proposal.md`, 2026-11-19).
 
 - **Set up sealing** (the app): write `.gnomon/root.json` and the device's enrollment (§11.4); one commit `Set up sealing`.
 - **Seal a capture** that has no valid content seal (the app), after showing the curator its whole text: one `attest` seal (§11.5); one commit `Seal: <stem>`.
 - **Seal everything that exists** *(v2)*, once, after setup or after upgrading a brain sealed before version 2: one `attest` seal for each capture with no valid content seal, one `source` seal with basis `attest` for each `ratified` or `human` source with none, and the first `principles` manifest; one commit `Seal: existing material`. The app states what this proves, that the material is unchanged since today, before the curator confirms. From this commit on the brain is *fully sealed* (§11.6). Before version 2 this was `Seal: <n> existing captures`, captures only.
-- **Seals that ride in other commits** *(v2)*, on a fully sealed brain: `Ratify:` carries the source's `source` seal; `Edit source:` carries a replacement when it changes `title`, `author`, `work`, or `year`; every commit that creates, edits, reorders, moves, or deletes a principle or a set (§7.1 to §7.4, §7.9, §7.10 when it writes a principle, §7.14, §7.16, §7.18) carries a new `principles` manifest. A device that holds no enrolled key cannot make these commits; the app says so and offers recovery.
+- **Seals that ride in other commits** *(v2)*. From the day sealing is set up, on a device that holds an enrolled key: `Ratify:` carries the source's `source` seal, and `Edit source:` carries a replacement when it changes `title`, `author`, `work`, or `year` of a sealed source. On a fully sealed brain: every commit that creates, edits, reorders, moves, or deletes a principle or a set (§7.1 to §7.4, §7.9, §7.10 when it writes a principle, §7.14, §7.16, §7.18) carries a new `principles` manifest. A device that holds no enrolled key cannot make these commits; the app says so and offers recovery.
 - **Accept the principles as they stand** *(v2)*: when the tree differs from the manifest (a hand edit on the desktop, or tampering), the app lists every difference, and the curator either restores the files or signs a new manifest for the tree as it is; one commit `Seal: principles`.
 - **Seal a source as it stands** *(v2)*: a `ratified` or `human` source with no current seal, after the curator was shown its whole text and its title, author, work, and year: one `source` seal with basis `attest`; one commit `Seal: source <slug>`.
 - **Request a desktop key** (`gnomon keys request`, deferred with the desktop): write `.gnomon/keys/requests/<key-id>.json`; one commit `Request key: <label>`.
@@ -419,13 +419,13 @@ These rules govern which files are included when the app or an agent assembles c
 
 **The reserve is never assembled.** Only the selected sets, their principles, and those principles' grounds go to the model (§7.14).
 
-**Only sealed material is assembled** *(v2; today only broken passages are left out)*. On a fully sealed brain (§11.6), a set is assembled only when it verifies as a whole against the current `principles` manifest, and a passage only when its source is *verified* or *attested*. On a brain whose sealing is set up but which is not yet fully sealed, broken passages are left out and the app asks the curator to seal what exists (§7.20). A set that does not verify is refused with the reason; a passage that is *pending*, *unsealed*, or *broken* is left out and named in a notice. Every answer records which sets, principles, and passages it was given, each with its verdict.
+**Only sealed material is assembled** *(v2)*. On a fully sealed brain (§11.6), a set is assembled only when it verifies as a whole against the current `principles` manifest, and a passage only when its source is *verified* or *attested*. On a brain whose sealing is set up but which is not yet fully sealed, broken passages are left out and the app asks the curator to seal what exists (§7.20). A set that does not verify is refused with the reason; a passage that is *pending*, *unsealed*, or *broken* is left out and named in a notice. Every answer records which sets, principles, and passages it was given, each with its verdict.
 
 **Fill order for Task A (reason from a principle set) and Task B (relate a new text):**
 
 1. For each selected set, in set `order`: the `_set.md` body, then every principle file in principle `order`, verbatim. If this alone exceeds budget, stop and tell the user the selection is too large for the model; never truncate principles.
 2. For each principle, in the same order, the `raw.md` body of every slug in `grounds`, verbatim, in order of first reference, until the budget is reached. Attachments are never sent.
-3. For any grounding capture not included for lack of budget: its title and author, plus its dual link, under a heading "Passages referenced but not included." On a fully sealed brain these come only from *verified* or *attested* sources, whose title and author are sealed; `notes.md` is not sealed and is never sent *(v2; until then the `notes.md` body is sent when there is one)*.
+3. For any grounding capture not included for lack of budget: its title and author, plus its dual link, under a heading "Passages referenced but not included." On a fully sealed brain these come only from *verified* or *attested* sources, whose title and author are sealed; `notes.md` is not sealed and is never sent *(v2)*; on a brain that is not fully sealed the `notes.md` body is sent in its place when there is one, as before.
 4. Task B adds the new text last; if the new text alone exceeds the remaining budget the user is told before the request is sent.
 
 **Precedence.** The task instructions state that principle order within a set is precedence: where two principles of one set conflict, the model names the tension, resolves it in favor of the lower `order` only if answering requires it, and says that it invoked precedence.
@@ -469,7 +469,7 @@ On an encrypted brain read without its key, the frontmatter rules run as usual a
 
 ## 11. Seals
 
-Seals make tampering with the curator's texts and principles evident. `security.md` states the claim they support, the threat model, and its assumptions; this section is the normative format and verification, exact enough to reimplement. Technical Specification §6.5 describes the implementation. Parts marked *(v2)* were added on 2026-11-19 (`integrity-proposal.md`) and are built in blocks I2 and I3; everything unmarked is built. A version 2 verifier accepts every seal made before it; nothing is re-signed.
+Seals make tampering with the curator's texts and principles evident. `security.md` states the claim they support, the threat model, and its assumptions; this section is the normative format and verification, exact enough to reimplement. Technical Specification §6.5 describes the implementation. Parts marked *(v2)* were added on 2026-11-19 (`integrity-proposal.md`); all of it is built. A version 2 verifier accepts every seal made before it; nothing is re-signed.
 
 ### 11.1 What is sealed
 
@@ -606,7 +606,7 @@ A seal is **current** *(v2)* for a slug (kind `source`) or for the tree (kind `p
 
 - A device makes a seal at commit time, not when the curator taps: `seq` is one more than the greater of the device's stored head and the highest `seq` of its key in the tree, and `prev` is the digest of that seal. The device advances its stored head after the commit lands, and never before. A commit that carries several seals numbers them consecutively.
 - A `capture` seal is in its `Capture:` commit (§7.5); an `attest` seal in a `Seal:` commit (§7.20), only for a capture with no valid content seal and only after the curator was shown its whole text; a `clear` seal in its `Clear:` commit (§7.19).
-- *(v2)* A `source` seal with basis `ratify` is in the `Ratify:` commit, made from the source's bytes as the curator was shown them; when the capture it names has no valid content seal, the same commit carries an `attest` seal for the capture. A replacement is in the `Edit source:` commit that changes a sealed field, with `replaces` naming the current seal. An `attest`-basis seal is in a `Seal:` commit (§7.20).
+- *(v2)* A `source` seal with basis `ratify` is in the `Ratify:` commit, from the day sealing is set up, made from the source's bytes as the curator was shown them; when the capture it names has no valid content seal, the same commit carries an `attest` seal for the capture. A replacement is in the `Edit source:` commit that changes a sealed field, with `replaces` naming the current seal. An `attest`-basis seal is in a `Seal:` commit (§7.20).
 - *(v2)* A `principles` manifest is in every commit that changes the `principles/` tree on a fully sealed brain, built from the tree as that commit leaves it, with `replaces` naming the current manifest. The first is in `Seal: existing material`. A commit that gives a slug its first `source` seal (a `Ratify:`, a `Seal: source`) also carries a new manifest when any principle grounds on that slug, since that ground goes from unbound (`null`) to bound and the principle's digest changes with it.
 - A device builds a replacement only on a brain it has just verified clean, or, for `Seal: principles`, after the curator was shown every difference. It never signs over a state it has not shown or checked.
 - Seals are never edited or deleted (§11.2). Filing and rejecting need no seal: a filed copy awaiting review is checked against its capture's seal (§11.6 step 5), and a rejected one ceases to exist.

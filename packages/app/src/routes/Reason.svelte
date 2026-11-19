@@ -3,7 +3,7 @@
   // presets, provider and model picker, the budget bar from assemble
   // before sending, a streaming transcript, and citations as links.
   import { session } from '../lib/stores/session.svelte';
-  import { withoutBroken } from '../lib/services/sealing';
+  import { reasonable } from '../lib/services/sealing';
   import { hold } from '../lib/press';
   import { untrack } from 'svelte';
   import { type SourceFm, type Task, buildDerivePrompt, buildRelatePrompt, setLabel } from '@gnomon/core';
@@ -22,9 +22,18 @@
   import { describeError } from '../lib/services/index';
   import { snapshot } from '../lib/stores/snapshot.svelte';
 
-  // Decision D3 (spec §6.5): passages that do not match their seals are left out of every task here, and named above the answer.
-  const s = $derived(withoutBroken(snapshot.current, session.sealing.verdicts));
-  const leftOut = $derived(snapshot.current ? Object.entries(session.sealing.verdicts).filter(([p, v]) => v.verdict === 'broken' && p.startsWith('sources/') && snapshot.current!.files.has(p)).map(([p]) => p) : []);
+  // Spec §6.5, schema §8: on a fully sealed brain every task here works only from sealed material. Passages whose source is
+  // not sealed are left out and named; a set that does not match what was sealed is refused as a whole. Before that, only
+  // passages that do not match their seals are left out (decision D3).
+  const usableNow = $derived(reasonable(snapshot.current, session.sealing));
+  const s = $derived(usableNow.snapshot);
+  const leftOut = $derived(usableNow.passages);
+  const refused = $derived(new Set(usableNow.sets.map((x) => x.path.split('/')[1]!)));
+  const WHY_LEFT_OUT: Record<string, string> = { broken: 'does not match its seal', pending: 'awaits your review', unsealed: 'has no seal' };
+  $effect(() => {
+    reasoner.seals = { fullySealed: session.sealing.fullySealed, verdicts: session.sealing.verdicts };
+  });
+  const MARK: Record<string, string> = { verified: 'sealed', attested: 'sealed', pending: 'awaiting review', unsealed: 'not sealed', broken: 'changed' };
   const TASKS: Array<Task | 'derive' | 'relate-set'> = ['reason', 'relate', 'compare', 'free', 'derive', 'relate-set'];
   // Derive (Task E) and Relate sources to a set (Task F) share the source picker and the set select.
   const isDerive = $derived(reasoning.task === 'derive' || reasoning.task === 'relate-set');
@@ -32,6 +41,7 @@
   const assemblyTask = $derived((isDerive ? 'reason' : reasoning.task) as Task);
   const PROVIDER_LABELS: Record<string, string> = { mock: 'Demo model (no key)', anthropic: 'Anthropic', openrouter: 'OpenRouter', custom: 'Your model' };
   let selected = $state<string[]>([]);
+  const active = $derived(selected.filter((slug) => !refused.has(slug)));
   let modelsFor = $state<string | null>(null);
   let modelError = $state<string | null>(null);
   let seeded = $state(false);
@@ -69,7 +79,8 @@
   // The budget bar: preview on every change of inputs, before anything is sent.
   $effect(() => {
     if (!s || !reasoning.model || isDerive) { reasoning.preview = null; return; }
-    reasoner.preview(s, assemblyTask, selected, reasoning.input, reasoning.model, settings.prefs.budgetPercent, settings.prefs.setDescriptionPlacement);
+    void session.sealing.fullySealed;
+    reasoner.preview(s, assemblyTask, active, reasoning.input, reasoning.model, settings.prefs.budgetPercent, settings.prefs.setDescriptionPlacement);
   });
 
   // Derive and Relate to a set. `#/reason?task=derive&sources=a,b` (or `task=relate-set`) arrives with the task and the sources picked, once per hash.
@@ -163,17 +174,25 @@
     if (!s || !reasoning.model) return;
     const input = reasoning.input;
     reasoning.input = '';
-    await reasoner.run(s, reasoning.provider, reasoning.model, assemblyTask, selected, input, settings.prefs.budgetPercent, settings.prefs.setDescriptionPlacement);
+    await reasoner.run(s, reasoning.provider, reasoning.model, assemblyTask, active, input, settings.prefs.budgetPercent, settings.prefs.setDescriptionPlacement);
     void brain;
   }
 </script>
 
 <h2>Reason</h2>
 {#if leftOut.length}
-  <p class="error" role="alert" data-testid="reason-left-out">
-    Left out of every task here, because {leftOut.length === 1 ? 'it does' : 'they do'} not match {leftOut.length === 1 ? 'its' : 'their'} sealed capture:
-    {#each leftOut as p, i (p)}{i ? ', ' : ''}<a href={browseHref(p)}>{linkLabel(p, snapshot.current!)}</a>{/each}.
+  <p class={leftOut.some((x) => x.verdict === 'broken') ? 'error' : 'hint'} role={leftOut.some((x) => x.verdict === 'broken') ? 'alert' : 'status'} data-testid="reason-left-out">
+    Left out of every task here:
+    {#each leftOut as x, i (x.path)}{i ? '; ' : ''}<a href={browseHref(x.path)}>{linkLabel(x.path, snapshot.current!)}</a> ({WHY_LEFT_OUT[x.verdict] ?? x.verdict}){/each}.
   </p>
+{/if}
+{#if refused.size}
+  <p class="error" role="alert" data-testid="reason-sets-refused">
+    {refused.size === 1 ? 'One set differs' : `${refused.size} sets differ`} from what you sealed, so {refused.size === 1 ? 'it is' : 'they are'} not reasoned from.
+    <a href="#/settings">Settings → Sealing</a> lists the differences.
+  </p>
+{:else if session.sealing.status === 'on' && session.sealing.verifiedHead && !session.sealing.fullySealed}
+  <p class="hint" data-testid="reason-not-sealed">Your sources and principles are not sealed yet, so nothing here is checked against them. <a href="#/settings">Seal everything that exists</a> in Settings → Sealing.</p>
 {/if}
 {#if !s}
   <ConnectionNotice />
@@ -183,7 +202,7 @@
       <div class="chips" data-testid="set-picker">
         {#each s.sets as set (set.path)}
           {@const slug = set.path.split('/')[1]!}
-          <button type="button" class="chip" class:on={selected.includes(slug)} aria-pressed={selected.includes(slug)} onclick={() => toggle(slug)} data-testid="chip-{slug}">{setLabel(set.fm)}</button>
+          <button type="button" class="chip" class:on={active.includes(slug)} aria-pressed={active.includes(slug)} onclick={() => toggle(slug)} disabled={refused.has(slug)} title={refused.has(slug) ? 'Differs from what you sealed' : undefined} data-testid="chip-{slug}">{setLabel(set.fm)}{refused.has(slug) ? ' (changed)' : ''}</button>
         {/each}
       </div>
     {/if}
@@ -303,6 +322,22 @@
           {#if !reasoning.streaming || i < reasoning.transcript.length - 1}
             {#if turn.citations.length}
               <p class="meta">{turn.citations.filter((c) => c.resolved).length} citation{turn.citations.filter((c) => c.resolved).length === 1 ? '' : 's'}{turn.citations.some((c) => !c.resolved) ? `, ${turn.citations.filter((c) => !c.resolved).length} not in this brain` : ''}</p>
+            {/if}
+            {#if turn.unfound?.length}
+              <div class="unfound" role="note" data-testid="unfound-quotes">
+                <p class="meta">{turn.unfound.length === 1 ? 'One quotation is' : `${turn.unfound.length} quotations are`} not found word for word in what the model was given. This is a text match only; it does not judge the answer.</p>
+                <ul>{#each turn.unfound as q (q)}<li>“{q}”</li>{/each}</ul>
+              </div>
+            {/if}
+            {#if turn.stoodOn?.length}
+              <details class="stood" data-testid="stood-on">
+                <summary>Stood on {turn.stoodOn.filter((x) => x.ref.endsWith('/_set')).length} set{turn.stoodOn.filter((x) => x.ref.endsWith('/_set')).length === 1 ? '' : 's'}, {turn.stoodOn.filter((x) => x.ref.startsWith('principles/') && !x.ref.endsWith('/_set')).length} principles, {turn.stoodOn.filter((x) => x.ref.startsWith('sources/')).length} passages</summary>
+                <ul>
+                  {#each turn.stoodOn as x (x.ref)}
+                    <li><a href={browseHref(`${x.ref}.md`)}>{linkLabel(`${x.ref}.md`, s)}</a>{#if x.verdict} <span class="meta" data-verdict={x.verdict}>{MARK[x.verdict]}</span>{/if}</li>
+                  {/each}
+                </ul>
+              </details>
             {/if}
             {#if turn.task === 'relate'}
               {@const draft = extractProposal(turn.text, turn.sets, turn.citations)}

@@ -36,15 +36,21 @@
   // Arriving from an accepted link proposal: say which ground was added, or that it was one already.
   const added = $derived((route.query.get('added') ?? '').split(',').filter(Boolean));
   const already = $derived(route.query.get('already') === '1');
-  // "Seal as mine" (spec §6.5): an unsealed capture, read in full on this page, sealed by this device.
-  const canSeal = $derived(path.startsWith('inbox/') && session.sealing.status === 'on' && session.sealing.verdicts[path]?.verdict === 'unsealed');
+  // "Seal as mine" (spec §6.5): an unsealed capture, read in full on this page, sealed by this device. On a fully sealed
+  // brain the same for a source marked as the curator's that no seal vouches for, its text and attribution shown here.
+  const verdict = $derived(session.sealing.verdicts[path]?.verdict);
+  const sourceSlug = $derived(/^sources\/([^/]+)\/raw\.md$/.exec(path)?.[1]);
+  const curated = $derived((snapshot.current?.files.get(path)?.fm as { curated?: string } | undefined)?.curated);
+  const canSealSource = $derived(sourceSlug !== undefined && session.sealing.status === 'on' && session.sealing.fullySealed && (verdict === 'unsealed' || verdict === 'pending') && (curated === 'ratified' || curated === 'human'));
+  const canSeal = $derived((path.startsWith('inbox/') && session.sealing.status === 'on' && verdict === 'unsealed') || canSealSource);
   let sealing = $state(false);
   let sealError = $state<string | null>(null);
   async function sealMine() {
     sealing = true;
     sealError = null;
     try {
-      await sealingFlows.sealAsMine(path.slice('inbox/'.length, -'.md'.length));
+      if (canSealSource) await sealingFlows.sealSourceAsMine(sourceSlug!);
+      else await sealingFlows.sealAsMine(path.slice('inbox/'.length, -'.md'.length));
     } catch (e) {
       sealError = describeError(e);
     } finally {
@@ -66,7 +72,7 @@
   <p class="meta"><code>{path}</code> <SealMark {path} /></p>
   {#if canSeal}
     <p class="hint" data-testid="seal-mine-row">
-      This capture has no seal. If the passage{fm['note'] ? ', the note,' : ''}{fm['attachment'] ? ' and the attached file' : ''} below are what you captured,
+      {#if canSealSource}This source is marked as yours and has no seal, so it is not used in reasoning. If the passage, the title, and the author below are what you approved,{:else}This capture has no seal. If the passage{fm['note'] ? ', the note,' : ''}{fm['attachment'] ? ' and the attached file' : ''} below are what you captured,{/if}
       <button class="small" onclick={sealMine} disabled={sealing} use:hold={sealing} data-testid="seal-mine">{sealing ? 'Sealing…' : 'seal it as yours'}</button>.
     </p>
     {#if sealError}<p class="error" role="alert" data-testid="seal-mine-error">{sealError}</p>{/if}
