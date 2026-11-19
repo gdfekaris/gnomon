@@ -127,7 +127,7 @@ as recommended.
   and the live test's scratch repository, `gnomon-scratch`. Never read,
   write, create, delete, or change settings on any other repository, even
   when the credential at hand allows it; the local `gh` login and the
-  `GNOMON_TEST_TOKEN` secret may reach further than that.
+  live test's token (the secret `GNOMON_LIVE_TEST`) may reach further than that.
   Settings changes on this repo (visibility, Pages, secrets, branch rules)
   happen only when the maintainer asks for that change in the current
   session. The maintainer's own brain, `~/Desktop/main/geo-brain-2`, has no

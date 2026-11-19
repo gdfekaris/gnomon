@@ -3,7 +3,7 @@ name: live-github
 # Spec §18: the storage contract suite against real GitHub, run by hand
 # when the storage code changes (it was nightly until 2026-11-19). It
 # touches only gdfekaris/gnomon-scratch, reset to the reference fixture
-# before each test. Its token, GNOMON_TEST_TOKEN, is fine-grained with
+# before each test. Its token, the secret GNOMON_LIVE_TEST, is fine-grained with
 # Contents read and write on that one repository and nothing else.
 # One run costs about 260 of GitHub's 500 writes an hour: never start it
 # twice within an hour.
@@ -29,5 +29,5 @@ jobs:
       - name: Storage contract suite against real GitHub
         run: npx vitest run --project storage github-live
         env:
-          GNOMON_TEST_TOKEN: ${{ secrets.GNOMON_TEST_TOKEN }}
+          GNOMON_TEST_TOKEN: ${{ secrets.GNOMON_LIVE_TEST }}
           GNOMON_TEST_REPO: gdfekaris/gnomon-scratch
