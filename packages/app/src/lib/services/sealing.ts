@@ -66,7 +66,7 @@ export interface SealingState {
   /** a sealing file that did not read, in its own words */
   error: string | null;
   /** schema §11.6 at the last verified head: per capture and source path */
-  verdicts: Record<string, SealVerdict>;
+  verdicts: Record<string, LegacyVerdict>;
   /** findings about the seal record itself; any one is a banner on every screen */
   findings: SealFinding[];
   /** seal files are still ciphertext (an encrypted brain, locked): nothing was verified */
@@ -148,6 +148,24 @@ async function readFiles(ctx: SealingContext): Promise<Map<string, string>> {
 }
 
 /**
+ * Until block I3 teaches the screens version 2 (integrity-proposal.md), they
+ * are shown what they were shown before it: captures and sources only, and
+ * a source awaiting review (`pending`: no seal of its own, matches its
+ * sealed capture) as the verdict its capture carries. Core already decides
+ * by version 2; nothing here grants trust core withheld, since no brain is
+ * fully sealed until I3 offers it.
+ */
+type LegacyVerdict = Exclude<SealVerdict, { verdict: 'pending' }>;
+function legacyVerdicts(verdicts: ReadonlyMap<string, SealVerdict>): Record<string, LegacyVerdict> {
+  const out: Record<string, LegacyVerdict> = {};
+  for (const [path, v] of verdicts) {
+    if (!path.startsWith('inbox/') && !path.startsWith('sources/')) continue;
+    out[path] = v.verdict === 'pending' ? (v.since === undefined ? { verdict: 'verified' } : { verdict: 'attested', since: v.since }) : v;
+  }
+  return out;
+}
+
+/**
  * Read the brain's sealing files and this device's record, set the state, and
  * verify the loaded snapshot against the pinned root and heads (schema §11.6),
  * moving the pins forward on a clean result. Never throws: a failure is the
@@ -165,7 +183,7 @@ export async function loadSealing(ctx: SealingContext): Promise<void> {
       const input = sealInputFromSnapshot(s, files, (path) => attachmentDigest(ctx, s, path));
       const r = await verifySeals(input, record.root, record.heads);
       verified = {
-        verdicts: Object.fromEntries(r.verdicts),
+        verdicts: legacyVerdicts(r.verdicts),
         findings: r.findings,
         locked: r.locked,
         verifiedHead: s.head,

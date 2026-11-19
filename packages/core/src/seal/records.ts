@@ -2,7 +2,7 @@
 // parsing (a field out of place is a malformed record, never ignored), the
 // paths, and building signed files.
 import { isEncryptedBody } from '../crypto/body';
-import { isInboxStem, isSourceSlug } from '../schema/identifiers';
+import { isInboxStem, isPrincipleSlug, isSetSlug, isSourceSlug } from '../schema/identifiers';
 import { DIGEST, signedBytes } from './encoding';
 import { SEAL_ALGS, type SealAlg, type Signer, keyId } from './keys';
 
@@ -34,7 +34,18 @@ export interface RequestPayload { v: 1; kind: 'request'; key: string; alg: 'sk-e
 export interface SealAttachment { name: string; digest: string }
 export type ContentSealPayload = { v: 1; kind: 'capture' | 'attest'; stem: string; body: string; note?: string; attachment: SealAttachment | null; at: string; key: string; seq: number; prev: string | null };
 export type ClearSealPayload = { v: 1; kind: 'clear'; stem: string; filed_as: string | null; at: string; key: string; seq: number; prev: string | null };
-export type SealPayload = ContentSealPayload | ClearSealPayload;
+/** Schema §11.5, version 2: the curator's signature that the source `slug` holds this text, this file, and this attribution. */
+export type SourceSealPayload = {
+  v: 1; kind: 'source'; slug: string; basis: 'ratify' | 'create' | 'attest'; since?: string; body: string; attachment: SealAttachment | null; stem: string | null;
+  title: string | null; author: string | null; work: string | null; year: string | null; replaces: string | null; at: string; key: string; seq: number; prev: string | null;
+};
+export interface ManifestEntry { slug: string; digest: string }
+export interface ManifestSet { slug: string; descriptor: string; principles: ManifestEntry[] }
+/** Schema §11.5, version 2: the curator's signature over the whole `principles/` tree. */
+export type PrinciplesSealPayload = { v: 1; kind: 'principles'; sets: ManifestSet[]; reserve: ManifestEntry[]; replaces: string | null; at: string; key: string; seq: number; prev: string | null };
+export type SealPayload = ContentSealPayload | ClearSealPayload | SourceSealPayload | PrinciplesSealPayload;
+/** The capture a seal is about, for the three kinds that are about one. */
+export const stemOf = (p: SealPayload): string | undefined => (p.kind === 'source' || p.kind === 'principles' ? undefined : p.stem);
 
 type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -64,16 +75,77 @@ export function parseSigned(text: string): { payload: Obj; sig: string } | strin
   return { payload: v.payload, sig: v.sig };
 }
 
+const isDigest = (v: unknown): v is string => isStr(v) && DIGEST.test(v);
+const isDigestOrNull = (v: unknown): v is string | null => v === null || isDigest(v);
+const isTextOrNull = (v: unknown): v is string | null => v === null || isStr(v);
+
+function entriesProblem(v: unknown, what: string): string | undefined {
+  if (!Array.isArray(v)) return `its \`${what}\` is not a list`;
+  const seen = new Set<string>();
+  for (const e of v) {
+    if (!isObj(e) || fieldsProblem(e, ['slug', 'digest']) || !isStr(e.slug) || !isPrincipleSlug(e.slug) || !isDigest(e.digest)) return `its \`${what}\` holds a malformed entry`;
+    if (seen.has(e.slug)) return `its \`${what}\` names ${e.slug} twice`;
+    seen.add(e.slug);
+  }
+  return undefined;
+}
+
+function checkSourceSeal(p: Obj): SourceSealPayload | string {
+  if (!isStr(p.slug) || !isSourceSlug(p.slug)) return 'its `slug` is not a source slug';
+  if (p.basis !== 'ratify' && p.basis !== 'create' && p.basis !== 'attest') return 'its `basis` is unknown';
+  if ((p.basis === 'attest') !== ('since' in p)) return 'its `since` does not fit its `basis`';
+  if ('since' in p && !(isStr(p.since) && DATETIME.test(p.since))) return 'its `since` is not a UTC datetime';
+  if (!isDigest(p.body)) return 'its `body` is not a digest';
+  if (p.attachment !== null) {
+    const a = p.attachment;
+    if (!isObj(a) || fieldsProblem(a, ['name', 'digest']) || !isStr(a.name) || !isDigest(a.digest) || !/^original\.[a-z0-9]+$/i.test(a.name)) return 'its `attachment` is malformed';
+  }
+  if (!(p.stem === null || (isStr(p.stem) && isInboxStem(p.stem)))) return 'its `stem` is not a capture stem or null';
+  for (const k of ['title', 'author', 'work', 'year'] as const) if (!isTextOrNull(p[k])) return `its \`${k}\` is not text or null`;
+  if (!isDigestOrNull(p.replaces)) return 'its `replaces` is not a digest or null';
+  return p as unknown as SourceSealPayload;
+}
+
+function checkPrinciplesSeal(p: Obj): PrinciplesSealPayload | string {
+  if (!Array.isArray(p.sets)) return 'its `sets` is not a list';
+  const seen = new Set<string>();
+  for (const s of p.sets) {
+    if (!isObj(s) || fieldsProblem(s, ['slug', 'descriptor', 'principles']) || !isStr(s.slug) || !isSetSlug(s.slug) || !isDigest(s.descriptor)) return 'its `sets` holds a malformed set';
+    if (seen.has(s.slug)) return `its \`sets\` names ${s.slug} twice`;
+    seen.add(s.slug);
+    const bad = entriesProblem(s.principles, 'principles');
+    if (bad) return bad;
+  }
+  const bad = entriesProblem(p.reserve, 'reserve');
+  if (bad) return bad;
+  const slugs = (p.reserve as ManifestEntry[]).map((e) => e.slug);
+  if (slugs.some((s, i) => i > 0 && !(slugs[i - 1]! < s))) return 'its `reserve` is not sorted by slug';
+  if (!isDigestOrNull(p.replaces)) return 'its `replaces` is not a digest or null';
+  return p as unknown as PrinciplesSealPayload;
+}
+
 export function checkSealPayload(p: Obj): SealPayload | string {
   if (p.v !== 1) return 'its `v` is not 1';
-  const common = ['v', 'kind', 'stem', 'at', 'key', 'seq', 'prev'];
-  const bad = p.kind === 'clear' ? fieldsProblem(p, [...common, 'filed_as']) : p.kind === 'capture' || p.kind === 'attest' ? fieldsProblem(p, [...common, 'body', 'attachment'], ['note']) : 'its `kind` is unknown';
+  const envelope = ['v', 'kind', 'at', 'key', 'seq', 'prev'];
+  const common = [...envelope, 'stem'];
+  const bad =
+    p.kind === 'clear'
+      ? fieldsProblem(p, [...common, 'filed_as'])
+      : p.kind === 'capture' || p.kind === 'attest'
+        ? fieldsProblem(p, [...common, 'body', 'attachment'], ['note'])
+        : p.kind === 'source'
+          ? fieldsProblem(p, [...envelope, 'slug', 'basis', 'body', 'attachment', 'stem', 'title', 'author', 'work', 'year', 'replaces'], ['since'])
+          : p.kind === 'principles'
+            ? fieldsProblem(p, [...envelope, 'sets', 'reserve', 'replaces'])
+            : 'its `kind` is unknown';
   if (bad) return bad;
-  if (!isStr(p.stem) || !isInboxStem(p.stem)) return 'its `stem` is not a capture stem';
   if (!isStr(p.at) || !DATETIME.test(p.at)) return 'its `at` is not a UTC datetime';
   if (!isStr(p.key) || !KEY_ID.test(p.key)) return 'its `key` is not a key id';
   if (!isCount(p.seq, 1)) return 'its `seq` is not a positive integer';
   if (p.seq === 1 ? p.prev !== null : !(isStr(p.prev) && DIGEST.test(p.prev))) return 'its `prev` does not fit its `seq`';
+  if (p.kind === 'source') return checkSourceSeal(p);
+  if (p.kind === 'principles') return checkPrinciplesSeal(p);
+  if (!isStr(p.stem) || !isInboxStem(p.stem)) return 'its `stem` is not a capture stem';
   if (p.kind === 'clear') {
     if (!(p.filed_as === null || (isStr(p.filed_as) && isSourceSlug(p.filed_as)))) return 'its `filed_as` is not a source slug or null';
     return p as unknown as ClearSealPayload;

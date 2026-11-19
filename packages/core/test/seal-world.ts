@@ -5,8 +5,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
-  type BrainSnapshot, type Heads, type Signer, SEAL_NAMESPACE, SK_ED25519, buildSnapshot, concat, deriveRoot, digest, ed25519Signer, isFrontmatterPath, keyId,
-  loadSodium, makeEnrollment, makeSeal, rootFile, sealContent, sealInputFromSnapshot, sealPosition, sha256, sshString, toBase64, utf8, verifySeals,
+  type BrainSnapshot, type Heads, type PinnedRevocations, type Signer, SEAL_NAMESPACE, SK_ED25519, buildManifest, buildSnapshot, concat, deriveRoot, digest, ed25519Signer, isFrontmatterPath, keyId,
+  loadSodium, makeEnrollment, makeSeal, rootFile, sealContent, sealInputFromSnapshot, sealPosition, sha256, sourceContent, sshString, toBase64, utf8, verifySeals,
 } from '../src/index';
 import { FIXTURE, readBrain } from './brains';
 
@@ -90,9 +90,40 @@ export async function world(): Promise<World> {
   return w;
 }
 
-export async function check(w: World, pinned: Heads = w.heads) {
-  const input = sealInputFromSnapshot(snap(w), w.gnomon, async (p) => (w.bytes.has(p) ? digest(w.bytes.get(p)!) : undefined));
-  return verifySeals(input, { id: w.root.keyId, pub: w.root.pub }, pinned);
+const inputOf = (w: World) => sealInputFromSnapshot(snap(w), w.gnomon, async (p) => (w.bytes.has(p) ? digest(w.bytes.get(p)!) : undefined));
+
+export async function check(w: World, pinned: Heads = w.heads, revocations: PinnedRevocations = {}) {
+  return verifySeals(inputOf(w), { id: w.root.keyId, pub: w.root.pub }, pinned, revocations);
+}
+
+async function put(w: World, signer: Signer, req: Parameters<typeof makeSeal>[1]): Promise<string> {
+  const s = await makeSeal(signer, req, await sealPosition(w.gnomon, signer.keyId, w.heads[signer.keyId]));
+  w.gnomon.set(s.path, s.text);
+  w.heads[signer.keyId] = s.head;
+  return s.path;
+}
+
+/** The curator seals a source as it stands (schema §11.5, version 2), replacing its current seal when it has one. */
+export async function sealSource(w: World, signer: Signer, slug: string, basis: 'ratify' | 'create' | 'attest' = 'ratify', at = AT): Promise<string> {
+  const input = inputOf(w);
+  const src = input.sources.find((s) => s.path === `sources/${slug}/raw.md`)!;
+  const now = (await check(w, {})).current.sources.get(slug);
+  const content = await sourceContent({ slug, ...src }, src.attachment ? w.bytes.get(`sources/${slug}/${src.attachment}`) : undefined);
+  return put(w, signer, { kind: 'source', slug, basis: now?.payload.basis ?? basis, ...((now?.payload.basis ?? basis) === 'attest' ? { since: now?.payload.since ?? at } : {}), at, content, replaces: now?.digest ?? null });
+}
+
+/** The curator signs the principles tree as it stands (schema §11.5, version 2). */
+export async function sealPrinciples(w: World, signer: Signer, at = AT): Promise<string> {
+  const input = inputOf(w);
+  const now = (await check(w, {})).current;
+  const manifest = await buildManifest(input.sets!, input.principles!, (slug) => now.sources.get(slug)?.payload.body ?? null);
+  return put(w, signer, { kind: 'principles', at, manifest, replaces: now.manifest?.digest ?? null });
+}
+
+/** "Seal everything that exists" (schema §7.20): every source the curator holds, then the first manifest. */
+export async function fullySeal(w: World): Promise<void> {
+  for (const s of inputOf(w).sources) if (s.curated === 'ratified' || s.curated === 'human') await sealSource(w, w.phone, s.path.split('/')[1]!, s.inboxRef ? 'ratify' : 'attest');
+  await sealPrinciples(w, w.phone);
 }
 
 /** The verdict names by path, for compact assertions. */

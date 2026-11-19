@@ -7,11 +7,14 @@ Schema §11, the implementation Technical Specification §6.5.
 - **Built and in use on the phone:** keys, the recovery phrase, seals on
   captures, chains and rollback detection, verdicts on captures, the
   banner (blocks S2 to S4).
-- **Specified, not yet built** (blocks I2 and I3; marked *(v2)* below and
-  in the schema): the seal a source gets at Ratify, the seal over the
-  principles, pinned revocations, and keeping everything unsealed out of
-  reasoning. Until they are built, §1 holds for captures only, and the
-  two gaps named in §7 (rows T23 and T24) are open.
+- **Built in the verifier, not yet in the app** (block I2 done
+  2026-11-19, block I3 next; marked *(v2)* below and in the schema): the
+  seal a source gets at Ratify, the seal over the principles, pinned
+  revocations, and keeping everything unsealed out of reasoning. The
+  verifier checks all of it and the attack table of §7 runs in full, but
+  the app does not yet make these seals. So on a real brain today §1
+  still holds for captures only, and the two gaps of rows T23 and T24
+  stay open until I3.
 - **Set aside until the phone app works well:** the desktop CLI and
   YubiKey, the separate agent account, and a second, independent
   verifier. No such verifier exists today; an earlier version of this
@@ -195,9 +198,11 @@ verification steps and verdicts.
 
 ## 7. Attacks and what catches them
 
-Each row is a test fixture in `packages/core/test/seal-verify.test.ts`.
-T1 to T22 run today. T23 to T36 are the rows of version 2: they become
-tests in block I2, and until then T23 and T24 are **not caught**.
+Each row is a test in `packages/core/test/seal-verify.test.ts`, and all
+of them run. T23 to T36 are the rows of version 2: the verifier catches
+them on a brain that carries version 2 seals, which the app starts
+making in block I3. Until then T23 and T24 are **not caught** on a real
+brain.
 
 | # | Action by an adversary of §3 | Caught by (Schema §11.6) | Result |
 |---|---|---|---|
@@ -223,8 +228,8 @@ tests in block I2, and until then T23 and T24 are **not caught**.
 | T20 | Fork a chain (a different seal at a pinned `seq`) | step 3 | brain finding |
 | T21 | T1, T4, T8 on an encrypted brain | as above, with the brain key | as above |
 | T22 | Edit unprotected metadata (tags, `locator`, `status`) | not caught, out of scope (§2) | verified |
-| T23 | Edit a ratified source and delete its `inbox_ref` *(v2; open today: reads as unsealed, no finding)* | step 5, the source seal | source broken |
-| T24 | Replace a source's text and `inbox_ref` with another sealed capture's *(v2; open today: reads as verified)* | step 5, the slug is signed | source broken |
+| T23 | Edit a ratified source and delete its `inbox_ref` *(v2; open until I3: reads as unsealed, no finding)* | step 5, the source seal | source broken |
+| T24 | Replace a source's text and `inbox_ref` with another sealed capture's *(v2; open until I3: reads as awaiting review)* | step 5, the slug is signed | source broken |
 | T25 | Change a ratified source's title, author, work, or year *(v2)* | step 5 | source broken |
 | T26 | Flip a filing's `curated` to `ratified` without the curator *(v2)* | step 5, no source seal | brain finding, unsealed source; never assembled |
 | T27 | Delete a ratified source *(v2)* | step 5 | brain finding |

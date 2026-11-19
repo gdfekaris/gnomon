@@ -1,4 +1,4 @@
-// seal — schema §11, spec §6.5: tamper evidence for captured content.
+// seal — schema §11, spec §6.5: integrity of the curator's texts and principles.
 export * from './encoding';
 export * from './keys';
 export * from './sshsig';

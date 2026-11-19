@@ -277,30 +277,29 @@ verifySeals(input, pinnedRoot, pinnedHeads): {
 };
 ```
 
-**Version 2 in core (block I2).** The same module, extended; no new package.
+**Version 2 in core (block I2, built 2026-11-19).** The same module, extended; no new package.
 
 ```ts
 // encodings: canonicalJson accepts arrays (Schema §11.3)
 textValue(v: unknown): string | null;                                     // a frontmatter text value (§11.1)
 descriptorDigest(set): Promise<string>;  principleDigest(principle, groundBody: (slug) => string | null): Promise<string>;
 // making (§11.5, §11.7)
-sourceSealContent(source, attachmentBytes?): SourceContent;               // body, attachment, stem, title, author, work, year
-makeSourceSeal(signer, { slug, basis, since?, at, content, replaces }, position);
-buildManifest(snapshot, currentSourceBody: (slug) => string | null): Promise<ManifestBody>;    // sets in order, reserve by slug
-makeManifestSeal(signer, { at, manifest, replaces }, position);
-currentSeals(gnomonFiles, enrolled): { sources: Map<slug, SealRef>; manifest: SealRef | null; forks: string[] };
+sourceContent(source, attachmentBytes?): SourceContent;                   // body, attachment, stem, title, author, work, year
+buildManifest(sets, principles, groundBody: (slug) => string | null): Promise<ManifestBody>;   // sets in order, reserve by slug
+makeSeal(signer, { kind: 'source', slug, basis, since?, at, content, replaces } | { kind: 'principles', at, manifest, replaces } | …, position);
 // verification (§11.6, renumbered: 4 captures, 5 sources, 6 principles, 7 verdicts, 8 pins)
-verifySeals(input, pinnedRoot, pins: { heads: Heads; revocations: Record<keyId, string> }): {
+verifySeals(input, pinnedRoot, pinnedHeads, pinnedRevocations): {
   locked; findings;                                                       // adds revocation-removed, seal-fork, sealed-source-deleted, unsealed-source, principles-changed
   fullySealed: boolean;                                                   // a valid principles manifest exists
-  verdicts: Map<path, Verdict>;                                           // captures, raw.md, _set.md, principle files; adds { verdict: 'pending' }
+  verdicts: Map<path, Verdict>;                                           // captures, raw.md, _set.md, principle files; adds { verdict: 'pending'; since? }
   differences: Array<{ path; kind: 'edited' | 'reordered' | 'added' | 'removed' | 'description-edited' }>;
-  pins: { heads: Heads; revocations: Record<keyId, string> } | null;      // null unless clean (step 8)
+  current: { sources: Map<slug, { digest; payload }>; manifest: { digest; payload } | null };   // what a replacement names in `replaces`
+  heads: Heads | null;  revocations: PinnedRevocations | null;            // to pin; null unless clean (step 8)
 };
-usable(result, snapshot): { sets: Set<slug>; sources: Set<slug>; excluded: Array<{ path; verdict; why? }> };   // what §8 may assemble
+usable(result): { sets(slug): boolean; source(slug): boolean; excluded: Array<{ path; verdict }> };   // what §8 may assemble
 ```
 
-A source's verdict comes from its slug and its bytes against `source` seals; `inbox_ref` is read only to check a filing awaiting review against its capture (verdict `pending` or `broken`) and as one more field the source seal covers. `curated` is read only to report an unsealed `ratified` or `human` source. Old pins (heads alone) are read as pins with no revocations. The attack table grows by rows T23 to T36 of `security.md` §7, and T22 is narrowed to metadata no seal covers. Plans that write a sealed thing take an optional sealer, as `captureSealer` does today, so core stays the one place a batch is built: `planRatify`, `planEditSource`, and every plan that touches `principles/` return their batch plus what must be sealed, and the sealer adds the seal files at commit time.
+A source's verdict comes from its slug and its bytes against `source` seals; `inbox_ref` is read only to check a filing awaiting review against its capture (verdict `pending` or `broken`) and as one more field the source seal covers. `curated` is read only to report an unsealed `ratified` or `human` source. A pinned revocation keeps the point it revokes at, so the key stays revoked when its file is removed; old pins (heads alone) are read as pins with no revocations. The attack table grew by rows T23 to T36 of `security.md` §7, and T22 was narrowed to metadata no seal covers. Until I3 the app shows its screens the verdicts of before (`legacyVerdicts` in `services/sealing.ts`: a `pending` source as its capture's verdict, no marks on principles), and no brain is fully sealed, so nothing changes on a phone. Left to I3, where the app consumes it: plans that write a sealed thing (`planRatify`, `planEditSource`, every plan that touches `principles/`) hand the sealer what must be sealed, as `captureSealer` does today, so core stays the one place a batch is built.
 
 The BIP-39 English word list ships in core as data, held to the published file's SHA-256 by a test. Verification takes `.gnomon/` as a map of path to text, read with the rest of the snapshot and with seal files decrypted on an encrypted brain, and digests attachments through a callback: the app can cache digests by blob sha (block S4), the CLI reads the files. The tests check the encodings, the root derivation, and Ed25519 and P-256 signatures against Node's independent implementations, FIDO signatures against OpenSSH's own vector (`core/fixtures/sshsig`) and `ssh-keygen -Y verify`, and every row of `security.md` §7.
 

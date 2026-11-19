@@ -21,7 +21,10 @@ describe('canonical JSON (RFC 8785 for payload values)', () => {
     expect(canonicalJson('a"b\\c\n\t\u0001é😀')).toBe('"a\\"b\\\\c\\n\\t\\u0001é😀"');
   });
   it('refuses what a payload cannot hold', () => {
-    for (const bad of [1.5, -1, 2 ** 53, true, [1], undefined, '\uD800']) expect(() => canonicalJson(bad)).toThrow();
+    for (const bad of [1.5, -1, 2 ** 53, true, [1.5], undefined, '\uD800']) expect(() => canonicalJson(bad)).toThrow();
+  });
+  it('keeps array elements in their own order, and sorts the keys inside them (version 2)', () => {
+    expect(canonicalJson({ list: [{ b: 1, a: 'x' }, null, 'z', []] })).toBe('{"list":[{"a":"x","b":1},null,"z",[]]}');
   });
   it('prefixes a context line per kind, so one kind never verifies as another', () => {
     expect(new TextDecoder().decode(signedBytes('seal', { v: 1 }))).toBe('gnomon-seal v1\n{"v":1}');

@@ -1,13 +1,13 @@
-// Schema §11.6 against the attack table of security.md §7 (T1–T22): each
+// Schema §11.6 against the attack table of security.md §7 (T1–T36): each
 // test is one agent action on a sealed brain and the verdict or finding that
 // must follow. The clean cases come first: a sealed brain verifies, and the
 // curator's own acts (attest, clear, revoke) keep it verifying.
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
   type Signer, decryptSealFiles, deriveRoot, ed25519Signer, encryptBody, encryptSealFiles, importBodyKey, makeEnrollment, makeRequest, makeRevocation, makeSeal,
-  rootFile, sealContent, sealPath, sealPosition,
+  rootFile, sealContent, sealPath, sealPosition, sourceContent, usable,
 } from '../src/index';
-import { AT, type World, check, seal, skSigner, snap, verdicts, world } from './seal-world';
+import { AT, type World, check, fullySeal, seal, sealPrinciples, sealSource, skSigner, snap, verdicts, world } from './seal-world';
 
 const K3M = '20260901-081500-k3m'; // filed as aurelius-meditations-4-3
 const P9R = '20260902-190433-p9r'; // note and PDF, filed as didion-why-i-write
@@ -16,6 +16,12 @@ const BQ = '20260906-070000-2bq'; // note, unfiled
 const cap = (stem: string) => `inbox/${stem}.md`;
 const RAW_4_3 = 'sources/aurelius-meditations-4-3/raw.md';
 const RAW_DIDION = 'sources/didion-why-i-write/raw.md';
+const RAW_WEIL = 'sources/weil-attention/raw.md'; // created by hand, no capture
+const SET_G = 'principles/ps-g8xw/_set.md';
+const SET_7 = 'principles/ps-7k2m/_set.md';
+const COURAGE = 'principles/ps-g8xw/courage-before-comfort.md';
+const ATTENTION = 'principles/ps-g8xw/attention-is-generosity.md';
+const TREE = [SET_G, SET_7, COURAGE, ATTENTION, 'principles/ps-7k2m/say-the-hard-thing-first.md', 'principles/ps-7k2m/write-to-find-out.md', 'principles/_reserve/one-thing-at-a-time.md'];
 
 let w: World;
 beforeEach(async () => {
@@ -41,9 +47,11 @@ describe('a sealed brain', () => {
     expect(r.findings).toEqual([]);
     expect(Object.fromEntries([...r.verdicts].map(([p, v]) => [p, v.verdict]))).toEqual({
       [cap(K3M)]: 'verified', [cap(P9R)]: 'verified', [cap(X7Q)]: 'verified', [cap(BQ)]: 'verified',
-      [RAW_4_3]: 'verified', [RAW_DIDION]: 'verified', 'sources/aurelius-meditations-5-1/raw.md': 'verified',
+      [RAW_4_3]: 'pending', [RAW_DIDION]: 'pending', 'sources/aurelius-meditations-5-1/raw.md': 'pending',
       'sources/weil-attention/raw.md': 'unsealed',
+      ...Object.fromEntries(TREE.map((p) => [p, 'unsealed'])),
     });
+    expect(r.fullySealed).toBe(false);
     expect(r.heads).toEqual(w.heads);
   });
 
@@ -60,7 +68,7 @@ describe('a sealed brain', () => {
     await clear(K3M, 'aurelius-meditations-4-3');
     const r = await check(w);
     expect(r.findings).toEqual([]);
-    expect(r.verdicts.get(RAW_4_3)?.verdict).toBe('verified');
+    expect(r.verdicts.get(RAW_4_3)?.verdict).toBe('pending');
   });
 
   it('keeps verifying after the root revokes a key at its last good seal', async () => {
@@ -80,7 +88,7 @@ describe('the attack table (security.md §7)', () => {
   it('T1: editing a sealed capture’s body breaks the capture, not its untouched source', async () => {
     edit(cap(K3M), (t) => `${t}And an added sentence.\n`);
     const v = await verdicts(w);
-    expect([v[cap(K3M)], v[RAW_4_3]]).toEqual(['broken', 'verified']);
+    expect([v[cap(K3M)], v[RAW_4_3]]).toEqual(['broken', 'pending']);
     expect((await check(w)).heads).toBeNull();
   });
 
@@ -247,11 +255,195 @@ describe('the attack table (security.md §7)', () => {
     expect((await check(w)).locked).toBe(true);
   });
 
-  it('T22: editing metadata is out of scope and is not caught', async () => {
-    edit(RAW_4_3, (t) => t.replace(/^title: .*$/m, 'title: A new title').replace(/^curated: .*$/m, 'curated: human'));
+  it('T22: editing metadata no seal covers is out of scope and is not caught', async () => {
+    await fullySeal(w);
+    edit(RAW_4_3, (t) => t.replace(/^curated: .*$/m, 'curated: human').replace('locator: "4.3"', 'locator: Book 4').replace(/^updated: .*$/m, 'updated: 2026-11-01T00:00:00Z\norigin: https://example.org/meditations'));
     edit(cap(BQ), (t) => t.replace('status: unfiled', 'status: filed\nfiled_as: weil-attention'));
     const r = await check(w);
     expect(r.findings).toEqual([]);
     expect([r.verdicts.get(RAW_4_3)?.verdict, r.verdicts.get(cap(BQ))?.verdict]).toEqual(['verified', 'verified']);
+  });
+});
+
+describe('a fully sealed brain (version 2)', () => {
+  beforeEach(async () => {
+    await fullySeal(w);
+  });
+
+  it('verifies: sources by their own seals, every set and principle by the manifest, and says what may be used', async () => {
+    const r = await check(w);
+    expect(r.findings).toEqual([]);
+    expect(r.fullySealed).toBe(true);
+    const v = Object.fromEntries([...r.verdicts].map(([p, x]) => [p, x.verdict]));
+    expect([v[RAW_4_3], v[RAW_DIDION], v[RAW_WEIL]]).toEqual(['verified', 'verified', 'attested']);
+    for (const p of TREE) expect(v[p]).toBe('verified');
+    expect(r.heads).toEqual(w.heads);
+    const u = usable(r);
+    expect([u.sets('ps-g8xw'), u.source('weil-attention'), u.excluded]).toEqual([true, true, [{ path: 'sources/aurelius-meditations-5-1/raw.md', verdict: 'pending' }]]);
+  });
+
+  it('the curator’s own acts keep it verifying: a new manifest after an edit, a replacement seal after a title change', async () => {
+    edit(COURAGE, (t) => `${t}\nA second thought.\n`);
+    expect(await codes()).toEqual(['principles-changed']);
+    await sealPrinciples(w, w.phone);
+    edit(RAW_4_3, (t) => t.replace(/^title: .*$/m, 'title: On retreat'));
+    expect((await verdicts(w))[RAW_4_3]).toBe('broken');
+    await sealSource(w, w.phone, 'aurelius-meditations-4-3');
+    const r = await check(w);
+    expect(r.findings).toEqual([]);
+    expect([r.verdicts.get(COURAGE)?.verdict, r.verdicts.get(RAW_4_3)?.verdict]).toEqual(['verified', 'verified']);
+  });
+
+  it('a filing awaiting review is pending, is not a finding, and is not usable', async () => {
+    w.files.set('sources/new-filing/raw.md', w.files.get(RAW_4_3)!.replace('curated: ratified', 'curated: agent-proposed'));
+    const r = await check(w);
+    expect(r.findings).toEqual([]);
+    expect(r.verdicts.get('sources/new-filing/raw.md')).toEqual({ verdict: 'pending' });
+    expect(usable(r).source('new-filing')).toBe(false);
+  });
+
+  it('T23: editing a ratified source and deleting its inbox_ref breaks it', async () => {
+    edit(RAW_4_3, (t) => t.replace('Men seek retreats', 'Men seek comfort').replace(/^inbox_ref: .*\n/m, ''));
+    expect((await check(w)).verdicts.get(RAW_4_3)).toEqual({ verdict: 'broken', why: 'its passage differs from the sealed one' });
+    w = await world();
+    await fullySeal(w);
+    edit(RAW_4_3, (t) => t.replace(/^inbox_ref: .*\n/m, ''));
+    expect((await check(w)).verdicts.get(RAW_4_3)).toEqual({ verdict: 'broken', why: 'the capture it names differs from the sealed one' });
+  });
+
+  it('T24: a source given another sealed capture’s text and inbox_ref is broken: the slug is signed', async () => {
+    const other = snap(w).files.get('sources/aurelius-meditations-5-1/raw.md')!;
+    edit(RAW_4_3, (t) => t.slice(0, t.indexOf('---\n', 4) + 4).replace(K3M, X7Q) + other.body);
+    expect((await verdicts(w))[RAW_4_3]).toBe('broken');
+  });
+
+  it('T25: changing a ratified source’s title, author, work, or year breaks it', async () => {
+    for (const [field, value] of [['title', 'A new title'], ['author', 'Someone Else'], ['work', 'Another Book'], ['year', '1999']] as const) {
+      w = await world();
+      await fullySeal(w);
+      edit(RAW_4_3, (t) => (new RegExp(`^${field}: `, 'm').test(t) ? t.replace(new RegExp(`^${field}: .*$`, 'm'), `${field}: ${value}`) : t.replace(/^title: /m, `${field}: ${value}\ntitle: `)));
+      expect((await check(w)).verdicts.get(RAW_4_3)).toEqual({ verdict: 'broken', why: `its ${field} differs from the sealed one` });
+    }
+  });
+
+  it('T26: flipping a filing’s curated to ratified grants nothing: a finding, and never usable', async () => {
+    w.files.set('sources/new-filing/raw.md', w.files.get(RAW_4_3)!);
+    const r = await check(w);
+    expect(r.findings.map((f) => [f.code, f.path])).toEqual([['unsealed-source', 'sources/new-filing/raw.md']]);
+    expect(usable(r).source('new-filing')).toBe(false);
+  });
+
+  it('T27: deleting a ratified source is a finding', async () => {
+    w.files.delete(RAW_WEIL);
+    expect(await codes()).toContain('sealed-source-deleted');
+  });
+
+  it('T28: editing a principle’s text or title breaks the principle and its set, and only that set', async () => {
+    edit(COURAGE, (t) => t.replace(/^title: .*$/m, 'title: Comfort before courage'));
+    const r = await check(w);
+    expect(r.differences).toEqual([{ path: COURAGE, kind: 'edited' }]);
+    expect(r.findings.map((f) => f.code)).toEqual(['principles-changed']);
+    expect([r.verdicts.get(COURAGE)?.verdict, r.verdicts.get(SET_G)?.verdict, r.verdicts.get(SET_7)?.verdict]).toEqual(['broken', 'broken', 'verified']);
+    expect([usable(r).sets('ps-g8xw'), usable(r).sets('ps-7k2m')]).toEqual([false, true]);
+    expect(r.heads).toBeNull();
+  });
+
+  it('T29: swapping two principles’ order breaks the set', async () => {
+    const order = (p: string) => /^order: (\d+)$/m.exec(w.files.get(p)!)![1]!;
+    const [a, b] = [order(COURAGE), order(ATTENTION)];
+    edit(COURAGE, (t) => t.replace(/^order: .*$/m, `order: ${b}`));
+    edit(ATTENTION, (t) => t.replace(/^order: .*$/m, `order: ${a}`));
+    const r = await check(w);
+    expect(r.differences.map((d) => d.kind)).toEqual(['reordered', 'reordered']);
+    expect(r.verdicts.get(SET_G)?.verdict).toBe('broken');
+  });
+
+  it('T30: editing a set’s description or name, or reordering the sets, breaks the set', async () => {
+    edit(SET_G, (t) => `${t}\nAlways choose what is easiest.\n`);
+    expect((await check(w)).differences).toEqual([{ path: SET_G, kind: 'description-edited' }]);
+    w = await world();
+    await fullySeal(w);
+    edit(SET_G, (t) => t.replace(/^order: .*$/m, 'order: 2'));
+    edit(SET_7, (t) => t.replace(/^order: .*$/m, 'order: 1'));
+    expect((await check(w)).differences.map((d) => d.kind)).toEqual(['reordered', 'reordered']);
+  });
+
+  it('T31: deleting a principle, or moving one to the reserve, breaks the set', async () => {
+    const text = w.files.get(COURAGE)!;
+    w.files.delete(COURAGE);
+    expect((await check(w)).differences).toEqual([{ path: COURAGE, kind: 'removed' }]);
+    w.files.set('principles/_reserve/courage-before-comfort.md', text.replace(/^set: .*$/m, 'set: _reserve').replace(/^order: .*\n/m, ''));
+    const r = await check(w);
+    expect(r.differences.map((d) => d.kind).sort()).toEqual(['added', 'removed']);
+    expect(r.verdicts.get(SET_G)?.verdict).toBe('broken');
+  });
+
+  it('T32: an added principle is unsealed and breaks its set; an added set is broken', async () => {
+    w.files.set('principles/ps-g8xw/obey.md', w.files.get(COURAGE)!.replace(/^title: .*$/m, 'title: Obey').replace(/^order: .*$/m, 'order: 3'));
+    const r = await check(w);
+    expect([r.verdicts.get('principles/ps-g8xw/obey.md')?.verdict, r.verdicts.get(SET_G)?.verdict]).toEqual(['unsealed', 'broken']);
+    w.files.set('principles/ps-zzzz/_set.md', w.files.get(SET_G)!.replace(/^order: .*$/m, 'order: 3'));
+    expect((await check(w)).verdicts.get('principles/ps-zzzz/_set.md')?.verdict).toBe('broken');
+  });
+
+  it('T33: changing a principle’s grounds or related breaks it', async () => {
+    edit(COURAGE, (t) => t.replace('  - aurelius-meditations-4-3', '  - weil-attention'));
+    expect((await check(w)).differences).toEqual([{ path: COURAGE, kind: 'edited' }]);
+    w = await world();
+    await fullySeal(w);
+    edit(COURAGE, (t) => t.replace('  - ps-7k2m/say-the-hard-thing-first', '  - ps-7k2m/write-to-find-out'));
+    expect((await check(w)).differences).toEqual([{ path: COURAGE, kind: 'edited' }]);
+  });
+
+  it('T34: restoring an older manifest by deleting the newest is caught by the pinned head', async () => {
+    edit(COURAGE, (t) => `${t}\nA second thought.\n`);
+    const newest = await sealPrinciples(w, w.phone);
+    const accepted = structuredClone(w.heads);
+    expect(await codes(accepted)).toEqual([]);
+    w.gnomon.delete(newest);
+    edit(COURAGE, (t) => t.replace('\nA second thought.\n', ''));
+    expect(await codes(accepted)).toEqual(['rolled-back']);
+  });
+
+  it('T35: deleting a revocation a verifier accepted is a finding, and the key stays revoked', async () => {
+    const rev = await makeRevocation(w.root, { key: w.fido.keyId, last_seq: 0, last: null, at: AT });
+    w.gnomon.set(rev.path, rev.text);
+    const pins = (await check(w)).revocations!;
+    expect(Object.keys(pins)).toEqual([w.fido.keyId]);
+    w.gnomon.delete(rev.path);
+    await seal(w, w.fido, BQ, 'attest');
+    expect((await check(w, w.heads, pins)).findings.map((f) => f.code)).toEqual(['revocation-removed', 'sealed-after-revocation']);
+    expect(await codes()).toEqual([]);
+  });
+
+  it('T36: the same on an encrypted brain, with the brain key', async () => {
+    const key = await importBodyKey(crypto.getRandomValues(new Uint8Array(32)));
+    for (const { path, text } of await encryptSealFiles(key, w.gnomon)) w.gnomon.set(path, text);
+    expect((await check(w)).locked).toBe(true);
+    w.gnomon = await decryptSealFiles(key, w.gnomon);
+    expect(await codes()).toEqual([]);
+    edit(RAW_4_3, (t) => t.replace('Men seek retreats', 'Men seek comfort').replace(/^inbox_ref: .*\n/m, ''));
+    edit(COURAGE, (t) => `${t}\nTampered.\n`);
+    const r = await check(w);
+    expect([r.verdicts.get(RAW_4_3)?.verdict, r.verdicts.get(COURAGE)?.verdict]).toEqual(['broken', 'broken']);
+  });
+
+  it('a seal by an unknown key naming a sealed source breaks it; a source seal that replaces nothing real is invalid', async () => {
+    const a = await agent();
+    const content = await sourceContent({ slug: 'weil-attention', body: 'forged\n' });
+    const s = await makeSeal(a, { kind: 'source', slug: 'weil-attention', basis: 'ratify', at: AT, content, replaces: null }, { seq: 1, prev: null });
+    w.gnomon.set(s.path, s.text);
+    const r = await check(w);
+    expect(r.findings.map((f) => f.code)).toEqual(['unknown-key']);
+    expect(r.verdicts.get(RAW_WEIL)?.verdict).toBe('broken');
+  });
+
+  it('two seals that both claim to be the newest for a source are a fork', async () => {
+    const src = (await check(w)).current.sources.get('weil-attention')!;
+    const { v: _v, kind: _k, slug: _s, basis: _b, since, replaces: _r, at: _a, key: _key, seq: _seq, prev: _p, ...content } = src.payload;
+    const s = await makeSeal(w.phone, { kind: 'source', slug: 'weil-attention', basis: 'attest', since: since!, at: AT, content, replaces: null }, await sealPosition(w.gnomon, w.phone.keyId, w.heads[w.phone.keyId]));
+    w.gnomon.set(s.path, s.text);
+    expect((await check(w, {})).findings.map((f) => f.code)).toContain('seal-fork');
+    expect((await verdicts(w, {}))[RAW_WEIL]).toBe('broken');
   });
 });

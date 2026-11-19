@@ -61,9 +61,16 @@ were discussed and set aside. Each block still needs the maintainer's go.
   `docs/integrity-proposal.md`; version 2 parts are marked *(v2)* until
   built. Five points the texts settled are listed under I1 in the
   proposal §10 for the maintainer to confirm.
-- Next: **step 2, I2** (core: `source` and `principles` seals, verdicts
-  by slug and bytes, pinned revocations, attack rows T23 to T36), on the
-  maintainer's go and their word on those five points.
+- Done: **step 2, I2** (2026-11-19): `core/src/seal` makes and verifies
+  `source` and `principles` seals, decides a source by slug and bytes,
+  pins revocations, and runs attack rows T1 to T36. The maintainer
+  accepted the five points. The app still shows the verdicts of before
+  (`legacyVerdicts` in `services/sealing.ts`) and makes no version 2
+  seal, so nothing changed on the phone.
+- Next: **step 2, I3** (the app: seal at Ratify and on every principle
+  and set write, "Seal everything that exists", marks, the banner's way
+  out, Reason from sealed material only with "Stood on" and the quote
+  check; Technical Specification §6.5 lists it), on the maintainer's go.
 - The nightly became `live-github.yml` on 2026-11-19: on demand only,
   against `gdfekaris/gnomon-scratch` alone, with a token that has
   Contents read and write on that one repository (the maintainer judged

@@ -269,7 +269,7 @@ principles at all, which turns detection into prevention.
   sealed and is no longer sent to a model, the sealed title and author
   go instead; (e) "Accept as mine" (`Seal: principles`) is the way out
   when principles show as changed, after every difference was shown.
-- [ ] **I2. Core** (L). `source` and `principles` seals; verdicts by slug
+- [x] **I2. Core** (L; done 2026-11-19, `core/src/seal`, 70 seal tests; the sealer hooks on the plans moved to I3). `source` and `principles` seals; verdicts by slug
   and bytes; pinned revocations; new attack rows: remove `inbox_ref`,
   swap a source's text, delete a revocation, edit a principle, reorder,
   edit a set's description, delete a principle, flip `curated` to

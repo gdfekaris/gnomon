@@ -33,8 +33,8 @@ export const bodyBytes = (body: string): Uint8Array<ArrayBuffer> => utf8(normali
 const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
 
 /**
- * RFC 8785 for the values a payload may hold (schema §11.3): objects, strings,
- * null, and integers from 0 to 2^53 − 1. Keys sort by UTF-16 code units, which
+ * RFC 8785 for the values a payload may hold (schema §11.3): objects, arrays,
+ * strings, null, and integers from 0 to 2^53 − 1. Array elements keep their order. Keys sort by UTF-16 code units, which
  * is what Array.prototype.sort does by default; strings escape as JSON.stringify.
  */
 export function canonicalJson(value: unknown): string {
@@ -47,14 +47,15 @@ export function canonicalJson(value: unknown): string {
     if (!Number.isSafeInteger(value) || value < 0) throw new Error(`a payload number must be an integer from 0 to 2^53 - 1, not ${value}`);
     return String(value);
   }
-  if (typeof value === 'object' && !Array.isArray(value)) {
+  if (Array.isArray(value)) return `[${value.map((v) => canonicalJson(v)).join(',')}]`;
+  if (typeof value === 'object') {
     const o = value as Record<string, unknown>;
     return `{${Object.keys(o)
       .sort()
       .map((k) => `${canonicalJson(k)}:${canonicalJson(o[k])}`)
       .join(',')}}`;
   }
-  throw new Error(`a payload cannot hold ${Array.isArray(value) ? 'an array' : typeof value}`);
+  throw new Error(`a payload cannot hold ${typeof value}`);
 }
 
 export type SignedKind = 'seal' | 'enroll' | 'revoke';
