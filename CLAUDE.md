@@ -46,16 +46,16 @@ I5 there; (3) the reasoning loop (Reason usable on day one, provenance
 under each answer, fewer tabs). Share-sheet capture and a server backend
 were discussed and set aside. Each block still needs the maintainer's go.
 
-- Built, not ticked: **step 1, C1 to C5** (2026-11-19; Technical
-  Specification §6.6, §10.3, §14): `storage/caching` keeps a copy of the
-  brain's stored text on the device (ciphertext on an encrypted brain),
-  the app opens from it and then checks the repository, a save no longer
-  re-reads the repository, drafts and a multi-capture queue live in
-  `localStorage`, Capture has a Paste button, and Settings → About has a
-  "Copy on this device" line with open, check, and save times. Waiting
-  on the maintainer's check on brain-1 from the iPhone: relaunch and read
-  that line; capture in airplane mode, relaunch, come back online. Ask
-  for that result first.
+- Done: **step 1, C1 to C5** (2026-11-19; Technical Specification §6.6,
+  §10.3, §14): `storage/caching` keeps a copy of the brain's stored text
+  on the device (ciphertext on an encrypted brain), the app opens from it
+  and then checks the repository, a save no longer re-reads the
+  repository, drafts and a multi-capture queue live in `localStorage`,
+  Capture has a Paste button, and Settings → About has a "Copy on this
+  device" line. The maintainer's check on brain-1 from the iPhone passed
+  the same day (opened in 161 ms from the copy; offline capture, relaunch,
+  draft, and Paste all good). A failed reconnect at launch now says why
+  (`session.connectError`); brain-1's token had expired and was replaced.
 - Next: **step 2, I1** (rewrite `security.md`, Schema §11 and §7.20,
   Technical Specification §6.5 to `docs/integrity-proposal.md`), on the
   maintainer's go.
