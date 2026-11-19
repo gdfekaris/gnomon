@@ -789,10 +789,9 @@ Open at the close of Phase 3 (2026-09-11); none blocks a Phase 4 block.
   hides decided ones, five newest first. Reopen only as a schema question.
 - [ ] **Filings list depth** — `listFilings` reads fifty commits; "Show
   all n ratified" means within that window. Raise if a brain outgrows it.
-- [ ] **Snapshot persistence across launches** (spec §20.1) — none yet;
-  cold start on the phone loads everything from GitHub. Measure against
-  §16 once the maintainer has a real-sized brain; a tree-only cache
-  (paths and shas, no content) is the candidate.
+- [x] **Snapshot persistence across launches** (spec §20.1) — done
+  2026-11-19 as the copy on the device (spec §6.6): the app opens from
+  it and fetches only what changed.
 - [ ] **Read-only-token assumptions** in the nightly — a Contents-read-only
   token reports `push: false` and gets 403 on writes; a token without
   Administration gets a 403 from `POST /user/repos`. Unconfirmed; needs

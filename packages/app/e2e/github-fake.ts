@@ -18,12 +18,15 @@ const cors = {
 export interface Bridge {
   /** added to every answer; a slow connection for loading-state checks */
   latencyMs: number;
+  /** every request fails as a dropped connection does: GitHub cannot be reached, though the app itself still loads */
+  down: boolean;
 }
 
 export async function serveGitHub(page: Page, gh: FakeGitHub): Promise<Bridge> {
-  const bridge: Bridge = { latencyMs: 0 };
+  const bridge: Bridge = { latencyMs: 0, down: false };
   await page.route('https://api.github.com/**', async (route) => {
     const req = route.request();
+    if (bridge.down) return route.abort('internetdisconnected');
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
     if (bridge.latencyMs) await new Promise((r) => setTimeout(r, bridge.latencyMs));
     const init: RequestInit = { method: req.method(), headers: req.headers() };

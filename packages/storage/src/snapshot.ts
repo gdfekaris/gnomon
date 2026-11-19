@@ -6,8 +6,7 @@ import { type BrainSnapshot, buildSnapshot, isFrontmatterPath } from '@gnomon/co
 import type { StorageDriver } from './driver';
 
 export async function loadSnapshot(driver: StorageDriver): Promise<BrainSnapshot> {
-  const head = await driver.head();
-  const tree = await driver.list();
+  const { head, tree } = driver.listAt ? await driver.listAt() : { head: await driver.head(), tree: await driver.list() };
   const texts = await driver.readMany(tree.map((e) => e.path).filter(isFrontmatterPath));
   return buildSnapshot({ head, tree, texts });
 }

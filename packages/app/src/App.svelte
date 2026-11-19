@@ -11,7 +11,7 @@
   import UnlockSheet from './lib/components/UnlockSheet.svelte';
   import UpdateToast from './lib/components/UpdateToast.svelte';
   import { startServiceWorker } from './lib/stores/pwa.svelte';
-  import { watchNetwork } from './lib/stores/pending.svelte';
+  import { flushPending, watchNetwork } from './lib/stores/pending.svelte';
   import Browse from './routes/Browse.svelte';
   import FileView from './routes/FileView.svelte';
   import Capture from './routes/Capture.svelte';
@@ -36,6 +36,8 @@
       if (session.driver) return;
       if (settings.prefs.mode === 'github' && settings.git) await connectGitHub(settings.git);
       else if (settings.prefs.mode === 'demo') await connectDemo();
+      // Captures made while the brain could not be reached are saved now that it can.
+      flushPending();
     } catch {
       // the screens show the error state; the user can reconnect in Settings
     } finally {

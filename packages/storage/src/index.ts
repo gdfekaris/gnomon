@@ -3,6 +3,7 @@ export * from './errors';
 export * from './keyring';
 export * from './memory';
 export * from './encrypting';
+export * from './caching';
 export * from './github';
 export * from './snapshot';
 export * from './filings';

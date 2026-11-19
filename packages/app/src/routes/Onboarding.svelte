@@ -262,6 +262,11 @@
   <ul class="privacy">
     <li><strong>You.</strong> The brain is a private repository under your GitHub account. You can read it there, copy it, or take it elsewhere at any time.</li>
     <li>
+      <strong>This device</strong> keeps a copy of the brain's text, so the app opens at once and works without a connection,
+      and holds any capture that is waiting to be saved. Anyone with the device unlocked can read it; on an encrypted brain
+      the copy is kept encrypted. Disconnecting in Settings removes it.
+    </li>
+    <li>
       <strong>GitHub</strong> holds the files and can technically read them. Its current policy keeps private repositories
       out of model training, but that is a promise, not a lock. Attached files stay in the repository's history for good.
     </li>

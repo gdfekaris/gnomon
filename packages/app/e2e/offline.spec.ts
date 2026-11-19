@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test('offline, a text capture waits in memory and saves when the connection returns', async ({ page, context }) => {
+test('offline, text captures wait on the device and save in order when the connection returns', async ({ page, context }) => {
   await page.goto('/#/settings');
   await page.getByTestId('use-demo').click();
   await expect(page.getByText('Connected: demo brain')).toBeVisible();
@@ -16,7 +16,14 @@ test('offline, a text capture waits in memory and saves when the connection retu
 
   await page.getByTestId('capture-text').fill('A second one.');
   await page.getByTestId('capture-save').click();
-  await expect(page.getByRole('alert')).toContainText('already waiting');
+  await expect(page.getByTestId('queued')).toContainText('2 captures are waiting');
+  await expect(page.getByTestId('queued-item')).toHaveCount(2);
+
+  // One can be taken back into the empty form.
+  await page.getByTestId('queued-item').nth(1).getByTestId('queued-take').click();
+  await expect(page.getByTestId('capture-text')).toHaveValue('A second one.');
+  await expect(page.getByTestId('queued')).toContainText('One capture is waiting');
+  await page.getByTestId('capture-text').fill('');
 
   await context.setOffline(false);
   await expect(page.getByTestId('saved')).toBeVisible();

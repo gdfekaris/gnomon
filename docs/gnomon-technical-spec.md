@@ -9,6 +9,8 @@ September 2026
 
 *2026-10-05: seals (§6.5, and §6.4, §10.3, §13, §15), Phase 5; the claim and threat model are `security.md`, the format Schema §11.*
 
+*2026-11-19: the copy of the brain on the device (§6.6, and §2, §6.1, §6.2, §10.2, §10.3, §10.4, §14, §16, §20.1), by the maintainer's decision: the app opens from the device and keeps captures there until they are saved. This reverses "no brain content on the device".*
+
 ---
 
 ## 1. Purpose and scope
@@ -30,7 +32,7 @@ Out of scope: visual design of the UI (a separate design pass), the exact prose 
 | Symmetric crypto | WebCrypto `SubtleCrypto` | AES-256-GCM, `getRandomValues`, non-extractable keys. |
 | Password KDF | `libsodium-wrappers-sumo` | Argon2id only. Loaded lazily; never in the initial bundle. |
 | Git host API | Plain `fetch` | REST Git Data API for writes, GraphQL for batched reads. Behind the `StorageDriver` interface. No Octokit. |
-| On-device storage | `idb-keyval` (IndexedDB) | Credentials, preferences, wrapped keys. Never brain content. |
+| On-device storage | `idb-keyval` (IndexedDB), `localStorage` | Credentials, preferences, wrapped keys; since 2026-11-19 a copy of the brain's stored text (§6.6) and the capture draft and queue (§14). |
 | Tests | Vitest (unit), Playwright (flows) | See §17. |
 | Hosting/CI | GitHub Pages via GitHub Actions; npm for the CLI | See §18. |
 
@@ -140,6 +142,7 @@ export interface BrainSnapshot {
 export interface StorageDriver {
   head(): Promise<string>;                                        // current commit SHA of main
   list(): Promise<TreeEntry[]>;                                   // full recursive tree at head: { path, sha, size }
+  listAt?(): Promise<{ head: string; tree: TreeEntry[] }>;        // optional: the head and its tree read together
   readMany(paths: string[]): Promise<Map<string, { text: string; sha: string }>>;  // batched text reads
   readBytes(path: string): Promise<{ bytes: Uint8Array; sha: string }>;            // one attachment
   commit(batch: CommitBatch): Promise<{ sha: string }>;           // atomic multi-file commit
@@ -171,7 +174,7 @@ export interface CommitBatch {
 
 ### 6.2 GitHub driver
 
-**Reads.** `list` is `GET /git/trees/{head}?recursive=1`. `readMany` is the GraphQL endpoint (`POST https://api.github.com/graphql`, same PAT), one query per batch of up to 100 paths using aliases:
+**Reads.** `list` is `GET /git/trees/{head}?recursive=1`; the optional `listAt` returns the head with that tree, so a snapshot load reads the ref once, and `readMany` reads at the head last listed or committed. `readMany` is the GraphQL endpoint (`POST https://api.github.com/graphql`, same PAT), one query per batch of up to 100 paths using aliases:
 
 ```graphql
 query($owner: String!, $name: String!) {
@@ -192,6 +195,8 @@ A 500-file brain loads in at most six requests. Blobs GraphQL reports as binary 
 3. `POST /git/trees` with `base_tree` = head tree; deletes expressed as entries with `sha: null`.
 4. `POST /git/commits` with parent = head.
 5. `PATCH /git/refs/heads/main` with `force: false` — a second guard against a moved head.
+
+The blobs of step 2 are created in parallel (creation is content-addressed), paced under GitHub's secondary limit. The head's tree for step 3 comes from `GET /git/commits/{head}` on the first commit of a session and is remembered from the driver's own commits after that. GitHub can serve the previous ref and the previous commits listing for a moment after step 5: `head` answers with the driver's own last commit when the ref still names its parent, and `history` waits, once, until the listing shows that commit; a commit itself does not wait.
 
 `history` uses `GET /commits?sha=main&per_page=`. `compare` uses `GET /compare/{base}...{head}` and maps to `{ path, status: 'added'|'modified'|'removed', patch? }`. `revert` fetches the commit's parent tree, builds a new tree that restores the parent's blobs for every touched path (added files → delete, modified → parent blob, removed → parent blob), and commits it; it refuses (`RevertConflictError`) if any touched path's current blob SHA differs from the target commit's blob SHA — the Schema §5 "later commits built on it" check, done precisely. Because a filing touches only its own new files and its capture (Schema §7.6), later filings never conflict with it.
 
@@ -285,6 +290,19 @@ The BIP-39 English word list ships in core as data, held to the published file's
 **Encryption.** `planEncrypt`, `planDecrypt`, and `planRekey` (§6.4) take the seal files as plaintext and write them whole as ciphertext or plaintext; the payloads and signatures are untouched. The encrypting wrapper encrypts a seal file written through it, whole, and decrypts one read through it, so a capture's seal on an encrypted brain is ciphertext from its first commit.
 
 **Where verification counts.** The app on the phone and `gnomon verify` in the maintainer's own account are the trusted verifiers. `gnomon verify` anywhere an agent runs, and in a brain's CI, is advisory: the agent controls that environment. `security.md` says so.
+
+### 6.6 The copy on the device (2026-11-19)
+
+`CachingDriver` (`storage/caching`) wraps any driver and keeps, in a `CopyStore` (a small async key-value interface; IndexedDB in the app, database `gnomon-copy`), the tree at the last head it saw and every text blob it has read or written, keyed by git blob id. It sits directly over the GitHub driver, **below** the encrypting wrapper, so the copy holds exactly what the git host holds: ciphertext bodies on an encrypted brain. A blob id names its bytes, so a held blob is never stale; only the head and the tree are ever asked for again.
+
+- **Reads.** `listAt`, which a load or a refresh calls, always asks the host for the head and the tree (two requests) and stores them; `list` answers from that listing for three seconds, so the readers that follow a load (the encryption config, the sealing files) read the same tree and ask nothing more. A refused commit drops that listing. `readMany` answers from the copy and asks the host only for blobs it does not hold. A copy that has not been checked since it was opened, or since a `revert`, is checked before it answers an online read.
+- **Writes.** After the inner `commit` succeeds, the copy is advanced from the batch itself: blob ids are computed (`gitBlobSha`), written text is stored, the tree and head are replaced. No request is made. `revert` invalidates the tree, since what it restores is the host's to say. `compare` results never change and are kept by commit pair.
+- **`copyOnly`** is the same brain read from the copy alone: `head`, `list`, and `readMany` never reach the host, and a read the copy cannot answer is `NotInCopyError` (a `NetworkError`). The app composes a second stack over it (`Stack.local`: the encrypting wrapper over `copyOnly`, with the same keyring).
+- **`forget`** drops one brain's keys from the store; **`prune`** drops blobs the current tree no longer names.
+
+`BrainService` uses it in three places. **Launch:** when a copy exists, `connect(driver, { local, fromCopy: true })` loads the snapshot through `local` with no request, sets `snapshot.fromCopy`, and seal verification runs over the copy; the app then calls `refresh` in the background, which costs the head, the tree, and only the files that changed, and clears `fromCopy`. An unreachable repository leaves the open brain in place and is not an error on screen. **After a commit:** the reload that used to be a full `refresh` reads `local`, which is already at the new head. **On return:** when the app becomes visible again (at most every fifteen seconds) it refreshes the same way, so a commit made elsewhere is seen before the next tap fails on it. A load that a commit or a newer load overtook is dropped. Unlocking an encrypted brain reopens from the copy and then checks the repository.
+
+The copy is a cache, never an authority: the store is wrapped so that every call is bounded in time and a failure reads as "not in the copy" (iOS has made IndexedDB throw, hang, and come back empty), and the app then loads from the repository as it did before. Disconnecting forgets the copy. The demo brain keeps none. Attachment bytes are not kept; the digest of each attachment the verifier has read is, by blob id, so verification on a later launch does not download the file again. Settings → About reports whether the brain was opened from the copy, how long the open, the last check, and the last save took, and the copy's last failure.
 
 ## 7. Brain model operations (`core`)
 
@@ -417,11 +435,22 @@ Stores are Svelte 5 `$state` objects exported from modules; services mutate them
 | `enc.wrappedKey` | ArrayBuffer | Brain key wrapped under `enc.deviceKey`. |
 | `seal.<owner>/<name>` | `{ key: CryptoKey, keyId, alg, root: { id, pub }, heads }` | §6.5: the device's non-extractable signing key for that brain, the pinned root, the pinned heads. Never leaves the device. |
 
-No brain content — markdown or attachment — is ever written to IndexedDB, localStorage, or the Cache API. iOS may evict this store after seven days of non-use; the app treats a missing token as "signed out" and re-onboards to the token step only.
+Since 2026-11-19 the device also holds brain content, by the maintainer's decision:
+
+| Where | Key | Value | Notes |
+|---|---|---|---|
+| IndexedDB, database `gnomon-copy` | `<owner>/<name>\|meta` | `{ head, tree }` | §6.6: the tree at the last head seen. |
+| | `<owner>/<name>\|b\|<blob id>` | string | The stored text of one blob: ciphertext bodies on an encrypted brain. |
+| | `<owner>/<name>\|c\|<base>...<head>` | `FileChange[]` | A compare, which never changes. |
+| | `<owner>/<name>\|digests` | `{ <blob id>: digest }` | Attachment digests for seal verification. |
+| `localStorage` | `gnomon.capture.draft` | `{ text, note }` | §14: what is typed on Capture, until saved or cleared. Plaintext. |
+| | `gnomon.capture.queue` | `QueuedCapture[]` | §14: captures waiting to be saved. Plaintext. |
+
+Attachment bytes are never written to the device, and nothing is written to the Cache API. The draft and the queue are plaintext even on an encrypted brain, since they must be readable before the brain is unlocked; they hold only what has not been saved yet. Disconnecting removes the copy. iOS may evict these stores after seven days of non-use: the copy is rebuilt from the repository, and the app treats a missing token as "signed out" and re-onboards to the token step only. The onboarding disclosure names the device as a place the brain's text is kept.
 
 ### 10.4 Capture path (US-1 budget)
 
-Launch → Capture screen is the default route, rendered before the snapshot loads. The screen has the paste target, the note field, and an attach control (`<input type="file">`, which on iOS offers Files, Photos, and the camera). Save builds the capture locally — stem per Schema §3.4, attachment written as `inbox/<stem>.<ext>` with the extension lowercased — and issues one `commit` with `expectedHead` = last known head; on `HeadMovedError` it refetches head and retries once automatically (a capture cannot conflict with anything). Attachments over the §6.2 limit are refused before upload with the size shown. Snapshot refresh happens after the commit resolves, off the critical path.
+Launch → Capture screen is the default route, rendered before the snapshot loads. The screen has the paste target, the note field, and an attach control (`<input type="file">`, which on iOS offers Files, Photos, and the camera). Save builds the capture locally — stem per Schema §3.4, attachment written as `inbox/<stem>.<ext>` with the extension lowercased — and issues one `commit` with `expectedHead` = last known head; on `HeadMovedError` it refetches head and retries once automatically (a capture cannot conflict with anything). Attachments over the §6.2 limit are refused before upload with the size shown. The reload after the commit is off the critical path and, with the copy on the device (§6.6), asks the repository nothing. A Paste button fills the passage from the clipboard in one tap where the browser allows it; a refusal says how to paste by hand, beside the button.
 
 ## 11. PWA and service worker
 
@@ -458,7 +487,7 @@ AGENTS.md instructs agents to run `npx gnomon-cli validate && npx gnomon-cli ind
 
 ## 14. Error handling and offline
 
-All driver errors are typed: `AuthError`, `HeadMovedError`, `RevertConflictError`, `RateLimitError`, `NetworkError`, `ValidationError`, `AttachmentTooLargeError`, `LockedError` (encrypted brain, no key). Screens map these to specific recoveries rather than generic toasts: `AuthError` → token step; `HeadMovedError` → refresh banner with retry; `LockedError` → unlock sheet; `AttachmentTooLargeError` → the size and the limit, with the capture kept in the form. Offline: the app shell loads; Capture accepts text and queues **one** pending text-only capture in memory (not persisted — see §10.3) with a clear "will save when online" state; attachments are not queued; everything else shows the read-only cached snapshot if present.
+All driver errors are typed: `AuthError`, `HeadMovedError`, `RevertConflictError`, `RateLimitError`, `NetworkError`, `ValidationError`, `AttachmentTooLargeError`, `LockedError` (encrypted brain, no key). Screens map these to specific recoveries rather than generic toasts: `AuthError` → token step; `HeadMovedError` → refresh banner with retry; `LockedError` → unlock sheet; `AttachmentTooLargeError` → the size and the limit, with the capture kept in the form. Offline: the app shell loads and the brain opens from the copy on the device (§6.6), read-only in effect since no commit can land. **Capture never loses text.** What is typed is written to the device a moment after each keystroke and when the screen or the app is left, and is restored on return. A text capture that cannot be saved now (offline, the repository unreachable, or the brain not connected yet) joins a queue on the device (§10.3), any number of them, each with the time it was made; the queue is written before the form is cleared, so a device that cannot store it fails the save and keeps the text in the form. The queue is saved oldest first when the connection returns, when the app comes back to the front, and at launch; each capture is committed, and sealed when sealing is on, at that moment, with its own time as `created`. An unreachable repository stops the run and everything keeps waiting; any other failure is shown on that capture, which stays until the curator tries again or takes it back into the form. Attachments are not queued.
 
 ## 15. Security considerations
 
@@ -497,7 +526,7 @@ GitHub Actions on push to `main`: install, typecheck, unit tests, `gnomon valida
 
 ## 20. Open technical decisions
 
-1. **Snapshot persistence across launches.** Currently none (brain content never touches device storage). A Cache-API-free option is to persist only the tree listing (paths + blob SHAs, no content) to speed cold start; decide after measuring §16 targets with the GraphQL loader.
+1. **Snapshot persistence across launches.** *Decided 2026-11-19:* the device keeps a copy of the brain's stored text (§6.6), by the maintainer's decision after a review found launch and every save re-reading the whole repository. The earlier position, that brain content never touches device storage, is withdrawn.
 2. **Anthropic context-window table maintenance.** Bundled table vs. a `/models` field if one becomes available; revisit at each release.
 3. **Argon2id parameters.** *Decided 2026-09-26:* `INTERACTIVE` (64 MB) is the default. Measured on the maintainer's iPhone (Settings → About → Measure): `INTERACTIVE` 2.29 s, `MODERATE` 13.62 s. No user-raisable setting for now; the stored parameters leave room for one.
 4. **Multiple pending offline captures.** Deliberately capped at one, text only; revisit if real usage shows loss.

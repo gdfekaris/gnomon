@@ -80,7 +80,7 @@ export interface SealingState {
 export const emptySealing = (): SealingState => ({ status: 'off', root: null, device: null, keys: [], requests: [], error: null, verdicts: {}, findings: [], locked: false, verifiedHead: null, uncapturable: [] });
 
 /** What a session keeps between runs: the last sealing files read, attachment digests by blob sha, and a run counter that drops stale results. */
-export interface SealCache { files: Map<string, string>; digests: Map<string, string>; run: number }
+export interface SealCache { files: Map<string, string>; digests: Map<string, string>; run: number; /** told of each new attachment digest, so a device can keep them across launches */ onDigest?: (sha: string, digest: string) => void }
 export const newSealCache = (): SealCache => ({ files: new Map(), digests: new Map(), run: 0 });
 
 export interface SealingContext {
@@ -192,7 +192,10 @@ async function attachmentDigest(ctx: SealingContext, s: BrainSnapshot, path: str
   const known = a.sha ? ctx.cache.digests.get(a.sha) : undefined;
   if (known) return known;
   const d = await digest((await ctx.plain.readBytes(path)).bytes);
-  if (a.sha) ctx.cache.digests.set(a.sha, d);
+  if (a.sha) {
+    ctx.cache.digests.set(a.sha, d);
+    ctx.cache.onDigest?.(a.sha, d);
+  }
   return d;
 }
 

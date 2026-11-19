@@ -7,4 +7,8 @@ export const snapshot = $state({
   stale: false,
   loading: false,
   error: null as string | null,
+  /** opened from the copy on this device, not yet checked against the repository */
+  fromCopy: false,
+  /** how long the last open, check, and save took (Settings → About) */
+  timings: { open: null, refreshMs: null, commitMs: null } as import('../services/brain').Timings,
 });

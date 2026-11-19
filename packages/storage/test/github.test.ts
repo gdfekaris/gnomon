@@ -55,12 +55,13 @@ describe('GitHubDriver against the fake API (spec §6.2)', () => {
     expect(validateSnapshot(s)).toEqual([]);
   });
 
-  it('commit is the five-step Git Data sequence, a non-forced ref update, then a history read to see it', async () => {
+  it('commit is the five-step Git Data sequence and a non-forced ref update; the wait for the listing is left to history()', async () => {
     const { gh, driver } = await pair();
     const head = await driver.head();
     gh.requests.length = 0;
-    await driver.commit({ message: 'x', expectedHead: head, writes: [{ path: 'a.md', text: 'a' }, { path: 'b.bin', bytes: new Uint8Array([0, 1]) }], deletes: ['inbox/.gitkeep'] });
-    expect(gh.requests.map((r) => `${r.method} ${r.path.replace(/\/repos\/octocat\/brain/, '')}`)).toEqual([
+    const first = await driver.commit({ message: 'x', expectedHead: head, writes: [{ path: 'a.md', text: 'a' }, { path: 'b.bin', bytes: new Uint8Array([0, 1]) }], deletes: ['inbox/.gitkeep'] });
+    const names = () => gh.requests.map((r) => `${r.method} ${r.path.replace(/\/repos\/octocat\/brain/, '')}`);
+    expect(names()).toEqual([
       'GET /git/ref/heads/main',
       `GET /git/commits/${head}`,
       'POST /git/blobs',
@@ -68,8 +69,18 @@ describe('GitHubDriver against the fake API (spec §6.2)', () => {
       'POST /git/trees',
       'POST /git/commits',
       'PATCH /git/refs/heads/main',
-      'GET /commits?sha=main&per_page=1',
     ]);
+
+    // A second commit already knows its parent's tree.
+    gh.requests.length = 0;
+    const second = await driver.commit({ message: 'y', expectedHead: first.sha, writes: [{ path: 'c.md', text: 'c' }], deletes: [] });
+    expect(names()).toEqual(['GET /git/ref/heads/main', 'POST /git/blobs', 'POST /git/trees', 'POST /git/commits', 'PATCH /git/refs/heads/main']);
+
+    // The first history read after a commit checks that the listing shows it, once.
+    gh.requests.length = 0;
+    expect((await driver.history({ limit: 5 }))[0]!.sha).toBe(second.sha);
+    await driver.history({ limit: 5 });
+    expect(names()).toEqual(['GET /commits?sha=main&per_page=1', 'GET /commits?sha=main&per_page=5', 'GET /commits?sha=main&per_page=5']);
   });
 
   it('a head that moves between the ref check and the ref update surfaces as HeadMovedError', async () => {

@@ -34,9 +34,19 @@ export interface EncryptionState {
 export interface Stack {
   driver: StorageDriver;
   plain: StorageDriver;
+  /** `driver` reading only the copy on this device (spec §6.6), or null when the plain driver keeps none */
+  local: StorageDriver | null;
   keyring: PassphraseKeyring | null;
   config: EncryptionConfig | null;
   store: KeyStore | null;
+}
+
+/** The copy-only view of a plain driver that keeps a copy on this device (the caching driver), or null. */
+const copyOf = (plain: StorageDriver): StorageDriver | null => (plain as { copyOnly?: StorageDriver }).copyOnly ?? null;
+/** The session's driver over the copy alone: the encrypting wrapper over the copy-only view when there is a keyring. */
+export function localOf(plain: StorageDriver, keyring: PassphraseKeyring | null): StorageDriver | null {
+  const copy = copyOf(plain);
+  return copy && keyring ? new EncryptingDriver(copy, keyring) : copy;
 }
 
 /** The sentence the enable flow makes the user type back (spec §6.4): there is no recovery. */
@@ -69,19 +79,20 @@ export async function readEncryptionConfig(plain: StorageDriver): Promise<Encryp
  * check first; one that belongs to another brain or an earlier passphrase is
  * forgotten, so a wrong remembered key reads as locked, never as damage.
  */
-export async function composeStack(plain: StorageDriver, store: KeyStore | null, state: EncryptionState): Promise<Stack> {
-  const config = await readEncryptionConfig(plain);
+export async function composeStack(plain: StorageDriver, store: KeyStore | null, state: EncryptionState, fromCopy = false): Promise<Stack> {
+  // Opening from the copy on this device asks the repository nothing, the config included.
+  const config = await readEncryptionConfig(fromCopy ? (copyOf(plain) ?? plain) : plain);
   if (!config) {
     state.enabled = false;
     state.locked = false;
-    return { driver: plain, plain, keyring: null, config: null, store };
+    return { driver: plain, plain, local: localOf(plain, null), keyring: null, config: null, store };
   }
   const keyring = new PassphraseKeyring(store);
   if ((await keyring.restore()) && !(await verifyCheck(await keyring.key(), config.check))) await keyring.forget();
   state.enabled = true;
   state.locked = !keyring.unlocked;
   state.storeError = keyring.storeError;
-  return { driver: new EncryptingDriver(plain, keyring), plain, keyring, config, store };
+  return { driver: new EncryptingDriver(plain, keyring), plain, local: localOf(plain, keyring), keyring, config, store };
 }
 
 /** A fresh config and the raw key it seals (spec §6.4): one derivation, the check sealed from the same bytes. The caller adopts or zeroes `raw`. */
@@ -127,11 +138,11 @@ export async function enableEncryption(brain: BrainService, stack: Stack, state:
   }
   const keyring = new PassphraseKeyring(stack.store);
   await keyring.adopt(raw, opts.remember ?? false);
-  const next: Stack = { driver: new EncryptingDriver(stack.plain, keyring), plain: stack.plain, keyring, config, store: stack.store };
+  const next: Stack = { driver: new EncryptingDriver(stack.plain, keyring), plain: stack.plain, local: localOf(stack.plain, keyring), keyring, config, store: stack.store };
   state.enabled = true;
   state.locked = false;
   state.storeError = keyring.storeError;
-  await brain.replaceDriver(next.driver);
+  await brain.replaceDriver(next.driver, next.local);
   return { stack: next, files: batch.writes.length - 1 };
 }
 
@@ -144,11 +155,11 @@ export async function disableEncryption(brain: BrainService, stack: Stack, state
   const batch = planDecrypt(s, await sealFiles(stack.driver));
   await brain.commitStored(batch, stack.plain);
   await stack.keyring.forget();
-  const next: Stack = { driver: stack.plain, plain: stack.plain, keyring: null, config: null, store: stack.store };
+  const next: Stack = { driver: stack.plain, plain: stack.plain, local: localOf(stack.plain, null), keyring: null, config: null, store: stack.store };
   state.enabled = false;
   state.locked = false;
   state.storeError = stack.keyring.storeError;
-  await brain.replaceDriver(next.driver);
+  await brain.replaceDriver(next.driver, next.local);
   return { stack: next, files: batch.writes.length };
 }
 
@@ -171,7 +182,7 @@ export async function changePassphrase(brain: BrainService, stack: Stack, state:
   const next: Stack = { ...stack, config };
   state.locked = false;
   state.storeError = stack.keyring.storeError;
-  await brain.replaceDriver(next.driver);
+  await brain.replaceDriver(next.driver, next.local);
   return { stack: next, files: batch.writes.length - 1 };
 }
 
@@ -181,7 +192,7 @@ export async function unlockBrain(brain: BrainService, stack: Stack, state: Encr
   await stack.keyring.unlock(passphrase, stack.config, remember);
   state.locked = false;
   state.storeError = stack.keyring.storeError;
-  await brain.refresh();
+  await brain.reopen();
 }
 
 /** The locked sentence, as the screens show it under the sheet. */

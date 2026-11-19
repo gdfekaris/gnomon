@@ -21,6 +21,9 @@ export class EncryptingDriver implements StorageDriver {
   list(): Promise<TreeEntry[]> {
     return this.inner.list();
   }
+  async listAt(): Promise<{ head: string; tree: TreeEntry[] }> {
+    return this.inner.listAt ? this.inner.listAt() : { head: await this.inner.head(), tree: await this.inner.list() };
+  }
   readBytes(path: string): Promise<{ bytes: Uint8Array; sha: string }> {
     return this.inner.readBytes(path);
   }

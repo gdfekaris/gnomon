@@ -4,7 +4,7 @@
   // encryption flows of spec §6.4 (Phase 4 block 3). The token walkthrough is onboarding.
   import { hold } from '../lib/press';
   import pkg from '../../package.json';
-  import { connectDemo, connectGitHub, describeError, disconnect, encryption } from '../lib/services/index';
+  import { connectDemo, connectGitHub, copyDiagnostics, describeError, disconnect, encryption } from '../lib/services/index';
   import ValidationPanel from '../lib/components/ValidationPanel.svelte';
   import EncryptForm from '../lib/components/EncryptForm.svelte';
   import SealingPanel from '../lib/components/SealingPanel.svelte';
@@ -162,6 +162,7 @@
   <label>Fine-grained token <input bind:value={token} type="password" autocomplete="off" data-testid="git-token" /></label>
   <button class="primary" onclick={useGitHub} disabled={busy || !owner || !name || !token} use:hold={pressed === 'connect'}>{pressed === 'connect' ? 'Connecting…' : 'Connect'}</button>
   <p class="hint">A fine-grained token with Contents read and write on the one repository. Stored only on this device.</p>
+  <p class="hint" data-testid="copy-hint">This device keeps a copy of the brain's text so the app opens at once and works offline (encrypted, on an encrypted brain). Disconnect removes it.</p>
 </section>
 
 <section>
@@ -300,6 +301,17 @@
     </li>
     <li>
       Brain: {#if session.driver}{session.label}, {snapshot.current ? `at ${snapshot.current.head.slice(0, 7)}` : 'no snapshot'}{#if snapshot.error}, last load failed: {snapshot.error}{/if}{:else}none connected{/if}.
+    </li>
+    <li data-testid="copy-diag">
+      {#if session.mode === 'github'}
+        Copy on this device: {snapshot.fromCopy ? 'in use, not yet checked against the repository' : 'checked against the repository'}.
+        {#if snapshot.timings.open}Opened in {snapshot.timings.open.ms} ms from {snapshot.timings.open.from === 'copy' ? 'the copy' : 'the repository'}.{/if}
+        {#if snapshot.timings.refreshMs !== null}Last check of the repository: {snapshot.timings.refreshMs} ms.{/if}
+        {#if snapshot.timings.commitMs !== null}Last save: {snapshot.timings.commitMs} ms.{/if}
+        {#if copyDiagnostics.error}Last failure of the copy: {copyDiagnostics.error}{/if}
+      {:else}
+        Copy on this device: none (only a GitHub brain keeps one).
+      {/if}
     </li>
     <li>Service worker {swState}.</li>
     <li data-testid="custom-endpoint-build">{describePolicy(endpointPolicy)}</li>

@@ -52,6 +52,12 @@ export class GitHubDriver implements StorageDriver {
   private readonly sent: number[] = [];
   /** the last commit this driver made and what it was made on: a ref read that still says the parent is a lagging read */
   private lastWrite: { parent: string; sha: string } | null = null;
+  /** whether the commits listing has been seen to show `lastWrite`; history() waits for it, a commit does not */
+  private settled = true;
+  /** the commit the last listing or own commit was at; readMany reads at it, so a list then a read is one head */
+  private listedHead: string | null = null;
+  /** commit sha → its tree sha, learned from own commits and commit reads, so a second commit need not fetch its parent */
+  private readonly treeOf = new Map<string, string>();
 
   constructor(opts: GitHubDriverOptions) {
     this.owner = opts.owner;
@@ -173,18 +179,23 @@ export class GitHubDriver implements StorageDriver {
   }
 
   async list(): Promise<TreeEntry[]> {
+    return (await this.listAt()).tree;
+  }
+
+  async listAt(): Promise<{ head: string; tree: TreeEntry[] }> {
     const head = await this.head();
     const tree = await this.request<GitTree>('GET', `/git/trees/${head}?recursive=1`);
     if (tree.truncated) throw new StorageError('the repository tree is too large for one listing');
     const entries = tree.tree.filter((e) => e.type === 'blob').map((e) => ({ path: e.path, sha: e.sha, size: e.size ?? 0 }));
     this.treeCache = new Map(entries.map((e) => [e.path, e.sha]));
-    return entries.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+    this.listedHead = head;
+    return { head, tree: entries.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0)) };
   }
 
   async readMany(paths: string[]): Promise<Map<string, ReadResult>> {
     const out = new Map<string, ReadResult>();
     if (paths.length === 0) return out;
-    const head = await this.head();
+    const head = this.listedHead ?? (await this.head());
     for (let i = 0; i < paths.length; i += GRAPHQL_BATCH) {
       const batch = paths.slice(i, i + GRAPHQL_BATCH);
       const fields = batch.map((p, j) => `f${j}: object(expression: ${JSON.stringify(`${head}:${p}`)}) { ... on Blob { oid text isBinary } }`).join('\n');
@@ -251,7 +262,9 @@ export class GitHubDriver implements StorageDriver {
       throw e;
     }
     this.lastWrite = { parent, sha: commit.sha };
-    await this.settleRef(commit.sha);
+    this.settled = false;
+    this.listedHead = commit.sha;
+    this.treeOf.set(commit.sha, tree.sha);
     for (const e of entries) {
       if (e.sha === null) this.treeCache.delete(e.path);
       else this.treeCache.set(e.path, e.sha);
@@ -262,13 +275,16 @@ export class GitHubDriver implements StorageDriver {
   /**
    * The commits listing can lag a successful ref update, as the ref itself
    * does (seen in the nightly run; head() covers the ref through lastWrite).
-   * This waits until the listing shows the commit, so a caller's next
-   * history() sees the commit it was just handed.
+   * history() calls this first, so it waits until the listing shows this
+   * driver's last commit; a commit itself does not wait, since most are
+   * never followed by a history read.
    */
-  private async settleRef(sha: string): Promise<void> {
-    // head() already answers with this commit while the ref lags (lastWrite); the listing has no such cover.
+  private async settleRef(): Promise<void> {
+    if (this.settled || !this.lastWrite) return;
+    const sha = this.lastWrite.sha;
+    this.settled = true;
     for (let i = 0; i < REF_SETTLE.tries; i++) {
-      if ((await this.history({ limit: 1 }))[0]?.sha === sha) return;
+      if ((await this.listCommits({ limit: 1 }))[0]?.sha === sha) return;
       await sleep(REF_SETTLE.delayMs);
     }
   }
@@ -276,18 +292,27 @@ export class GitHubDriver implements StorageDriver {
   async commit(batch: CommitBatch): Promise<{ sha: string }> {
     const head = await this.head();
     if (head !== batch.expectedHead) throw new HeadMovedError(batch.expectedHead, head);
-    const headCommit = await this.commitObject(head);
-    const entries: Array<{ path: string; sha: string | null }> = [];
-    for (const w of batch.writes) {
-      const bytes = 'text' in w ? enc.encode(w.text) : w.bytes;
-      const blob = await this.request<{ sha: string }>('POST', '/git/blobs', { content: toBase64(bytes), encoding: 'base64' });
-      entries.push({ path: w.path, sha: blob.sha });
-    }
+    // The parent's tree and the blobs are independent requests; blob creation is content-addressed, so order does not matter.
+    const [baseTree, entries] = await Promise.all([
+      this.treeOf.get(head) ?? this.commitObject(head).then((c) => (this.treeOf.set(head, c.tree.sha), c.tree.sha)),
+      Promise.all(
+        batch.writes.map(async (w): Promise<{ path: string; sha: string | null }> => {
+          const bytes = 'text' in w ? enc.encode(w.text) : w.bytes;
+          const blob = await this.request<{ sha: string }>('POST', '/git/blobs', { content: toBase64(bytes), encoding: 'base64' });
+          return { path: w.path, sha: blob.sha };
+        }),
+      ),
+    ]);
     for (const path of batch.deletes) entries.push({ path, sha: null });
-    return this.finish(headCommit.tree.sha, head, entries, batch.message);
+    return this.finish(baseTree, head, entries, batch.message);
   }
 
   async history(opts: { limit: number; path?: string }): Promise<CommitInfo[]> {
+    await this.settleRef();
+    return this.listCommits(opts);
+  }
+
+  private async listCommits(opts: { limit: number; path?: string }): Promise<CommitInfo[]> {
     const q = new URLSearchParams({ sha: this.branch, per_page: String(opts.limit) });
     if (opts.path !== undefined) q.set('path', opts.path);
     const commits = await this.request<Array<{ sha: string; commit: { message: string; committer: { date: string } }; parents: Array<{ sha: string }> }>>('GET', `/commits?${q}`);

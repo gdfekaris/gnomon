@@ -45,9 +45,20 @@ test('a fresh brain shows empty states and the nudge on every screen; loading an
   await expect(nudge).toContainText('1 capture awaits filing.');
   await expect(nudge.getByRole('link', { name: 'File in Inbox' })).toHaveAttribute('href', '#/inbox');
 
-  // A slow connection shows the loading state, named, and then the content.
+  // On a slow connection a relaunch opens from the copy on the device (spec §6.6): the content, with no loading state.
   bridge.latencyMs = 300;
   await page.goto('/#/browse');
+  await page.reload();
+  await expect(page.getByText('files')).toBeVisible();
+  await expect(page.getByTestId('loading')).toHaveCount(0);
+  // Without a copy (a new device, or storage the phone cleared) it shows the loading state, named, and then the content.
+  await page.evaluate(() => new Promise<void>((resolve) => {
+    const open = indexedDB.open('gnomon-copy');
+    open.onsuccess = () => {
+      const clear = open.result.transaction('kv', 'readwrite').objectStore('kv').clear();
+      clear.onsuccess = () => resolve();
+    };
+  }));
   await page.reload();
   await expect(page.getByTestId('loading')).toHaveText('Loading octocat/brain…');
   await expect(page.getByText('files')).toBeVisible({ timeout: 15_000 });
