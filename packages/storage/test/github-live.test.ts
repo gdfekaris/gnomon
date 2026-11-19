@@ -74,7 +74,7 @@ async function seedCommit(seed: Map<string, Uint8Array>): Promise<string> {
     tree.push({ path, mode: '100644', type: 'blob', sha: blob.sha });
   }
   const t = await must('POST', `/repos/${scratch}/git/trees`, { tree });
-  const c = await must('POST', `/repos/${scratch}/git/commits`, { message: `Seed: nightly ${runId}`, tree: t.sha, parents: [] });
+  const c = await must('POST', `/repos/${scratch}/git/commits`, { message: `Seed: live test ${new Date().toISOString()}`, tree: t.sha, parents: [] });
   seeded.set(key, c.sha);
   return c.sha;
 }
