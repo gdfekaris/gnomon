@@ -13,6 +13,8 @@ September 2026
 
 *2026-10-05, later: seals, tamper evidence for captured content (§11, §7.20, and §2, §7.5, §7.17, §7.19, §10), from `tamper-evidence-proposal.md`; the claim and threat model are `security.md`.*
 
+*2026-11-19: integrity version 2 (`integrity-proposal.md`, decisions D1 to D4): a `source` seal made at Ratify, a `principles` manifest over the whole principles tree, verdicts by seal and never by `inbox_ref` or `curated`, pinned revocations, and only sealed material in a prompt (§7.20, §8, §11). Marked (v2) until blocks I2 and I3 build it.*
+
 ---
 
 ## 1. Scope and principles
@@ -397,11 +399,15 @@ When the curator clears a capture whose filing was ratified, or one left `unfile
 
 ### 7.20 Sealing
 
-The curator's sealing acts (§11); agents make none of them.
+The curator's sealing acts (§11); agents make none of them. Parts marked *(v2)* are specified here and built in blocks I2 and I3 of `integrity-proposal.md`.
 
 - **Set up sealing** (the app): write `.gnomon/root.json` and the device's enrollment (§11.4); one commit `Set up sealing`.
-- **Seal a capture** that has no valid content seal (the app or `gnomon seal`), after showing the curator its whole text: one `attest` seal (§11.5); one commit `Seal: <stem>`. Sealing every existing capture at once, after setup: one `attest` seal each, one commit `Seal: <n> existing captures`.
-- **Request a desktop key** (`gnomon keys request`): write `.gnomon/keys/requests/<key-id>.json`; one commit `Request key: <label>`.
+- **Seal a capture** that has no valid content seal (the app), after showing the curator its whole text: one `attest` seal (§11.5); one commit `Seal: <stem>`.
+- **Seal everything that exists** *(v2)*, once, after setup or after upgrading a brain sealed before version 2: one `attest` seal for each capture with no valid content seal, one `source` seal with basis `attest` for each `ratified` or `human` source with none, and the first `principles` manifest; one commit `Seal: existing material`. The app states what this proves, that the material is unchanged since today, before the curator confirms. From this commit on the brain is *fully sealed* (§11.6). Before version 2 this was `Seal: <n> existing captures`, captures only.
+- **Seals that ride in other commits** *(v2)*, on a fully sealed brain: `Ratify:` carries the source's `source` seal; `Edit source:` carries a replacement when it changes `title`, `author`, `work`, or `year`; every commit that creates, edits, reorders, moves, or deletes a principle or a set (§7.1 to §7.4, §7.9, §7.10 when it writes a principle, §7.14, §7.16, §7.18) carries a new `principles` manifest. A device that holds no enrolled key cannot make these commits; the app says so and offers recovery.
+- **Accept the principles as they stand** *(v2)*: when the tree differs from the manifest (a hand edit on the desktop, or tampering), the app lists every difference, and the curator either restores the files or signs a new manifest for the tree as it is; one commit `Seal: principles`.
+- **Seal a source as it stands** *(v2)*: a `ratified` or `human` source with no current seal, after the curator was shown its whole text and its title, author, work, and year: one `source` seal with basis `attest`; one commit `Seal: source <slug>`.
+- **Request a desktop key** (`gnomon keys request`, deferred with the desktop): write `.gnomon/keys/requests/<key-id>.json`; one commit `Request key: <label>`.
 - **Enroll a key** (the app, with the recovery phrase): write `.gnomon/keys/<key-id>.json`, and delete the request when there was one; one commit `Enroll key: <label>`.
 - **Revoke a key** (the app, with the recovery phrase): write `.gnomon/keys/<key-id>.revoked.json`; one commit `Revoke key: <label>`.
 
@@ -413,11 +419,13 @@ These rules govern which files are included when the app or an agent assembles c
 
 **The reserve is never assembled.** Only the selected sets, their principles, and those principles' grounds go to the model (§7.14).
 
+**Only sealed material is assembled** *(v2; today only broken passages are left out)*. On a fully sealed brain (§11.6), a set is assembled only when it verifies as a whole against the current `principles` manifest, and a passage only when its source is *verified* or *attested*. On a brain whose sealing is set up but which is not yet fully sealed, broken passages are left out and the app asks the curator to seal what exists (§7.20). A set that does not verify is refused with the reason; a passage that is *pending*, *unsealed*, or *broken* is left out and named in a notice. Every answer records which sets, principles, and passages it was given, each with its verdict.
+
 **Fill order for Task A (reason from a principle set) and Task B (relate a new text):**
 
 1. For each selected set, in set `order`: the `_set.md` body, then every principle file in principle `order`, verbatim. If this alone exceeds budget, stop and tell the user the selection is too large for the model; never truncate principles.
 2. For each principle, in the same order, the `raw.md` body of every slug in `grounds`, verbatim, in order of first reference, until the budget is reached. Attachments are never sent.
-3. For any grounding capture not included: its `notes.md` body (if any) or its title and author, plus its dual link, under a heading "Passages referenced but not included."
+3. For any grounding capture not included for lack of budget: its title and author, plus its dual link, under a heading "Passages referenced but not included." On a fully sealed brain these come only from *verified* or *attested* sources, whose title and author are sealed; `notes.md` is not sealed and is never sent *(v2; until then the `notes.md` body is sent when there is one)*.
 4. Task B adds the new text last; if the new text alone exceeds the remaining budget the user is told before the request is sent.
 
 **Precedence.** The task instructions state that principle order within a set is precedence: where two principles of one set conflict, the model names the tension, resolves it in favor of the lower `order` only if answering requires it, and says that it invoked precedence.
@@ -461,16 +469,23 @@ On an encrypted brain read without its key, the frontmatter rules run as usual a
 
 ## 11. Seals
 
-Seals make tampering with captured content evident. `security.md` states the claim they support, the threat model, and its assumptions; this section is the normative format and verification, exact enough to reimplement. Technical Specification §6.5 describes the implementation.
+Seals make tampering with the curator's texts and principles evident. `security.md` states the claim they support, the threat model, and its assumptions; this section is the normative format and verification, exact enough to reimplement. Technical Specification §6.5 describes the implementation. Parts marked *(v2)* were added on 2026-11-19 (`integrity-proposal.md`) and are built in blocks I2 and I3; everything unmarked is built. A version 2 verifier accepts every seal made before it; nothing is re-signed.
 
 ### 11.1 What is sealed
 
-The *sealed content* of a capture `inbox/<stem>.md` is its body, its `note`, and its attachment; the same content in a filed source is the body of a `raw.md` whose `inbox_ref` is `<stem>`, and its `original.<ext>`. Nothing else is sealed: no other frontmatter field (titles, authors, tags, `curated`, `status`, `filed_as`), and no principle, set, notes, proposal, or index file.
+- **A capture** `inbox/<stem>.md`: its body, its `note`, and its attachment.
+- **A source** `sources/<slug>/raw.md` *(v2)*: its body, its `original.<ext>`, its `title`, `author`, `work`, and `year`, and the stem it was filed from. Before version 2 a source had no seal of its own and was checked against its capture's seal through `inbox_ref`; that check remains for a source awaiting review (§11.6 step 5).
+- **The principles tree** *(v2)*: every set in order with its name and description, every principle in order with its title, body, `related`, and `grounds`, each ground bound to the sealed body of its source, and the reserve.
+
+Not sealed: `notes.md`, proposals, the indexes, `AGENTS.md`, and every frontmatter field not named above (tags, dates, `locator`, `origin`, `curated`, `status`, `filed_as`). No verdict and no rule of this section reads `curated`: what counts as the curator's is decided by seals alone.
 
 - **Body bytes** of a markdown file: the body as §4 splits it (a leading byte-order mark removed, CRLF and CR turned to LF, the text after the line that closes the frontmatter); decrypted when it carries the encryption marker (Technical Specification §6.4); then normalized (trailing newlines collapsed to exactly one, and a body that is empty or only newlines is empty); encoded as UTF-8.
 - **Note bytes:** the UTF-8 encoding of the `note` value as parsed from YAML.
 - **Attachment bytes:** the file's bytes.
 - **Digest:** `sha256:` followed by the 64 lowercase hex digits of the SHA-256 of the bytes.
+- **A frontmatter text value** *(v2)*, where a seal carries one (`title`, `author`, `work`, `year`, a set's `name`): the value as parsed from YAML, as a string; an integer (a `year` written `1947`) in plain decimal; `null` when the field is absent.
+- **Descriptor digest** of a set *(v2)*: the digest of the UTF-8 canonical JSON (§11.3) of `{"body": <digest of the _set.md body bytes>, "name": <name>}`.
+- **Principle digest** *(v2)*: the digest of the UTF-8 canonical JSON of `{"body": <digest of the body bytes>, "grounds": [{"body": <digest or null>, "slug": <source slug>}, …], "related": [<ref>, …], "title": <title>}`, with `grounds` and `related` in the order the file lists them (an absent `related` is an empty array). A ground's `body` is the `body` digest in that source's current `source` seal (§11.6 step 4) when the manifest is made, or `null` when the source has none; a `null` ground is not bound, and its passage is used only if the source itself is sealed later.
 
 ### 11.2 Files
 
@@ -480,17 +495,17 @@ The *sealed content* of a capture `inbox/<stem>.md` is its body, its `note`, and
 | `.gnomon/keys/<key-id>.json` | An enrollment (§11.4). | the root |
 | `.gnomon/keys/<key-id>.revoked.json` | A revocation (§11.4). | the root |
 | `.gnomon/keys/requests/<key-id>.json` | A desktop key awaiting enrollment (§11.4). Carries no trust. | — |
-| `.gnomon/seals/<key-id>/<seq>.json` | One seal (§11.5). `<seq>` is decimal, zero-padded to six digits, wider only past 999999. | the device key `<key-id>` |
+| `.gnomon/seals/<key-id>/<seq>.json` | One seal (§11.5), of any kind. `<seq>` is decimal, zero-padded to six digits, wider only past 999999. | the device key `<key-id>` |
 
 A signed file is the JSON object `{"payload": {…}, "sig": "…"}`; its layout and key order are free, since only the payload's canonical form (§11.3) is signed. Nothing under `.gnomon/keys/` or `.gnomon/seals/` is ever edited or deleted, except a request, deleted by its `Enroll key:` commit, and seal files rewritten as ciphertext or plaintext by the §7.17 commits.
 
 ### 11.3 Encodings
 
 - **base64** is RFC 4648 §4, the standard alphabet, with padding.
-- **Canonical JSON.** Payload values are objects, strings, `null`, and integers from 0 to 2^53 − 1; nothing else. The canonical form is RFC 8785 (JCS), which for these types is: object keys sorted by UTF-16 code units, recursively; no whitespace; strings escaped as ECMAScript `JSON.stringify` escapes them (`\"`, `\\`, `\b`, `\f`, `\n`, `\r`, `\t`, other code points below U+0020 as `\u00xx` in lowercase hex, everything else as literal UTF-8); integers in plain decimal.
-- **Signed bytes** of a payload: the UTF-8 of a context line, then the canonical JSON. The context line is `gnomon-seal v1\n` for a seal, `gnomon-enroll v1\n` for an enrollment, `gnomon-revoke v1\n` for a revocation. A signature for one kind can never verify as another.
-- **A seal's digest** is the digest (§11.1) of its signed bytes. Chains (`prev`) and revocations (`last`) name seals by it.
-- **Encrypted brains.** While `.gnomon/encryption.json` exists, every seal file is stored whole in the encrypted body format of Technical Specification §6.4: the marker line, then base64 of `nonce ‖ ciphertext ‖ tag` from AES-256-GCM over the file's JSON text, with the file's repo path as associated data. Enrollment, revocation, request, and root files hold only public keys and stay cleartext.
+- **Canonical JSON.** Payload values are objects, arrays *(v2)*, strings, `null`, and integers from 0 to 2^53 − 1; nothing else. The canonical form is RFC 8785 (JCS), which for these types is: object keys sorted by UTF-16 code units, recursively; array elements in their own order; no whitespace; strings escaped as ECMAScript `JSON.stringify` escapes them (`\"`, `\\`, `\b`, `\f`, `\n`, `\r`, `\t`, other code points below U+0020 as `\u00xx` in lowercase hex, everything else as literal UTF-8); integers in plain decimal.
+- **Signed bytes** of a payload: the UTF-8 of a context line, then the canonical JSON. The context line is `gnomon-seal v1\n` for a seal of any kind, `gnomon-enroll v1\n` for an enrollment, `gnomon-revoke v1\n` for a revocation. A signature for one of the three can never verify as another; the kinds of seal are told apart by the signed `kind`.
+- **A seal's digest** is the digest (§11.1) of its signed bytes. Chains (`prev`), replacements (`replaces`), and revocations (`last`) name seals by it. A **revocation's digest** *(v2)* is likewise the digest of its signed bytes.
+- **Encrypted brains.** While `.gnomon/encryption.json` exists, every seal file is stored whole in the encrypted body format of Technical Specification §6.4: the marker line, then base64 of `nonce ‖ ciphertext ‖ tag` from AES-256-GCM over the file's JSON text, with the file's repo path as associated data. Enrollment, revocation, request, and root files hold only public keys and stay cleartext. Digests are always of plaintext, so encrypting, decrypting, or changing the passphrase needs no new seal.
 
 ### 11.4 Keys
 
@@ -512,43 +527,89 @@ The **key id** is the lowercase hex of the first 16 bytes of the SHA-256 of the 
 
 ### 11.5 Seals
 
+Every seal carries the same envelope:
+
+| Field | Value |
+|---|---|
+| `v` | 1 |
+| `kind` | `capture`, `attest`, `clear`, `source` *(v2)*, or `principles` *(v2)* |
+| `at` | datetime: when the seal was made (for `capture`, the capture's `created`) |
+| `key` | the signing key's id; equals the folder name |
+| `seq` | integer from 1, per key; equals the file name |
+| `prev` | the digest of the same key's seal `seq − 1`, or `null` when `seq` is 1 |
+
+A device's seals of every kind share its one chain.
+
+**Capture seals.** `capture` is made with the capture; `attest` when the curator seals an existing capture after reading it; `clear` is a tombstone, made when the curator clears the capture.
+
 | Field | In | Value |
 |---|---|---|
-| `v` | all | 1 |
-| `kind` | all | `capture` (made with the capture), `attest` (the curator sealed an existing capture after reading it), `clear` (a tombstone: the curator cleared the capture) |
-| `stem` | all | the capture's stem |
+| `stem` | all three | the capture's stem |
 | `body` | `capture`, `attest` | digest of the capture's body bytes |
 | `note` | `capture`, `attest` | digest of the note bytes; present exactly when the capture has a `note` |
 | `attachment` | `capture`, `attest` | `{"name": "<stem>.<ext>", "digest": …}`, or `null` when the capture has none |
 | `filed_as` | `clear` | the slug the capture was filed as, or `null` |
-| `at` | all | datetime: when captured for `capture`, when sealed for `attest`, when cleared for `clear` |
-| `key` | all | the signing key's id; equals the folder name |
-| `seq` | all | integer from 1, per key; equals the file name |
-| `prev` | all | the digest of the same key's seal `seq − 1`, or `null` when `seq` is 1 |
+
+**Source seals** *(v2)*, kind `source`: the curator's signature that the source named `slug` holds this text, this file, and this attribution.
+
+| Field | Value |
+|---|---|
+| `slug` | the source's slug |
+| `basis` | `ratify`: made in the `Ratify:` commit. `create`: made in the commit in which the curator created the source by hand. `attest`: the source already existed and was sealed as it stood. A replacement carries the basis of the seal it replaces. |
+| `since` | present exactly when `basis` is `attest`: the `at` of the first `attest` seal for this slug, carried through replacements. The day since which the source is known unchanged. |
+| `body` | digest of the `raw.md` body bytes |
+| `attachment` | `{"name": "original.<ext>", "digest": …}`, or `null` when the source has none |
+| `stem` | the source's `inbox_ref`, or `null` when it has none |
+| `title`, `author`, `work`, `year` | the frontmatter text values (§11.1) |
+| `replaces` | the digest of the `source` seal for this slug that this one replaces, or `null` for the first |
+
+**The principles manifest** *(v2)*, kind `principles`: the curator's signature over the whole `principles/` tree.
+
+| Field | Value |
+|---|---|
+| `sets` | an array, one object per set in `order`: `{"slug": …, "descriptor": <descriptor digest>, "principles": [{"slug": …, "digest": <principle digest>}, …]}`, the principles in `order`. A set's position in the array is its `order`, a principle's position in its set is its `order`, both counted from 1. |
+| `reserve` | an array of `{"slug": …, "digest": …}` for `principles/_reserve/`, sorted by slug in UTF-16 code unit order |
+| `replaces` | the digest of the manifest this one replaces, or `null` for the first |
 
 ### 11.6 Verification
 
-A verifier holds a **pinned root** (id and public key, set by the curator from the phrase or the paper fingerprint, never read from `root.json`) and **pinned heads** (per key id, the highest `seq` it has accepted and that seal's digest). On an encrypted brain it needs the brain key to read seal files; without it, verification reports that it is locked and nothing else. Findings are about the brain; verdicts are about each capture and source.
+A verifier holds, outside the repository, a **pinned root** (id and public key, set by the curator from the phrase or the paper fingerprint, never read from `root.json`), **pinned heads** (per key id, the highest `seq` it has accepted and that seal's digest), and **pinned revocations** *(v2)* (per key id, the digest of the revocation it has accepted). On an encrypted brain it needs the brain key to read seal files; without it, verification reports that it is locked and nothing else. Findings are about the brain; verdicts are about each capture, source, set, and principle.
 
-1. **Keys.** The valid enrollments (§11.4) are the enrolled keys. Any other file in `.gnomon/keys/` outside `requests/` that is not a valid enrollment or revocation is a finding, *key record invalid*. A `root.json` that does not parse, or whose `id` or `pub` differs from the pinned root's, is a finding, *root replaced*.
-2. **Seals.** A seal folder whose key is not enrolled: every seal in it is invalid, and the folder is a finding, *unknown key*. A seal whose `key` or `seq` disagrees with its path, or whose signature does not verify under its enrolled key (§11.4, §11.8), is invalid, and a finding, *seal invalid*.
+A seal is **current** *(v2)* for a slug (kind `source`) or for the tree (kind `principles`) when it is valid and no other valid seal of its kind names its digest in `replaces`. A brain is **fully sealed** *(v2)* once it holds a valid `principles` manifest.
+
+1. **Keys.** The valid enrollments (§11.4) are the enrolled keys. Any other file in `.gnomon/keys/` outside `requests/` that is not a valid enrollment or revocation is a finding, *key record invalid*. A `root.json` that does not parse, or whose `id` or `pub` differs from the pinned root's, is a finding, *root replaced*. *(v2)* A pinned revocation whose file is missing, invalid, or has another digest is a finding, *revocation removed*, and its key is treated as revoked at the pinned point all the same.
+2. **Seals.** A seal folder whose key is not enrolled: every seal in it is invalid, and the folder is a finding, *unknown key*. A seal whose `key` or `seq` disagrees with its path, whose `kind` is not one of §11.5, or whose signature does not verify under its enrolled key (§11.4, §11.8), is invalid, and a finding, *seal invalid*.
 3. **Chains,** per enrolled key with seals `1..n`: every `seq` from 1 to `n` is present (else *chain gap*); each `prev` is the digest of the seal before it (else *chain broken*); when a head is pinned, `n` is at least its `seq` and the seal at that `seq` has its digest (else *rolled back*). For a revoked key, seals after `last_seq` are invalid and a finding, *sealed after revocation*, and the seal at `last_seq` must have digest `last` (else *rolled back*).
-4. **Content,** for each stem named by a valid `capture` or `attest` seal, against every such seal:
+4. **Captures,** for each stem named by a valid `capture` or `attest` seal, against every such seal:
    - when `inbox/<stem>.md` exists: its body bytes have the seal's `body` digest; it has a `note` exactly when the seal does, with the same digest; its `attachment` field is absent exactly when the seal's is `null`, and otherwise names the seal's `name`, and that file's digest is the seal's;
-   - for every source whose `raw.md` has `inbox_ref: <stem>`: its body bytes have the seal's `body` digest; it declares `attachment` exactly when the seal's is not `null`, as `original.<ext>` with the extension of the seal's `name`, and that file has the seal's digest;
-   - when `inbox/<stem>.md` does not exist, a valid `clear` seal names the stem (else a finding, *sealed capture deleted*), and when that tombstone's `filed_as` is a slug, `sources/<slug>/raw.md` exists with `inbox_ref: <stem>` (else *sealed capture deleted*).
-5. **Verdicts,** for each capture and each source with an `inbox_ref`:
-   - **broken:** a valid seal names its stem and a check in step 4 fails for it, or an invalid seal whose payload parses names its stem;
-   - **verified:** a valid `capture` seal names its stem, and it is not broken;
-   - **attested:** no valid `capture` seal, a valid `attest` seal, and not broken; reported with the `attest` seal's `at`, the day since which it is known unchanged;
-   - **unsealed:** no seal names its stem. A source without `inbox_ref` is unsealed.
-6. **Heads.** Only when there is no finding and no broken verdict, the verifier moves its pinned heads to each key's highest `seq` and its digest.
+   - when `inbox/<stem>.md` does not exist, a valid `clear` seal names the stem (else a finding, *sealed capture deleted*), and when that tombstone's `filed_as` is a slug, `sources/<slug>/raw.md` exists (else *sealed capture deleted*).
+5. **Sources** *(v2)*, for each slug named by a valid `source` seal and for each `sources/<slug>/raw.md`:
+   - more than one current seal for the slug is a finding, *seal fork*, and the source is broken; a `replaces` that names no valid `source` seal for the same slug makes the seal invalid (*seal invalid*);
+   - a slug with a current seal and no `raw.md` is a finding, *sealed source deleted*;
+   - a source with a current seal **matches** it when its body bytes have the seal's `body` digest; it declares `attachment` exactly when the seal's is not `null`, with the seal's `name`, and that file has the seal's digest; its `title`, `author`, `work`, and `year` are the seal's values; its `inbox_ref` is the seal's `stem`, absent when that is `null`; and, when `stem` is a stem named by a valid `capture` or `attest` seal, the source seal's `body` equals that seal's `body` and its `attachment` digest equals that seal's (both `null`, or equal);
+   - a source with no current seal whose `inbox_ref` is a stem named by a valid `capture` or `attest` seal **matches its capture** when, against every such seal, its body bytes have the seal's `body` digest, and it declares `attachment` exactly when the seal's is not `null`, as `original.<ext>` with the extension of the seal's `name`, and that file has the seal's digest;
+   - on a fully sealed brain, a source with no current seal whose `curated` is `ratified` or `human` is a finding, *unsealed source*. This is the one place `curated` is read, and only to report: it grants nothing.
+6. **Principles** *(v2)*, on a fully sealed brain:
+   - more than one current manifest is a finding, *seal fork*, and every set is broken; a `replaces` that names no valid manifest makes the seal invalid;
+   - the tree **equals** the current manifest when the folders under `principles/` that hold a `_set.md` are exactly the manifest's sets; each `_set.md` has the `order` of its position and the manifest's descriptor digest; the principle files of each set are exactly the manifest's, each with `set` equal to the folder, the `order` of its position, and the manifest's principle digest, computed with each ground's `body` as the manifest's principle digest requires (§11.1: the current `source` seal's `body`, or `null`); and the files of `principles/_reserve/` are exactly the manifest's `reserve`, each with its digest and no `order`;
+   - every difference is a finding, *principles changed*, naming the path and the kind of difference: edited, reordered, added, removed, or description edited. *Edited* covers the title, the body, `related`, `grounds`, and a ground whose source's current seal no longer has the `body` the manifest bound: a manifest holds one digest per principle, so the verifier reports that the principle differs, and the app shows the file beside the sealed one where the copy on the device still has it.
+7. **Verdicts.**
+   - A **capture** is **broken** when a valid seal names its stem and a check in step 4 fails for it, or an invalid seal whose payload parses names its stem; **verified** when a valid `capture` seal names its stem and it is not broken; **attested** when it has no valid `capture` seal, a valid `attest` seal, and is not broken, reported with the `attest` seal's `at`; **unsealed** when no seal names its stem.
+   - A **source** *(v2)* with a current seal is **broken** when it does not match it (step 5) or an invalid `source` seal whose payload parses names its slug; otherwise **verified** when the seal's `basis` is `ratify` or `create`, and **attested** when it is `attest`, reported with `since`. A source with no current seal is **broken** when it names a sealed capture and does not match it; **pending** when it names one and matches it (awaiting the curator's review, and the text is the captured one); **unsealed** otherwise.
+   - A **set** *(v2)* is **verified** when its descriptor, its membership, its order, and every one of its principles equal the manifest; otherwise **broken**, with its differences. A **principle** is **verified**, **broken** (with the difference), or **unsealed** (a file the manifest does not list). A principle in a broken set keeps its own verdict; the set as a whole is what reasoning refuses (§8). On a brain that is not fully sealed, every set and principle is **unsealed**.
+   - Before version 2, a source's verdict was the verdict of the capture its `inbox_ref` named. That rule is withdrawn: it let an edited source read as unsealed once its `inbox_ref` was deleted, and let a source read as verified after its text and `inbox_ref` were both swapped for another capture's.
+8. **Pins.** Only when there is no finding and no broken verdict, the verifier moves its pinned heads to each key's highest `seq` and its digest, and pins every valid revocation it has not yet pinned.
+
+**What may be used.** Only *verified* and *attested* captures may be filed without the curator sealing them first; only *verified* and *attested* sources and *verified* sets are assembled into a prompt (§8); a *broken* source cannot be ratified, and a *pending* or *unsealed* one is ratified only by the commit that seals it.
 
 ### 11.7 Making seals
 
-- A device makes a seal at commit time, not when the curator taps: `seq` is one more than the greater of the device's stored head and the highest `seq` of its key in the tree, and `prev` is the digest of that seal. The device advances its stored head after the commit lands, and never before.
+- A device makes a seal at commit time, not when the curator taps: `seq` is one more than the greater of the device's stored head and the highest `seq` of its key in the tree, and `prev` is the digest of that seal. The device advances its stored head after the commit lands, and never before. A commit that carries several seals numbers them consecutively.
 - A `capture` seal is in its `Capture:` commit (§7.5); an `attest` seal in a `Seal:` commit (§7.20), only for a capture with no valid content seal and only after the curator was shown its whole text; a `clear` seal in its `Clear:` commit (§7.19).
-- Seals are never edited or deleted (§11.2). Filing, ratifying, and rejecting need no seal: a filed copy verifies against its capture's seal (§11.6 step 4).
+- *(v2)* A `source` seal with basis `ratify` is in the `Ratify:` commit, made from the source's bytes as the curator was shown them; when the capture it names has no valid content seal, the same commit carries an `attest` seal for the capture. A replacement is in the `Edit source:` commit that changes a sealed field, with `replaces` naming the current seal. An `attest`-basis seal is in a `Seal:` commit (§7.20).
+- *(v2)* A `principles` manifest is in every commit that changes the `principles/` tree on a fully sealed brain, built from the tree as that commit leaves it, with `replaces` naming the current manifest. The first is in `Seal: existing material`. A commit that gives a slug its first `source` seal (a `Ratify:`, a `Seal: source`) also carries a new manifest when any principle grounds on that slug, since that ground goes from unbound (`null`) to bound and the principle's digest changes with it.
+- A device builds a replacement only on a brain it has just verified clean, or, for `Seal: principles`, after the curator was shown every difference. It never signs over a state it has not shown or checked.
+- Seals are never edited or deleted (§11.2). Filing and rejecting need no seal: a filed copy awaiting review is checked against its capture's seal (§11.6 step 5), and a rejected one ceases to exist.
 
 ### 11.8 FIDO signatures (`sk-ed25519`)
 

@@ -11,8 +11,8 @@ small desktop CLI. This repo is the monorepo.
 - `docs/gnomon-technical-spec.md` (v0.2) — how the code is built. Module
   boundaries, interfaces, and algorithms are defined there; implement to it.
 - `docs/gnomon-proposal.md` (v0.3) — what and why.
-- `docs/security.md` — the tamper-evidence claim, threat model, and
-  assumptions (Phase 5); Schema §11 is its format. Any change to sealing
+- `docs/security.md` — the integrity claim, threat model, and
+  assumptions; Schema §11 is its format. Any change to sealing
   keeps the three in agreement.
 - `docs/alignment-review.md` — twenty decisions made 2026-09-05 with
   rationale. They are settled; do not reopen them without the user.
@@ -56,9 +56,18 @@ were discussed and set aside. Each block still needs the maintainer's go.
   the same day (opened in 161 ms from the copy; offline capture, relaunch,
   draft, and Paste all good). A failed reconnect at launch now says why
   (`session.connectError`); brain-1's token had expired and was replaced.
-- Next: **step 2, I1** (rewrite `security.md`, Schema §11 and §7.20,
-  Technical Specification §6.5 to `docs/integrity-proposal.md`), on the
-  maintainer's go.
+- Done: **step 2, I1** (2026-11-19): `security.md`, Schema §7.20, §8,
+  §11, and Technical Specification §6.5 rewritten to
+  `docs/integrity-proposal.md`; version 2 parts are marked *(v2)* until
+  built. Five points the texts settled are listed under I1 in the
+  proposal §10 for the maintainer to confirm.
+- Next: **step 2, I2** (core: `source` and `principles` seals, verdicts
+  by slug and bytes, pinned revocations, attack rows T23 to T36), on the
+  maintainer's go and their word on those five points.
+- The nightly's `GNOMON_TEST_TOKEN` (fine-grained, all repositories,
+  Contents and Administration read and write) lapsed on 2026-10-07; the
+  maintainer is replacing it. One run costs about 260 of the hourly 500
+  writes: never dispatch it twice within an hour.
 
 **Earlier plan: tamper-evident captures, Phase 5's first feature.** The
 plan and its block list are `docs/tamper-evidence-proposal.md` §8 (the

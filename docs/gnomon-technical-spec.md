@@ -240,9 +240,9 @@ Payload = `nonce(12 bytes) || ciphertext || tag(16 bytes)` as produced by AES-25
 
 **What is deliberately not done:** no custom padding or length hiding (file sizes leak; disclosed), no encryption of filenames (slugs leak; disclosed), no key escrow or recovery — a lost passphrase loses the bodies, and the enable flow requires the user to type that sentence back.
 
-### 6.5 Seals (designed 2026-10-05, Phase 5)
+### 6.5 Seals (designed 2026-10-05; version 2 designed 2026-11-19)
 
-Tamper evidence for captured content. `docs/security.md` states the claim, the adversary, and the assumptions it rests on (above all: agents run in a separate OS account whose only GitHub credential is a deploy key for the brain); Schema §11 is the format and verification, normative. This section is how the code does it.
+Integrity of the curator's texts and principles. `docs/security.md` states the claim, the adversary, and the assumptions it rests on (above all: the phone and the app it is served are honest); Schema §11 is the format and verification, normative. This section is how the code does it. The phone is the only signer and the only trusted verifier for now; the desktop parts below (the CLI, the YubiKey) are designed, partly built in core, and set aside. What is built: everything not under a **Version 2** heading. Version 2 (`integrity-proposal.md`) is built in blocks I2 (core) and I3 (the app).
 
 **Module `core/seal`** (no DOM or Node types; WebCrypto and the libsodium core already uses), built in block S2:
 
@@ -277,19 +277,55 @@ verifySeals(input, pinnedRoot, pinnedHeads): {
 };
 ```
 
+**Version 2 in core (block I2).** The same module, extended; no new package.
+
+```ts
+// encodings: canonicalJson accepts arrays (Schema §11.3)
+textValue(v: unknown): string | null;                                     // a frontmatter text value (§11.1)
+descriptorDigest(set): Promise<string>;  principleDigest(principle, groundBody: (slug) => string | null): Promise<string>;
+// making (§11.5, §11.7)
+sourceSealContent(source, attachmentBytes?): SourceContent;               // body, attachment, stem, title, author, work, year
+makeSourceSeal(signer, { slug, basis, since?, at, content, replaces }, position);
+buildManifest(snapshot, currentSourceBody: (slug) => string | null): Promise<ManifestBody>;    // sets in order, reserve by slug
+makeManifestSeal(signer, { at, manifest, replaces }, position);
+currentSeals(gnomonFiles, enrolled): { sources: Map<slug, SealRef>; manifest: SealRef | null; forks: string[] };
+// verification (§11.6, renumbered: 4 captures, 5 sources, 6 principles, 7 verdicts, 8 pins)
+verifySeals(input, pinnedRoot, pins: { heads: Heads; revocations: Record<keyId, string> }): {
+  locked; findings;                                                       // adds revocation-removed, seal-fork, sealed-source-deleted, unsealed-source, principles-changed
+  fullySealed: boolean;                                                   // a valid principles manifest exists
+  verdicts: Map<path, Verdict>;                                           // captures, raw.md, _set.md, principle files; adds { verdict: 'pending' }
+  differences: Array<{ path; kind: 'edited' | 'reordered' | 'added' | 'removed' | 'description-edited' }>;
+  pins: { heads: Heads; revocations: Record<keyId, string> } | null;      // null unless clean (step 8)
+};
+usable(result, snapshot): { sets: Set<slug>; sources: Set<slug>; excluded: Array<{ path; verdict; why? }> };   // what §8 may assemble
+```
+
+A source's verdict comes from its slug and its bytes against `source` seals; `inbox_ref` is read only to check a filing awaiting review against its capture (verdict `pending` or `broken`) and as one more field the source seal covers. `curated` is read only to report an unsealed `ratified` or `human` source. Old pins (heads alone) are read as pins with no revocations. The attack table grows by rows T23 to T36 of `security.md` §7, and T22 is narrowed to metadata no seal covers. Plans that write a sealed thing take an optional sealer, as `captureSealer` does today, so core stays the one place a batch is built: `planRatify`, `planEditSource`, and every plan that touches `principles/` return their batch plus what must be sealed, and the sealer adds the seal files at commit time.
+
 The BIP-39 English word list ships in core as data, held to the published file's SHA-256 by a test. Verification takes `.gnomon/` as a map of path to text, read with the rest of the snapshot and with seal files decrypted on an encrypted brain, and digests attachments through a callback: the app can cache digests by blob sha (block S4), the CLI reads the files. The tests check the encodings, the root derivation, and Ed25519 and P-256 signatures against Node's independent implementations, FIDO signatures against OpenSSH's own vector (`core/fixtures/sshsig`) and `ssh-keygen -Y verify`, and every row of `security.md` §7.
 
 **The phone.** Setup (Settings → Sealing) draws 32 bytes from `crypto.getRandomValues`, shows the 24 words once, asks for three of them back, derives the root, generates the device key with `crypto.subtle.generateKey` and `extractable: false` (Ed25519 where the browser supports it, else ECDSA P-256 with SHA-256; the maintainer's iPhone gives Ed25519, 2026-10-06), signs the enrollment, commits `Set up sealing`, and wipes the entropy and the root secret. It calls `navigator.storage.persist()`. Recovery on a new device takes the phrase, re-derives the root, pins it, and enrolls a fresh device key. Enrolling a desktop key lists `.gnomon/keys/requests/`, shows each fingerprint for the curator to compare with the one `gnomon keys request` printed, and takes the phrase. Revocation takes the phrase and names the last good seal as this device has pinned it, or, when it has pinned none from that key, the newest one in the brain; a device cannot revoke its own key, only forget it. `services/sealing.ts` (block S3) reads `.gnomon/` through the plain driver, since the snapshot skips dot-directories, and commits through `BrainService` like any operation, so a moved head is the usual stale prompt. Its state for the screens is one of `off`, `on`, `recover` (sealed, no key here), `unenrolled` (this device's key was revoked or removed), and `mismatch` (the brain's `root.json` is not the root this device pinned), shown in Settings → Sealing, with the key's algorithm in Settings → About. The demo brain keeps its device key in the tab only; `#/settings?seal-request=1` gives the demo a pending desktop-key request, a test affordance.
 
 **Sealing in the app** (block S4). `BrainService.captureSealer` adds the seal to every `Capture:` batch when this device holds a key for the brain, with `at` the capture's `created`; an offline capture (§14) is sealed when it is committed. The sealer relies on the device's own record, not on the first verification having finished, since the app opens on Capture; the stored head places the seal in its chain before the brain's seal files have been read. After the commit lands the device stores its new head. A head that moved rebuilds the capture and its seal at the same position. Settings → Sealing offers "Seal existing captures" once (each shown as a count, the claim "unchanged since today" spelled out) and every unsealed capture offers "Seal as mine", which shows the whole passage, note, and attachment name first.
 
+**Version 2 in the app (block I3).**
+
+- *Sealers.* `BrainService` gains `sourceSealer` and `manifestSealer` beside `captureSealer`, all three built by `services/sealing.ts` and all numbering from the same stored head, so a commit that carries several seals (a Ratify that also attests its capture and rebinds a ground) numbers them consecutively and advances the head once, after the commit lands. A moved head rebuilds the batch and its seals at the same positions, as captures do today.
+- *When a device cannot sign.* In the states `recover` and `unenrolled`, Ratify, Edit source, and every principle and set write are refused beside their control with the reason and a link to Settings → Sealing. Capture still works and is left unsealed, as today.
+- *Seal existing.* Settings → Sealing's one-time action becomes "Seal everything that exists": counts of captures, sources, sets, and principles, the sentence "this proves they are unchanged since today, not since you wrote them", then one commit `Seal: existing material`. Until it is done the brain is not fully sealed: a quiet notice on Reason and in Settings says so, and nothing is refused that is not refused today.
+- *Marks.* Inbox, Browse, Sets, the editor, and the file view carry one mark per file from one component: **sealed**, **sealed since \<date\>**, **awaiting your review** (`pending`), **not sealed**, **changed**. Sets carries the set's mark on its header and each principle's on its row.
+- *The banner and its way out.* Any finding or broken verdict is the banner of today, naming the files. For `principles-changed` the banner opens a review that lists every difference (with the sealed text beside the present one when the copy on the device, §6.6, still holds the sealed bytes) and offers "Accept as mine" (`Seal: principles`) after the last one has been shown. An unsealed `ratified` or `human` source offers "Seal as mine" from its file view, text and attribution shown first (`Seal: source <slug>`).
+- *Reason.* Assembly takes `usable()`: a selected set that does not verify is refused beside the picker with its differences; passages from sources that are not verified or attested are left out and named in the notice that names broken ones today. Referenced-but-not-included passages are listed by sealed title and author; `notes.md` is no longer sent (Schema §8). Under each answer a folded line, "Stood on", lists the sets, principles, and passages of `Turn.assembly` with their marks at the time of the request.
+- *Quote check.* After a reply completes, every span between quotation marks (straight or curly, and block quotes) of at least 12 characters is searched, after whitespace is collapsed and typographic quotes and dashes are folded, in the bodies of the passages and principles that were sent. A span found nowhere is underlined with "not found in the passages given". It is a string match and says nothing else; the note beside it says so.
+- *Pins.* The device's stored pins gain the accepted revocations; `revokeKey` pins its own revocation when its commit lands.
+
 **Verdicts in the app.** `verifySeals` runs after every snapshot load (`BrainService.onLoad`), reading `.gnomon/` through the session's driver so seal files arrive decrypted, and digesting each sealed attachment once per session, kept by its blob sha. A source that names no capture can never be sealed; Settings → Sealing counts those apart. The sealing state carries the verdicts, the findings, and the head they belong to. Inbox and Browse rows carry the verdict (broken loud, unsealed quiet, attested with its date); any finding is a banner on every screen until the brain verifies. Ratify refuses a broken source and, while sealing is on, offers "Seal as mine and ratify" for an unsealed one on the review panel, where the passage is shown in full (decision D2). Filing refuses a broken capture. Every task on Reason works from the snapshot without broken passages, which a notice at the top of the screen names (decision D3). Pinned heads move only on a clean result. Settings → Sealing shows what the last verification found, the findings in full, and "Seal existing captures" while any is unsealed.
 
-**The CLI** (§13) signs with the YubiKey through `ssh-keygen -Y sign -n gnomon-seal@v1 -f <handle>` (the handle file of a non-resident `ed25519-sk` key, touch required, PIN optional) and verifies with `core/seal`. Its pinned root and heads live in `$XDG_CONFIG_HOME/gnomon/seal/<brain>.json`, the brain named by its root commit's sha. Unlike the other commands, `capture`, `seal`, and `keys request` commit what they write, because a seal's `seq` and the commit that carries it must agree; they push only when asked (`--push`).
+**The CLI** (§13; set aside with the desktop, block S5 not built) signs with the YubiKey through `ssh-keygen -Y sign -n gnomon-seal@v1 -f <handle>` (the handle file of a non-resident `ed25519-sk` key, touch required, PIN optional) and verifies with `core/seal`. Its pinned root and heads live in `$XDG_CONFIG_HOME/gnomon/seal/<brain>.json`, the brain named by its root commit's sha. Unlike the other commands, `capture`, `seal`, and `keys request` commit what they write, because a seal's `seq` and the commit that carries it must agree; they push only when asked (`--push`).
 
 **Encryption.** `planEncrypt`, `planDecrypt`, and `planRekey` (§6.4) take the seal files as plaintext and write them whole as ciphertext or plaintext; the payloads and signatures are untouched. The encrypting wrapper encrypts a seal file written through it, whole, and decrypts one read through it, so a capture's seal on an encrypted brain is ciphertext from its first commit.
 
-**Where verification counts.** The app on the phone and `gnomon verify` in the maintainer's own account are the trusted verifiers. `gnomon verify` anywhere an agent runs, and in a brain's CI, is advisory: the agent controls that environment. `security.md` says so.
+**Where verification counts.** The app on the phone is the trusted verifier, and for now the only one. When the desktop returns, `gnomon verify` in the maintainer's own account joins it; the same command anywhere an agent runs, and in a brain's CI, is advisory, since the agent controls that environment. A principle or set edited anywhere but on an enrolled phone shows as changed until the curator accepts it there. `security.md` says so.
 
 ### 6.6 The copy on the device (2026-11-19)
 

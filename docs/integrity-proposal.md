@@ -257,9 +257,18 @@ principles at all, which turns detection into prevention.
 
 ## 10. Blocks
 
-- [ ] **I1. The texts** (S). `security.md`, Schema §11 and §7.20,
+- [x] **I1. The texts** (S). `security.md`, Schema §11 and §7.20,
   Technical Specification §6.5 rewritten to this; `security.md`'s status
-  line and its reference to a Python `--verify` corrected.
+  line and its reference to a Python `--verify` corrected. Done
+  2026-11-19. Five things the texts had to settle beyond §4, for the
+  maintainer to confirm before I2: (a) a brain is *fully sealed* once
+  "Seal everything that exists" has made the first manifest, and only
+  from then is unsealed a finding; (b) a set is reasoned from only when
+  the whole set verifies, not principle by principle; (c) a filing
+  awaiting review has its own verdict, *pending*; (d) `notes.md` is not
+  sealed and is no longer sent to a model, the sealed title and author
+  go instead; (e) "Accept as mine" (`Seal: principles`) is the way out
+  when principles show as changed, after every difference was shown.
 - [ ] **I2. Core** (L). `source` and `principles` seals; verdicts by slug
   and bytes; pinned revocations; new attack rows: remove `inbox_ref`,
   swap a source's text, delete a revocation, edit a principle, reorder,
