@@ -16,7 +16,8 @@ import { BrainService } from './brain';
 import * as enc from './encryption';
 import * as seal from './sealing';
 import { type CopyDiagnostics, idbCopyStore, safeCopyStore } from './localcopy';
-export { describeError } from './errors';
+import { describeError } from './errors';
+export { describeError };
 
 export const brain = new BrainService(snapshot);
 
@@ -61,6 +62,7 @@ async function attach(plain: StorageDriver, mode: 'github' | 'demo', label: stri
     session.driver = stack.driver;
     session.mode = mode;
     session.label = label;
+    session.connectError = null;
     try {
       await brain.connect(stack.driver, { local: stack.local, fromCopy });
     } catch (e) {
@@ -132,6 +134,21 @@ export async function connectGitHub(git: GitSettings): Promise<void> {
   await attach(copy ?? github, 'github', label);
 }
 
+/**
+ * Reopen the saved GitHub connection, at launch or from the notice a failed
+ * launch leaves. A failure is kept as one sentence for the screens and for
+ * Settings → About, so "not connected" always says why.
+ */
+export async function reconnect(git: GitSettings): Promise<void> {
+  try {
+    await connectGitHub(git);
+    session.connectError = null;
+  } catch (e) {
+    session.connectError = describeError(e);
+    throw e;
+  }
+}
+
 /** Disconnecting drops the copy of the brain from this device, with the session. */
 export function disconnect(): void {
   void copy?.forget().catch(() => undefined);
@@ -141,6 +158,7 @@ export function disconnect(): void {
   session.driver = null;
   session.mode = null;
   session.label = '';
+  session.connectError = null;
   session.encryption = { enabled: false, locked: false, storeError: null };
   session.sealing = seal.emptySealing();
   sealing = null;

@@ -134,3 +134,36 @@ test('a save reports its time, and disconnecting drops the copy from the device'
   await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
   await expect.poll(held).toBe(0);
 });
+
+test('a saved connection whose token GitHub rejects says so at launch, on the screen and in About, and connects again once the token works', async ({ page }) => {
+  const gh = await FakeGitHub.create(readBrainBytes());
+  const bridge = await connect(page, gh);
+
+  // no copy on the device, so launch has to ask GitHub, which refuses the token
+  // With a copy on the device the brain still opens, and a banner says the repository refused the check.
+  bridge.rejectToken = true;
+  await page.goto('/#/capture');
+  await page.reload();
+  await expect(page.getByTestId('capture-text')).toBeVisible();
+  await expect(page.getByTestId('check-error')).toContainText('GitHub rejected the token');
+
+  // With no copy, launch has to ask GitHub, and the screen says why it is not connected.
+  await page.evaluate(() => new Promise<void>((resolve) => {
+    const open = indexedDB.open('gnomon-copy');
+    open.onsuccess = () => {
+      const clear = open.result.transaction('kv', 'readwrite').objectStore('kv').clear();
+      clear.onsuccess = () => resolve();
+    };
+  }));
+  await page.reload();
+  await expect(page.getByTestId('connect-error')).toContainText('Could not connect to octocat/brain: GitHub rejected the token');
+  await page.goto('/#/settings');
+  await expect(page.getByTestId('diagnostics')).toContainText('none connected, the saved connection failed: GitHub rejected the token');
+  await expect(page.getByTestId('copy-diag')).toContainText('not in use, since no brain is connected');
+
+  bridge.rejectToken = false;
+  await page.goto('/#/capture');
+  await page.getByTestId('connect-error').getByRole('button', { name: 'Try again' }).click();
+  await expect(page.getByTestId('connect-error')).toHaveCount(0);
+  await expect(page.getByTestId('capture-text')).toBeVisible();
+});

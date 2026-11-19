@@ -5,7 +5,7 @@
   import { loadSettings, savePrefs, settings } from './lib/stores/settings.svelte';
   import { configureReasoner, reasoning } from './lib/stores/reasoning.svelte';
   import { session } from './lib/stores/session.svelte';
-  import { connectDemo, connectGitHub } from './lib/services/index';
+  import { connectDemo, reconnect } from './lib/services/index';
   import StaleBanner from './lib/components/StaleBanner.svelte';
   import SealBanner from './lib/components/SealBanner.svelte';
   import UnlockSheet from './lib/components/UnlockSheet.svelte';
@@ -34,7 +34,7 @@
       await loadSettings();
       configureReasoner();
       if (session.driver) return;
-      if (settings.prefs.mode === 'github' && settings.git) await connectGitHub(settings.git);
+      if (settings.prefs.mode === 'github' && settings.git) await reconnect(settings.git);
       else if (settings.prefs.mode === 'demo') await connectDemo();
       // Captures made while the brain could not be reached are saved now that it can.
       flushPending();

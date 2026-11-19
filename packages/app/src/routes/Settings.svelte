@@ -300,7 +300,7 @@
       {#if settings.storage.error}Last storage failure: {settings.storage.error}{/if}
     </li>
     <li>
-      Brain: {#if session.driver}{session.label}, {snapshot.current ? `at ${snapshot.current.head.slice(0, 7)}` : 'no snapshot'}{#if snapshot.error}, last load failed: {snapshot.error}{/if}{:else}none connected{/if}.
+      Brain: {#if session.driver}{session.label}, {snapshot.current ? `at ${snapshot.current.head.slice(0, 7)}` : 'no snapshot'}{#if snapshot.error}, last load failed: {snapshot.error}{/if}{:else}none connected{#if session.connectError}, the saved connection failed: {session.connectError}{/if}{/if}.
     </li>
     <li data-testid="copy-diag">
       {#if session.mode === 'github'}
@@ -309,8 +309,10 @@
         {#if snapshot.timings.refreshMs !== null}Last check of the repository: {snapshot.timings.refreshMs} ms.{/if}
         {#if snapshot.timings.commitMs !== null}Last save: {snapshot.timings.commitMs} ms.{/if}
         {#if copyDiagnostics.error}Last failure of the copy: {copyDiagnostics.error}{/if}
-      {:else}
+      {:else if session.mode === 'demo'}
         Copy on this device: none (only a GitHub brain keeps one).
+      {:else}
+        Copy on this device: not in use, since no brain is connected.
       {/if}
     </li>
     <li>Service worker {swState}.</li>

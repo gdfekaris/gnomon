@@ -8,6 +8,8 @@
     busy = true;
     try {
       await brain.refresh();
+    } catch {
+      // snapshot.error carries the sentence
     } finally {
       busy = false;
     }
@@ -18,6 +20,12 @@
   <div class="banner" role="status">
     <Icon name="clock" /><span class="grow">Your repository has newer changes.</span>
     <button onclick={refresh} disabled={busy} use:hold={busy}>{busy ? 'Refreshing…' : 'Refresh'}</button>
+  </div>
+{:else if snapshot.current && snapshot.error}
+  <!-- The brain is open from the copy on this device, and the repository refused the check (a rejected token, most often). -->
+  <div class="banner" role="alert" data-testid="check-error">
+    <Icon name="clock" /><span class="grow">The repository could not be checked: {snapshot.error} <a href="#/settings">Open Settings</a></span>
+    <button onclick={refresh} disabled={busy} use:hold={busy}>{busy ? 'Trying…' : 'Try again'}</button>
   </div>
 {/if}
 

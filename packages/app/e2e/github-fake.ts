@@ -20,14 +20,17 @@ export interface Bridge {
   latencyMs: number;
   /** every request fails as a dropped connection does: GitHub cannot be reached, though the app itself still loads */
   down: boolean;
+  /** every request is answered 401, as GitHub answers an expired or revoked token */
+  rejectToken: boolean;
 }
 
 export async function serveGitHub(page: Page, gh: FakeGitHub): Promise<Bridge> {
-  const bridge: Bridge = { latencyMs: 0, down: false };
+  const bridge: Bridge = { latencyMs: 0, down: false, rejectToken: false };
   await page.route('https://api.github.com/**', async (route) => {
     const req = route.request();
     if (bridge.down) return route.abort('internetdisconnected');
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
+    if (bridge.rejectToken) return route.fulfill({ status: 401, headers: { ...cors, 'content-type': 'application/json' }, body: JSON.stringify({ message: 'Bad credentials' }) });
     if (bridge.latencyMs) await new Promise((r) => setTimeout(r, bridge.latencyMs));
     const init: RequestInit = { method: req.method(), headers: req.headers() };
     const body = req.postData();

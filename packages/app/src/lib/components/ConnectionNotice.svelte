@@ -2,7 +2,9 @@
   // What a screen shows instead of its content while there is no snapshot:
   // not connected, still loading, or failed to load with a retry (spec §14).
   import { hold } from '../press';
-  import { brain } from '../services/index';
+  import { brain, reconnect } from '../services/index';
+  import { flushPending } from '../stores/pending.svelte';
+  import { settings } from '../stores/settings.svelte';
   import { session } from '../stores/session.svelte';
   import { snapshot } from '../stores/snapshot.svelte';
 
@@ -17,9 +19,27 @@
       busy = false;
     }
   }
+  async function connectAgain() {
+    if (!settings.git) return;
+    busy = true;
+    try {
+      await reconnect(settings.git);
+      flushPending();
+    } catch {
+      // session.connectError carries the sentence
+    } finally {
+      busy = false;
+    }
+  }
 </script>
 
-{#if !session.driver}
+{#if !session.driver && session.connectError && settings.git}
+  <p class="error" role="alert" data-testid="connect-error">
+    Could not connect to {settings.git.owner}/{settings.git.name}: {session.connectError}
+    <button onclick={connectAgain} disabled={busy} use:hold={busy}>{busy ? 'Trying…' : 'Try again'}</button>
+    <a href="#/settings">Open Settings</a>
+  </p>
+{:else if !session.driver}
   <p data-testid="not-connected">No brain connected. <a href="#/onboarding">Set one up</a>, or <a href="#/settings">open Settings</a>.</p>
 {:else if snapshot.error && !snapshot.current}
   <p class="error" role="alert" data-testid="load-error">
