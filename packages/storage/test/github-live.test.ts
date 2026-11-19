@@ -1,32 +1,28 @@
 // GitHubDriver against real GitHub (spec §18; Phase 1 item P1-13b). The
 // fake in fake-github.ts is a model; this file is what proves the model
 // right. It runs only when GNOMON_TEST_TOKEN (a fine-grained token with
-// Contents and Administration read/write on all repositories) and
+// Contents read/write on the scratch repository alone) and
 // GNOMON_TEST_REPO (owner/name of the disposable scratch repository) are
-// set, which the nightly workflow does; `npm test` skips it.
+// set, which the live-github workflow does; `npm test` skips it.
 //
-// Every repository this file touches is either GNOMON_TEST_REPO or one it
-// created itself, named gnomon-scratch-<run>; it deletes only the latter.
+// The only repository this file touches is GNOMON_TEST_REPO. Creating a
+// repository from the template (onboarding's createRepo) is not tested
+// here since 2026-11-19: it needed a token with Administration on every
+// repository the maintainer owns, and the maintainer judged that token a
+// liability. The fake's model of it stands untested against GitHub.
 
-import { afterAll, describe, expect, it, vi } from 'vitest';
-import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { describe, expect, it, vi } from 'vitest';
 import { toBase64 } from '@gnomon/core';
-import { validateSnapshot } from '@gnomon/core';
-import { AuthError, GitHubDriver, NotFoundError, StorageError, loadSnapshot } from '../src/index';
+import { GitHubDriver, NotFoundError } from '../src/index';
 import { driverContract } from './contract';
 import { readBrainBytes } from './fixture';
 
 const token = process.env['GNOMON_TEST_TOKEN'];
 const scratch = process.env['GNOMON_TEST_REPO'];
-const runId = (process.env['GNOMON_TEST_RUN'] ?? `local-${Date.now()}`).replace(/[^A-Za-z0-9_.-]/g, '-');
 const live = Boolean(token && scratch && /^[^/]+\/[^/]+$/.test(scratch));
 const suite = live ? describe : describe.skip;
 
-const TEMPLATE = join(fileURLToPath(new URL('.', import.meta.url)), '..', '..', '..', 'template');
-const TEMP_PREFIX = 'gnomon-scratch-';
 const API = 'https://api.github.com';
-const dec = new TextDecoder();
 
 /** Raw call with the test token; returns the parsed body and status. Used for seeding and cleanup, never through the driver. */
 async function api(method: string, path: string, body?: unknown): Promise<{ status: number; data: any }> {
@@ -96,23 +92,8 @@ function scratchDriver(): GitHubDriver {
   return new GitHubDriver({ owner, name, token: token! });
 }
 
-suite('GitHubDriver against real GitHub (spec §18, nightly)', () => {
+suite('GitHubDriver against real GitHub (spec §18, on demand)', () => {
   vi.setConfig({ testTimeout: 300_000, hookTimeout: 120_000 });
-  const created: string[] = [];
-
-  afterAll(async () => {
-    if (!live) return;
-    // Delete what this run created, then any leftover from a run that died before its cleanup. Never anything else.
-    const mine = await must('GET', '/user/repos?per_page=100&affiliation=owner&sort=created');
-    const leftovers = (mine as Array<{ full_name: string; name: string }>).filter((r) => r.name.startsWith(TEMP_PREFIX)).map((r) => r.full_name);
-    for (const fullName of new Set([...created, ...leftovers])) {
-      const name = fullName.split('/')[1] ?? '';
-      if (!name.startsWith(TEMP_PREFIX)) throw new Error(`refusing to delete ${fullName}: not a temporary scratch repository`);
-      const r = await api('DELETE', `/repos/${fullName}`);
-      if (![204, 404].includes(r.status)) console.warn(`could not delete ${fullName}: ${r.status}`);
-    }
-  });
-
   driverContract('GitHubDriver(real GitHub)', async (seed) => {
     await resetTo(seed);
     return scratchDriver();
@@ -128,7 +109,7 @@ suite('GitHubDriver against real GitHub (spec §18, nightly)', () => {
       expect(repo.fullName.toLowerCase()).toBe(scratch!.toLowerCase());
       expect(repo.defaultBranch).toBe('main');
       expect(repo.permissions).toEqual({ pull: true, push: true });
-      await expect(new GitHubDriver({ owner: scratch!.split('/')[0]!, name: `${TEMP_PREFIX}does-not-exist`, token: token! }).repository()).rejects.toBeInstanceOf(NotFoundError);
+      await expect(new GitHubDriver({ owner: scratch!.split('/')[0]!, name: 'gnomon-scratch-does-not-exist', token: token! }).repository()).rejects.toBeInstanceOf(NotFoundError);
     });
 
     it('a tree entry with sha null for a path absent from base_tree is a 422', async () => {
@@ -145,33 +126,6 @@ suite('GitHubDriver against real GitHub (spec §18, nightly)', () => {
       const r = await api('PATCH', `/repos/${scratch}/git/refs/heads/main`, { sha: head, force: false });
       expect(r.status).toBe(422);
       expect(await d.head()).toBe(sha);
-    });
-
-    it('create-from-template: auto_init exposes the ref, the template lands in one commit, and a name collision is a generic 422', async () => {
-      const name = `${TEMP_PREFIX}${runId}`;
-      const d = scratchDriver();
-      const { fullName, head } = await d.createRepo({ name, private: true });
-      created.push(fullName);
-      expect(fullName.toLowerCase()).toBe(`${scratch!.split('/')[0]}/${name}`.toLowerCase());
-      expect(d.repo).toBe(fullName);
-      expect((await d.list()).map((e) => e.path)).toEqual(['README.md']);
-
-      const template = readBrainBytes(TEMPLATE);
-      const { sha } = await d.commit({
-        message: 'Scaffold: template',
-        expectedHead: head,
-        writes: [...template].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([path, bytes]) => ({ path, text: dec.decode(bytes) })),
-        deletes: [],
-      });
-      expect(await d.head()).toBe(sha);
-      expect((await d.list()).map((e) => e.path)).toEqual([...template.keys()].sort());
-      expect(validateSnapshot(await loadSnapshot(d))).toEqual([]);
-      expect((await d.history({ limit: 5 })).map((c) => c.message)).toEqual(['Scaffold: template', 'Initial commit']);
-
-      const err = await scratchDriver().createRepo({ name, private: true }).catch((e: unknown) => e);
-      expect(err).toBeInstanceOf(StorageError);
-      expect(err).not.toBeInstanceOf(AuthError);
-      expect((err as Error).message).toContain('422');
     });
   });
 });

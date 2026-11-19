@@ -549,7 +549,7 @@ Cold start to interactive Capture screen < 1.5 s on a mid-range phone over LTE; 
 
 ## 18. Build and deploy
 
-GitHub Actions on push to `main`: install, typecheck, unit tests, `gnomon validate` over `template/`, build `app` with `VITE_BASE=/gnomon/`, deploy to Pages via `actions/deploy-pages`. Contract tests against real GitHub run on a nightly schedule, not on every push. Releases tag the repo; the tag workflow publishes `gnomon-cli` to npm with the same version, and the app shows its version (from `package.json`) in Settings. Index files carry no version (Schema §4.8).
+GitHub Actions on push to `main`: install, typecheck, unit tests, `gnomon validate` over `template/`, build `app` with `VITE_BASE=/gnomon/`, deploy to Pages via `actions/deploy-pages`. Contract tests against real GitHub run on demand (`live-github.yml`, when `packages/storage` changes), not on every push, against one scratch repository with a token limited to it; creating a repository from the template is not covered there. Releases tag the repo; the tag workflow publishes `gnomon-cli` to npm with the same version, and the app shows its version (from `package.json`) in Settings. Index files carry no version (Schema §4.8).
 
 ## 19. Phase mapping
 

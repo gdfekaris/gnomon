@@ -64,10 +64,13 @@ were discussed and set aside. Each block still needs the maintainer's go.
 - Next: **step 2, I2** (core: `source` and `principles` seals, verdicts
   by slug and bytes, pinned revocations, attack rows T23 to T36), on the
   maintainer's go and their word on those five points.
-- The nightly's `GNOMON_TEST_TOKEN` (fine-grained, all repositories,
-  Contents and Administration read and write) lapsed on 2026-10-07; the
-  maintainer is replacing it. One run costs about 260 of the hourly 500
-  writes: never dispatch it twice within an hour.
+- The nightly became `live-github.yml` on 2026-11-19: on demand only,
+  against `gdfekaris/gnomon-scratch` alone, with a token that has
+  Contents read and write on that one repository (the maintainer judged
+  the old all-repositories token a liability; the create-a-repository
+  test went with it). Run it when `packages/storage` changes. One run
+  costs about 260 of the hourly 500 writes: never start it twice within
+  an hour.
 
 **Earlier plan: tamper-evident captures, Phase 5's first feature.** The
 plan and its block list are `docs/tamper-evidence-proposal.md` §8 (the
@@ -114,11 +117,10 @@ as recommended.
   principle set:`, `Reorder principle sets`. A new message goes into
   schema §7 first; `core/test/vocabulary.test.ts` fails otherwise.
 - Other repositories are off limits. Agents touch only `gdfekaris/gnomon`
-  and the nightly's scratch repositories (`gnomon-scratch`, and the
-  `gnomon-scratch-<run>` ones it creates and deletes itself). Never read,
+  and the live test's scratch repository, `gnomon-scratch`. Never read,
   write, create, delete, or change settings on any other repository, even
   when the credential at hand allows it; the local `gh` login and the
-  `GNOMON_TEST_TOKEN` secret both reach every repo the maintainer owns.
+  `GNOMON_TEST_TOKEN` secret may reach further than that.
   Settings changes on this repo (visibility, Pages, secrets, branch rules)
   happen only when the maintainer asks for that change in the current
   session. The maintainer's own brain, `~/Desktop/main/geo-brain-2`, has no
@@ -166,5 +168,5 @@ fixture, the app build, and the Playwright flows on every push, then
 deploys the app to GitHub Pages from main (served at
 `gdfekaris.com/gnomon/`). A `v<version>` tag runs `publish.yml`, which
 publishes `gnomon-cli` through npm trusted publishing (no token stored);
-bump `packages/cli/package.json` first, the tag must match it. The nightly
-(`nightly.yml`) runs the storage contract against real GitHub.
+bump `packages/cli/package.json` first, the tag must match it. `live-github.yml`,
+started by hand, runs the storage contract against real GitHub.

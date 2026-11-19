@@ -77,8 +77,8 @@ including one server for both the app and the model:
 ## Where things stand
 
 Phases 1 to 3 of the technical spec (§19) are done: the app is live at
-`https://gdfekaris.com/gnomon/`, `gnomon-cli` 0.1.0 is on npm, and a
-nightly runs the storage contract against real GitHub. Phase 4 (client-
+`https://gdfekaris.com/gnomon/`, `gnomon-cli` 0.1.0 is on npm, and the
+storage contract is run against real GitHub by hand when storage changes. Phase 4 (client-
 side encryption, a second storage driver, local-model documentation) is
 in progress; `docs/phase-4-tracker.md` is its block list and carries the
 items left open from Phase 3. `docs/local-models.md` sets up a desktop session with a local model, so
