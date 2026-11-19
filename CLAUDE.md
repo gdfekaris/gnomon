@@ -32,7 +32,21 @@ deferred (a second storage driver), 7 and 8 (local models, the custom
 endpoint) built and waiting on the maintainer's own test. It closes after
 that: delete the tracker, write `docs/phase-5-tracker.md`.
 
-**Current work: tamper-evident captures, Phase 5's first feature.** The
+**Direction reset, 2026-11-19 (read this before the paragraph below).**
+After a whole-project review the maintainer fixed two pillars: trust that
+captured texts and the curator's principles are exactly what the curator
+made (integrity), then reasoning by principle sets. Everything else may
+change to serve them. The phone comes first; desktop work (S5 to S7, the
+YubiKey, the agent account, the Python verifier) is set aside until the
+phone app works well. Markdown in git stays. Agreed order: (1) speed and
+safe capture on the phone (local snapshot cache, durable offline capture
+queue, clipboard paste); (2) integrity version 2,
+`docs/integrity-proposal.md`, decisions D1 to D4 accepted, blocks I1 to
+I5 there; (3) the reasoning loop (Reason usable on day one, provenance
+under each answer, fewer tabs). Share-sheet capture and a server backend
+were discussed and set aside. Each block still needs the maintainer's go.
+
+**Earlier plan: tamper-evident captures, Phase 5's first feature.** The
 plan and its block list are `docs/tamper-evidence-proposal.md` §8 (the
 working tracker until the Phase 5 tracker exists); the claim and threat
 model are `docs/security.md`; the format is Schema §11 and §7.20; the code
