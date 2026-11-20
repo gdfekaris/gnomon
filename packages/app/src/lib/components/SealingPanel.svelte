@@ -10,6 +10,7 @@
   import { snapshot } from '../stores/snapshot.svelte';
   import { browseHref } from '../markdown';
   import { session } from '../stores/session.svelte';
+  import RepairPanel from './RepairPanel.svelte';
 
   const s = $derived(session.sealing);
   let busy = $state<string | null>(null);
@@ -180,6 +181,7 @@
         {/if}
       </p>
     {/if}
+    <RepairPanel />
     {#if s.differences.length}
       <div class="panel" data-testid="seal-differences">
         <p class="error">Your principles differ from what you sealed:</p>
@@ -189,7 +191,7 @@
           {/each}
         </ul>
         <p class="hint">
-          If you made these changes yourself, outside this app, accept them and they are sealed as they stand. If you did not, do not accept: restore the files from the brain’s history, and they will match again.
+          If you made these changes yourself, outside this app, accept them and they are sealed as they stand. If you did not, do not accept: restore the sealed texts above, and they will match again.
           Until then the sets they belong to are not used in reasoning, and principles cannot be edited here.
         </p>
         <label class="check"><input type="checkbox" bind:checked={seenAll.yes} data-testid="seal-accept-seen" /> I have looked at each one, and these are my changes.</label>
@@ -203,7 +205,7 @@
       <div class="panel" data-testid="seal-findings">
         <p class="error">The seal record does not verify:</p>
         <ul>{#each otherFindings as f (`${f.code}:${f.path}`)}<li>{#if f.code === 'unsealed-source'}<a href={browseHref(f.path)}><code>{f.path}</code></a>{:else}<code>{f.path}</code>{/if}: {f.detail}</li>{/each}</ul>
-        <p class="hint">Look at the brain’s history for the commits that touched these files. Seals are never edited or deleted by Gnomon. A source marked as yours with no seal can be read and sealed from its own page.</p>
+        <p class="hint">Look at the brain’s history for the commits that touched these files. A sealed text that was deleted can be restored above. Seals are never edited or deleted by Gnomon. A source marked as yours with no seal can be read and sealed from its own page.</p>
       </div>
     {/if}
     {#if todoCount && s.verifiedHead && !s.locked}

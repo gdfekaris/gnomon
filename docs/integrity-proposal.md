@@ -208,6 +208,12 @@ writes the body whose digest the seal names, in one commit. It works only
 while the cache survives; iOS may evict it, and then recovery is from git
 history.
 
+*As built (I4):* the copy already holds every text by its git blob id, so
+the phone records which blob each file was when it last verified and keeps
+those blobs; history is the fallback inside the app, read at the commit that
+carried the seal; and either text is offered only after the verifier passes
+with it in place.
+
 ## 7. What this does not protect, stated plainly
 
 - **The app itself.** The phone runs whatever `gdfekaris.com/gnomon/`
@@ -278,6 +284,6 @@ principles at all, which turns detection into prevention.
   write; "Seal existing" extended to sources and principles; marks on
   principles; unsealed treated as untrusted; Reason's provenance line and
   quote check.
-- [ ] **I4. Repair** (M). After the local cache block.
+- [x] **I4. Repair** (M; done 2026-11-19: Technical Specification §6.5 "Repair" says how. The phone keeps each file's text as it last verified and falls back to the commit that carried the seal; every text is checked by the verifier before it is offered; changed files are shown beside their sealed text. Attached files are not restored). After the local cache block.
 - [x] **I5. The maintainer's check on brain-1** (passed 2026-11-19, build `8a81c4b`, from the iPhone). Includes the pending S4
   check. Existing seals stay valid; nothing is re-signed.

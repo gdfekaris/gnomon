@@ -42,6 +42,20 @@ export class EncryptingDriver implements StorageDriver {
     return this.inner.createRepo(opts);
   }
 
+  /** A stored text as the brain reads it: decrypted when it carries the marker. For texts read around the driver (the kept sealed copies, spec §6.5). */
+  async openStored(path: string, text: string): Promise<string> {
+    return (await this.open(path, { text, sha: '' })).text;
+  }
+
+  /** History holds stored bytes of its day: ciphertext since the brain was encrypted, plaintext before; both read here. */
+  async readManyAt(commit: string, paths: string[]): Promise<Map<string, ReadResult>> {
+    if (!this.inner.readManyAt) throw new Error('this brain\'s storage cannot read its history');
+    const stored = await this.inner.readManyAt(commit, paths);
+    const out = new Map<string, ReadResult>();
+    for (const [path, r] of stored) out.set(path, await this.open(path, r));
+    return out;
+  }
+
   /** Decrypt a stored text when its body carries the marker; plaintext passes through. The key is fetched only when needed. */
   private async open(path: string, stored: ReadResult): Promise<ReadResult> {
     if (path.startsWith(SEALS_DIR)) {

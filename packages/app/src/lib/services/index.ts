@@ -6,7 +6,7 @@
 // service and the session store; the stack itself lives here, since it holds
 // class instances the stores would not make reactive anyway.
 import { del, get, set } from 'idb-keyval';
-import { CachingDriver, type CopyStore, GitHubDriver, type KeyStore, LockedError, type StorageDriver } from '@gnomon/storage';
+import { CachingDriver, type CopyStore, EncryptingDriver, GitHubDriver, type KeyStore, LockedError, type StorageDriver } from '@gnomon/storage';
 import { makeRequest } from '@gnomon/core';
 import { DEMO_YUBIKEY_PUB, demoDriver } from '../demo/fixture';
 import { session } from '../stores/session.svelte';
@@ -15,6 +15,7 @@ import { type GitSettings, savePrefs } from '../stores/settings.svelte';
 import { BrainService } from './brain';
 import * as enc from './encryption';
 import * as seal from './sealing';
+import * as repair from './repair';
 import { type CopyDiagnostics, idbCopyStore, safeCopyStore } from './localcopy';
 import { describeError } from './errors';
 export { describeError };
@@ -42,6 +43,8 @@ const openCopyStore = (): Promise<CopyStore | null> =>
   (copyStore ??= idbCopyStore().then((s) => (s ? safeCopyStore(s, copyDiagnostics) : null), () => null));
 /** The caching driver of the session, when the brain keeps a copy on this device (spec §6.6). */
 let copy: CachingDriver | null = null;
+/** The texts as they last verified, kept beside the copy (spec §6.5): what repair restores from first. */
+let kept: ReturnType<typeof repair.keptTexts> | null = null;
 const DIGESTS = (id: string) => `${id}|digests`;
 
 let stack: enc.Stack | null = null;
@@ -58,7 +61,7 @@ async function attach(plain: StorageDriver, mode: 'github' | 'demo', label: stri
   const open = async (fromCopy: boolean): Promise<void> => {
     stack = await enc.composeStack(plain, keyStore, session.encryption, fromCopy);
     session.sealing = seal.emptySealing();
-    sealing = { brain, cache: seal.newSealCache(), store: mode === 'demo' ? seal.memorySealStore() : githubSealStore, brainId: mode === 'demo' ? 'demo' : label };
+    sealing = { brain, cache: seal.newSealCache(), store: mode === 'demo' ? seal.memorySealStore() : githubSealStore, brainId: mode === 'demo' ? 'demo' : label, ...(kept ? { kept } : {}) };
     await keepDigests(sealing.cache, label);
     session.driver = stack.driver;
     session.mode = mode;
@@ -84,7 +87,8 @@ async function attach(plain: StorageDriver, mode: 'github' | 'demo', label: stri
   if (!opened) await open(false);
   await savePrefs({ mode });
   if (opened) void checkRepository();
-  if (copy) void copy.prune().catch(() => undefined);
+  // Blobs the tree dropped go, except the texts kept as they last verified: a changed file must not push its sealed text out.
+  if (copy) void (async () => copy.prune(kept ? await kept.shas() : []))().catch(() => undefined);
 }
 
 /** Attachment digests are kept with the copy, by blob id, so verification on a later launch does not download each file again. */
@@ -124,6 +128,7 @@ export async function connectDemo(omit: string[] = [], fill = 0, reserveFill = 0
     extra.set(r.path, r.text);
   }
   copy = null;
+  kept = null;
   await attach(await demoDriver(omit, fill, reserveFill, extra), 'demo', 'demo brain');
 }
 
@@ -132,6 +137,8 @@ export async function connectGitHub(git: GitSettings): Promise<void> {
   const github = new GitHubDriver({ owner: git.owner, name: git.name, token: git.token });
   const store = await openCopyStore();
   copy = store ? new CachingDriver(github, store, label) : null;
+  // A kept text is stored bytes, ciphertext on an encrypted brain; it is read through the session's driver of the moment.
+  kept = copy && store ? repair.keptTexts(copy, store, label, async (path, stored) => (stack?.driver instanceof EncryptingDriver ? stack.driver.openStored(path, stored) : stored)) : null;
   await attach(copy ?? github, 'github', label);
 }
 
@@ -154,6 +161,7 @@ export async function reconnect(git: GitSettings): Promise<void> {
 export function disconnect(): void {
   void copy?.forget().catch(() => undefined);
   copy = null;
+  kept = null;
   brain.disconnect();
   stack = null;
   session.driver = null;
@@ -220,4 +228,6 @@ export const sealingFlows = {
   sealExisting: () => seal.sealExisting(sealingContext()),
   acceptPrinciples: () => seal.acceptPrinciples(sealingContext()),
   sealSourceAsMine: (slug: string) => seal.sealSourceAsMine(sealingContext(), slug),
+  planRepair: () => repair.planRepair(sealingContext()),
+  restore: (plan: repair.RepairPlan, paths?: string[]) => repair.restore(sealingContext(), plan, paths),
 };

@@ -243,3 +243,70 @@ test('a principle changed outside the app shows as changed, its set is not reaso
   await expect(page.getByTestId('seal-banner')).toHaveCount(0);
   expect(messages(gh)).toContain('Seal: principles');
 });
+
+test('a changed passage and a changed principle are shown beside what was sealed and restored, from this device and from history', async ({ page }) => {
+  const gh = await FakeGitHub.create(readBrainBytes());
+  await connect(page, gh);
+  await setUp(page);
+  const panel = page.getByTestId('sealing');
+  await panel.getByTestId('seal-backfill').click();
+  await panel.getByTestId('seal-backfill-yes').click();
+  await expect(panel.getByTestId('seal-full')).toBeVisible();
+  await expect(panel.getByTestId('seal-repair')).toHaveCount(0);
+
+  const RAW = 'sources/aurelius-meditations-4-3/raw.md';
+  const P = 'principles/ps-g8xw/courage-before-comfort.md';
+  const stored = (path: string) => {
+    const head = gh.refs.get('heads/main')!;
+    return new TextDecoder().decode(gh.blobs.get(gh.trees.get(gh.commits.get(head)!.tree)!.get(path)!)!);
+  };
+  const sealed = { [RAW]: stored(RAW), [P]: stored(P) };
+  const tamper = () => gh.externalCommit({ [RAW]: sealed[RAW]!.replace('Men seek retreats', 'Men seek comfort'), [P]: sealed[P]!.replace('take the right', 'take the easy') });
+
+  // Changed behind the app's back: Settings shows each file beside its sealed text, found on this device.
+  await tamper();
+  await page.reload();
+  await page.goto('/#/settings');
+  const repair = panel.getByTestId('seal-repair');
+  await expect(repair.getByTestId('repair-item')).toHaveCount(2);
+  const principle = repair.locator(`[data-path="${P}"]`);
+  await expect(principle).toContainText('edited');
+  await expect(principle.getByTestId('diff-gone')).toHaveText('right');
+  await expect(principle.getByTestId('diff-new')).toHaveText('easy');
+  await expect(principle.getByTestId('repair-from')).toContainText('the copy on this device');
+  const passage = repair.locator(`[data-path="${RAW}"]`);
+  await expect(passage.getByTestId('diff-gone')).toHaveText('retreats');
+  await expect(passage.getByTestId('diff-new')).toHaveText('comfort');
+
+  await repair.getByTestId('repair-restore-all').click();
+  await expect(panel.getByTestId('repair-done')).toHaveText('Restored 2 files to what you sealed.');
+  await expect(panel.getByTestId('seal-repair')).toHaveCount(0);
+  await expect(page.getByTestId('seal-banner')).toHaveCount(0);
+  await expect(panel.getByTestId('seal-full')).toContainText('and match');
+  expect(messages(gh)).toContain('Restore: 2 files');
+  expect(stored(RAW)).toBe(sealed[RAW]);
+  expect(stored(P)).toBe(sealed[P]);
+
+  // The same change met by a device that holds no copy: the sealed texts come from the repository's history.
+  await tamper();
+  await page.evaluate(() => new Promise<void>((resolve) => {
+    const open = indexedDB.open('gnomon-copy');
+    open.onsuccess = () => {
+      const clear = open.result.transaction('kv', 'readwrite').objectStore('kv').clear();
+      clear.onsuccess = () => resolve();
+    };
+  }));
+  await page.reload();
+  await page.goto('/#/settings');
+  await expect(repair.getByTestId('repair-item')).toHaveCount(2);
+  await expect(passage.getByTestId('repair-from')).toContainText('the repository’s history');
+  await passage.getByTestId('repair-restore').click();
+  await expect(panel.getByTestId('repair-done')).toHaveText('Restored 1 file to what you sealed.');
+  await expect(repair.getByTestId('repair-item')).toHaveCount(1);
+  expect(messages(gh)).toContain(`Restore: ${RAW}`);
+  expect(stored(RAW)).toBe(sealed[RAW]);
+  await principle.getByTestId('repair-restore').click();
+  await expect(panel.getByTestId('seal-repair')).toHaveCount(0);
+  await expect(page.getByTestId('seal-banner')).toHaveCount(0);
+  expect(stored(P)).toBe(sealed[P]);
+});

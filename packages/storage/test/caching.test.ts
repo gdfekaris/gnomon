@@ -162,7 +162,12 @@ describe('CachingDriver (spec §6.6)', () => {
     const other = new CachingDriver(host.driver, store, 'me/other');
     await loadSnapshot(other);
     await mine.commit({ message: 'x', expectedHead: s.head, writes: [{ path: NOTES, text: notes('Replaced.') }], deletes: [] });
+    const was = s.files.get(NOTES)!.sha;
+    // A text kept as it last verified outlives the tree that named it, and reads back by its blob id.
+    expect(await mine.prune([was])).toBe(0);
+    expect(await mine.blob(was)).toContain('type: notes');
     expect(await mine.prune()).toBe(1);
+    expect(await mine.blob(was)).toBeUndefined();
     await mine.forget();
     expect(await mine.hasCopy()).toBe(false);
     expect(await other.hasCopy()).toBe(true);

@@ -137,6 +137,21 @@ export function driverContract(name: string, factory: DriverFactory, options: Co
       expect((await d.history({ limit: 10, path: 'a.md' })).map((c) => c.sha)).toEqual([c3.sha, c1.sha]);
     });
 
+    it('readManyAt reads text files as they stood at an earlier commit', async () => {
+      const d = await fresh();
+      if (!d.readManyAt) throw new Error('the driver cannot read at a commit');
+      const h0 = await d.head();
+      const c1 = await d.commit({ message: 'one', expectedHead: h0, writes: [{ path: 'a.md', text: 'first' }, { path: 'gone.md', text: 'here once' }], deletes: [] });
+      const c2 = await d.commit({ message: 'two', expectedHead: c1.sha, writes: [{ path: 'a.md', text: 'second' }], deletes: ['gone.md'] });
+      const then = await d.readManyAt(c1.sha, ['a.md', 'gone.md', 'never.md']);
+      expect(then.get('a.md')?.text).toBe('first');
+      expect(then.get('gone.md')?.text).toBe('here once');
+      expect(then.has('never.md')).toBe(false);
+      expect((await d.readManyAt(c2.sha, ['a.md', 'gone.md'])).get('a.md')?.text).toBe('second');
+      expect((await d.readManyAt(h0, ['a.md'])).size).toBe(0);
+      expect((await d.readMany(['a.md'])).get('a.md')?.text).toBe('second');
+    });
+
     it('compare reports added, modified, and removed files with patches for text', async () => {
       const d = await fresh();
       const h0 = await d.head();

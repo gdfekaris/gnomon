@@ -16,9 +16,11 @@ Schema §11, the implementation Technical Specification §6.5.
   ratified from then on; rows T23 to T36 of §7 are caught from that act
   onward. The maintainer did it on their own brain on 2026-11-19
   (block I5).
-- **Not built:** repair from the copy on the phone (block I4), and
-  showing a changed principle beside its sealed text; today the app
-  names the file and the kind of change.
+- **Repair (block I4, built 2026-11-19):** Settings → Sealing shows
+  each changed file beside the text its seal names and restores that
+  text, from the copy the phone kept when the file last verified or
+  from the commit in git history that carried the seal. Not built:
+  restoring an attached file.
 - **Set aside until the phone app works well:** the desktop CLI and
   YubiKey, the separate agent account, and a second, independent
   verifier. No such verifier exists today; an earlier version of this
@@ -114,8 +116,12 @@ curator; §5 says so plainly.
 - **Prevention and availability.** A git host cannot stop a holder of
   write access from changing or deleting a file. Gnomon makes that
   evident and keeps the result out of reasoning; it does not make it
-  impossible. Recovery is from git history, another clone, or, once
-  block I4 is built, the copy on the phone.
+  impossible. The app restores a changed or deleted
+  text from the copy the phone kept when it last verified, or from the
+  commit in git history that carried the seal, and checks either
+  against the seal first; attached files, and a history that was
+  rewritten when the phone holds no copy, are recovered from another
+  clone.
 - **A verifier's first look.** Rollback is caught against what a phone
   has already accepted. A phone just recovered from the phrase cannot
   tell that the newest seals, or a revocation, were removed before it

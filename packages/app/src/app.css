@@ -194,6 +194,9 @@ p { margin: 0 0 10px; }
 a { color: var(--link); }
 code { font: inherit; color: var(--code-ink); border-bottom: var(--code-line); }
 pre { font: inherit; }
+/* A changed text beside its sealed one (spec §6.5): told apart by the line, not by color alone. */
+del { color: var(--danger); text-decoration: line-through; }
+ins { color: var(--ok); text-decoration: underline; }
 small, .hint, .meta, .empty { font-size: var(--fs-small); color: var(--muted); opacity: 1; font-weight: normal; }
 .empty { list-style: none; }
 .error { color: var(--danger); font-weight: 600; }

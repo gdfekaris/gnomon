@@ -103,6 +103,19 @@ export interface SealCache {
 }
 export const newSealCache = (): SealCache => ({ files: new Map(), digests: new Map(), run: 0 });
 
+/**
+ * The texts as they last verified against their seals, kept on this device
+ * (spec §6.5, §10.3): what repair restores from. `remember` records the
+ * stored form of every file that verifies now, and forgets a path only when
+ * `gone` says the brain let go of it properly; a file found changed keeps
+ * the record of its last good text.
+ */
+export interface KeptTexts {
+  remember(good: Record<string, string>, gone: (path: string) => boolean): Promise<void>;
+  /** the kept text of a path as the brain reads it (decrypted), or undefined when this device holds none */
+  text(path: string): Promise<string | undefined>;
+}
+
 export interface SealingContext {
   brain: BrainService;
   /** the plain driver: stored bytes, as GitHub has them */
@@ -114,6 +127,8 @@ export interface SealingContext {
   /** names the brain in the store: `owner/name`, or `demo` */
   brainId: string;
   state: SealingState;
+  /** absent where the brain keeps no copy on this device (the demo brain): repair then reads the repository's history */
+  kept?: KeptTexts;
 }
 
 /** Every file under `.gnomon/` that sealing reads: the root record, keys, requests, seals. */
@@ -206,6 +221,7 @@ async function runSealing(ctx: SealingContext): Promise<void> {
       const r = await verifySeals(input, record.root, record.heads, record.revocations ?? {});
       verified = { verdicts: Object.fromEntries(r.verdicts), findings: r.findings, locked: r.locked, verifiedHead: s.head, fullySealed: r.fullySealed, differences: r.differences };
       if (!r.locked) current = r.current;
+      if (!r.locked && ctx.kept && run === ctx.cache.run) await keep(ctx.kept, s, r).catch(() => undefined);
       if (r.heads && run === ctx.cache.run) {
         const fresh = await ctx.store.get(ctx.brainId);
         if (fresh && fresh.keyId === record.keyId) await ctx.store.set(ctx.brainId, { ...fresh, heads: { ...fresh.heads, ...r.heads }, revocations: { ...fresh.revocations, ...r.revocations } });
@@ -223,8 +239,19 @@ async function runSealing(ctx: SealingContext): Promise<void> {
   }
 }
 
+/** Record the stored form of everything that verifies now; a path is forgotten only when it is gone and nothing reports it missing. */
+async function keep(kept: KeptTexts, s: BrainSnapshot, r: SealResult): Promise<void> {
+  const good: Record<string, string> = {};
+  for (const [path, v] of r.verdicts) {
+    const sha = s.files.get(path)?.sha;
+    if (sha && (v.verdict === 'verified' || v.verdict === 'attested' || v.verdict === 'pending')) good[path] = sha;
+  }
+  const named = new Set([...r.findings.map((f) => f.path), ...r.differences.map((d) => d.path)]);
+  await kept.remember(good, (path) => !s.files.has(path) && !named.has(path));
+}
+
 /** An attachment's digest (schema §11.1), read once per blob and kept by its sha for the session. */
-async function attachmentDigest(ctx: SealingContext, s: BrainSnapshot, path: string): Promise<string | undefined> {
+export async function attachmentDigest(ctx: SealingContext, s: BrainSnapshot, path: string): Promise<string | undefined> {
   const a = s.attachments.get(path);
   if (!a) return undefined;
   const known = a.sha ? ctx.cache.digests.get(a.sha) : undefined;
@@ -482,7 +509,7 @@ export const unsealedCaptures = (state: SealingState): string[] =>
 
 const CANNOT_SIGN = 'This brain is sealed, and this device holds no key for it. Add this device with the recovery phrase in Settings → Sealing, then try again.';
 const TREE_CHANGED = 'The principles differ from what you sealed. Review the differences in Settings → Sealing before changing them.';
-const STILL_VERIFYING = 'The brain is still being verified; try again in a moment.';
+export const STILL_VERIFYING = 'The brain is still being verified; try again in a moment.';
 
 const RAW = /^sources\/([^/]+)\/raw\.md$/;
 const sameManifest = (a: ManifestBody, b: ManifestBody): boolean => canonicalJson({ sets: a.sets, reserve: a.reserve }) === canonicalJson({ sets: b.sets, reserve: b.reserve });

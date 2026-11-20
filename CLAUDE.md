@@ -74,9 +74,18 @@ were discussed and set aside. Each block still needs the maintainer's go.
   `8a81c4b`, from the iPhone; it covers the old S4 check): brain-1 is
   fully sealed, and marks, a principle edit, a ratify, and "Stood on" on
   Reason all behaved.
-- Next: **I4, repair** (restore a changed file from the copy on the
-  device, and show a changed principle beside its sealed text), on the
-  maintainer's go; then step 3, the reasoning loop.
+- Done: **I4, repair** (2026-11-19; Technical Specification §6.5
+  "Repair"): the phone records each sealed file's text as it last
+  verified (`<brain>|sealed` beside the copy), `services/repair.ts` finds
+  the sealed text there or at the commit that carried the seal
+  (`StorageDriver.readManyAt`), offers it only after `verifySeals` passes
+  with it in place, and Settings → Sealing shows each changed file
+  beside its sealed text with Restore (`Restore:` commits go through
+  `commitStored`, past the body-immutable rules, and carry no seal).
+  Attached files are not restored. Waiting on the maintainer's look at
+  it on the phone; a real check needs a file changed behind the app's
+  back, which only the maintainer can do on brain-1.
+- Next: **step 3, the reasoning loop**, on the maintainer's go.
 - The nightly became `live-github.yml` on 2026-11-19: on demand only,
   against `gdfekaris/gnomon-scratch` alone, with a token that has
   Contents read and write on that one repository (the maintainer judged
@@ -125,7 +134,7 @@ as recommended.
   proposal:`, `Derive:`, `Relate:`, `Keep:`, `Decline:`, `Reserve
   principle:`, `Place principle:`, `Delete principle:`, `Reorder
   principles:`, `Edit principle:`, `Edit source:`, `Edit notes:`,
-  `Clear:`, `Encrypt:`, `Decrypt:`, `Change passphrase`, `Scaffold:`,
+  `Clear:`, `Seal:`, `Restore:`, `Encrypt:`, `Decrypt:`, `Change passphrase`, `Scaffold:`,
   `Index`, `Create principle set:`, `Update principle set:`, `Delete
   principle set:`, `Reorder principle sets`. A new message goes into
   schema §7 first; `core/test/vocabulary.test.ts` fails otherwise.

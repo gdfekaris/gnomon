@@ -193,9 +193,13 @@ export class GitHubDriver implements StorageDriver {
   }
 
   async readMany(paths: string[]): Promise<Map<string, ReadResult>> {
+    if (paths.length === 0) return new Map();
+    return this.readManyAt(this.listedHead ?? (await this.head()), paths);
+  }
+
+  /** The same batched read at any commit: a blob is named by `<commit>:<path>`. */
+  async readManyAt(head: string, paths: string[]): Promise<Map<string, ReadResult>> {
     const out = new Map<string, ReadResult>();
-    if (paths.length === 0) return out;
-    const head = this.listedHead ?? (await this.head());
     for (let i = 0; i < paths.length; i += GRAPHQL_BATCH) {
       const batch = paths.slice(i, i + GRAPHQL_BATCH);
       const fields = batch.map((p, j) => `f${j}: object(expression: ${JSON.stringify(`${head}:${p}`)}) { ... on Blob { oid text isBinary } }`).join('\n');

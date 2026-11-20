@@ -101,12 +101,17 @@ export class CachingDriver implements StorageDriver {
     this.compares.clear();
   }
 
-  /** Drop blobs the current tree no longer names. Run once in a while; the copy is correct without it. */
-  async prune(): Promise<number> {
+  /**
+   * Drop blobs the current tree no longer names, except those in `keep`: the
+   * texts as they last verified against their seals (spec §6.5), which a
+   * changed file must not push out. Run once in a while; the copy is correct without it.
+   */
+  async prune(keep: Iterable<string> = []): Promise<number> {
     const meta = await this.loadMeta();
     if (!meta) return 0;
     const prefix = this.key('b');
     const live = new Set(meta.tree.map((e) => prefix + e.sha));
+    for (const sha of keep) live.add(prefix + sha);
     const dead = (await this.store.keys()).filter((k) => k.startsWith(prefix) && !live.has(k));
     if (dead.length) await this.store.delMany(dead);
     return dead.length;
@@ -176,6 +181,18 @@ export class CachingDriver implements StorageDriver {
     }
     if (put.length) await this.store.setMany(put);
     return out;
+  }
+
+  /** A stored text by its blob id, from the copy alone; undefined when the copy does not hold it. */
+  async blob(sha: string): Promise<string | undefined> {
+    const text = await this.store.get(this.key('b', sha));
+    return typeof text === 'string' ? text : undefined;
+  }
+
+  /** History is the host's to answer. */
+  async readManyAt(commit: string, paths: string[]): Promise<Map<string, ReadResult>> {
+    if (!this.inner.readManyAt) throw new Error('this brain\'s storage cannot read its history');
+    return this.inner.readManyAt(commit, paths);
   }
 
   readBytes(path: string): Promise<{ bytes: Uint8Array; sha: string }> {

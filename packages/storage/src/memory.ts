@@ -111,10 +111,15 @@ export class MemoryDriver implements StorageDriver {
     return [...this.tip.tree].map(([path, b]) => ({ path, sha: b.sha, size: b.bytes.length })).sort((a, b) => cmp(a.path, b.path));
   }
 
-  async readMany(paths: string[]): Promise<Map<string, ReadResult>> {
+  readMany(paths: string[]): Promise<Map<string, ReadResult>> {
+    return this.readManyAt(this.tip.sha, paths);
+  }
+
+  async readManyAt(commit: string, paths: string[]): Promise<Map<string, ReadResult>> {
+    const tree = this.commitAt(commit).tree;
     const out = new Map<string, ReadResult>();
     for (const path of paths) {
-      const b = this.tip.tree.get(path);
+      const b = tree.get(path);
       if (b && isText(b.bytes)) out.set(path, { text: new TextDecoder().decode(b.bytes), sha: b.sha });
     }
     return out;
