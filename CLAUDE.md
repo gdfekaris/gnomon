@@ -70,12 +70,11 @@ were discussed and set aside. Each block still needs the maintainer's go.
   Sealing has "Seal everything that exists" and "Accept as mine"; Reason
   works from sealed material only on a fully sealed brain, with "Stood
   on" and the quote check under each answer.
-- Waiting: **I5, the maintainer's check on brain-1** (includes the old S4
-  check): update, Settings → Sealing → Seal everything that exists; marks
-  on Browse and Sets; edit a principle and ratify a filing with no red
-  banner; a question on Reason shows "Stood on". Ask for that result
-  first.
-- Then: **I4, repair** (restore a changed file from the copy on the
+- Done: **I5, the maintainer's check on brain-1** (2026-11-19, build
+  `8a81c4b`, from the iPhone; it covers the old S4 check): brain-1 is
+  fully sealed, and marks, a principle edit, a ratify, and "Stood on" on
+  Reason all behaved.
+- Next: **I4, repair** (restore a changed file from the copy on the
   device, and show a changed principle beside its sealed text), on the
   maintainer's go; then step 3, the reasoning loop.
 - The nightly became `live-github.yml` on 2026-11-19: on demand only,

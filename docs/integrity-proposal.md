@@ -279,5 +279,5 @@ principles at all, which turns detection into prevention.
   principles; unsealed treated as untrusted; Reason's provenance line and
   quote check.
 - [ ] **I4. Repair** (M). After the local cache block.
-- [ ] **I5. The maintainer's check on brain-1.** Includes the pending S4
+- [x] **I5. The maintainer's check on brain-1** (passed 2026-11-19, build `8a81c4b`, from the iPhone). Includes the pending S4
   check. Existing seals stay valid; nothing is re-signed.

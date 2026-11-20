@@ -14,7 +14,8 @@ Schema §11, the implementation Technical Specification §6.5.
   brain:** Settings → Sealing → "Seal everything that exists". Until
   that is done on a brain, §1 holds there for captures and for sources
   ratified from then on; rows T23 to T36 of §7 are caught from that act
-  onward. The maintainer's own brain awaits it (block I5).
+  onward. The maintainer did it on their own brain on 2026-11-19
+  (block I5).
 - **Not built:** repair from the copy on the phone (block I4), and
   showing a changed principle beside its sealed text; today the app
   names the file and the kind of change.
